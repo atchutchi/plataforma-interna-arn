@@ -2,7 +2,7 @@
 
 Documento de referência para desenvolver e acompanhar a plataforma interna da Autoridade Reguladora Nacional das TIC da Guiné-Bissau.
 
-Versão da documentação: 0.1. Data: 8 de outubro de 2026.
+Versão da documentação: 0.2. Data: 8 de outubro de 2026. Revisão de arquitetura para Windows Server.
 
 Estado do projeto: definição funcional e técnica. Esta entrega prepara apenas o README. As funcionalidades, configurações, contas, testes de aplicação e ambientes descritos neste documento são trabalho futuro.
 
@@ -13,6 +13,9 @@ O objetivo é disponibilizar um CMS WordPress privado, organizado pela estrutura
 1. [Objetivo e âmbito](#objetivo)
 2. [Decisões confirmadas e propostas](#decisoes)
 3. [Arquitetura e tecnologias](#arquitetura)
+   - [Infraestrutura Windows e rede observada](#infraestrutura-windows)
+   - [DNS, HTTPS e identidade](#dns-identidade)
+   - [Plano técnico de preparação](#plano-infraestrutura)
 4. [Estrutura institucional e funcionários](#organizacao)
 5. [Perfis e permissões](#permissoes)
 6. [Estrutura de páginas e gestão pelo CMS](#paginas)
@@ -65,18 +68,20 @@ O âmbito corrente é a documentação. A criação de código, instalação de 
 | DEC-02 | Entrega atual | Trabalhar apenas no README.md deste repositório. |
 | DEC-03 | Organização | Integrar os funcionários por direção e demais unidades orgânicas. |
 | DEC-04 | Autenticação | Usar as contas institucionais Google Workspace. |
-| DEC-05 | Alojamento | Usar a infraestrutura interna da ARN. |
+| DEC-05 | Alojamento | Usar a infraestrutura interna da ARN, em máquina virtual Windows. |
 | DEC-06 | Rede | Permitir acesso apenas pela rede ARN ou por VPN. |
 | DEC-07 | Desenvolvimento | Entregar por fases. |
 | DEC-08 | Notícias | Submissão pelos funcionários e aprovação por equipa editorial designada. |
 | DEC-09 | Unidades iniciais | DRE, DRAJDC, DMAO, DF, DRH, DCSI, DREC, NIC.gw e DCT-Q&S. |
 | DEC-10 | Requisitos | Rever as histórias fornecidas e documentar melhorias necessárias. |
+| DEC-11 | Servidor pretendido | Preparar a instalação para a VM Windows em 192.168.17.151, no domínio arn.local. A validação das funções e capacidade existentes antecede a instalação. |
+| DEC-12 | Prioridade desta revisão | Detalhar arquitetura e infraestrutura. Manter para depois nomes completos, hierarquia institucional, equipa editorial, colaboradores, fontes oficiais de dados e documentos, circuitos e calendário. |
 
 DEC-04 atualiza a forma de executar US-F01. A página da ARN disponibiliza a entrada institucional e encaminha a autenticação para o Google. A palavra-passe é introduzida no serviço Google, segundo a política da instituição.
 
 ### 2.2 Propostas técnicas desta versão
 
-São recomendações para orientar o desenvolvimento: WordPress numa instalação única, tema próprio, plugin institucional, integração OIDC, MariaDB LTS, armazenamento privado de anexos e ferramentas de desenvolvimento reproduzíveis.
+São recomendações para orientar o desenvolvimento: WordPress numa instalação única, tema próprio, plugin institucional, integração OIDC, IIS com PHP por FastCGI, MySQL 8.4 LTS, armazenamento privado de anexos e ferramentas de desenvolvimento reproduzíveis.
 
 As propostas de melhoria ainda dependentes de decisão funcional estão identificadas na secção 10. Os pontos que precisam de informação institucional adicional estão na secção 18, com responsável e momento de resolução.
 
@@ -93,11 +98,13 @@ Esta separação permite alterar o design sem perder a estrutura das unidades, o
 
 ~~~mermaid
 flowchart TD
-    Rede["Rede ARN ou VPN"] --> Portal["WordPress ARN"]
+    Rede["Rede ARN ou VPN"] --> IIS["IIS 10 com HTTPS"]
+    IIS --> PHP["PHP x64 NTS por FastCGI"]
+    PHP --> Portal["WordPress ARN"]
     Google["Google Workspace"] -->|"Identidade OIDC"| Portal
     Portal --> Tema["Tema de blocos ARN"]
     Portal --> Core["Plugin institucional"]
-    Core --> Base["Base de dados"]
+    Core --> Base["MySQL 8.4 LTS local"]
     Core --> Arquivo["Ficheiros privados"]
     Core --> Logs["Auditoria"]
 ~~~
@@ -109,28 +116,32 @@ A ligação ao Google representa autenticação. O acesso ao portal continua lim
 | Camada | Tecnologia proposta | Função e condição de adoção |
 | --- | --- | --- |
 | CMS | WordPress estável e mantido | Conteúdos, administração, editor, utilizadores e mecanismos nativos. Versão exata validada no início da implementação. |
-| Backend | PHP 8.4 ou superior, numa versão suportada | Executar WordPress e regras institucionais. Compatibilidade de todas as dependências verificada em homologação. |
+| Backend | PHP 8.4 x64 Non-Thread Safe, com atualização mantida | Executar através de php-cgi.exe e FastCGI no IIS. Validar extensões, runtime C++ e compatibilidade das dependências. [W13] |
 | Regras da ARN | Plugin próprio arn-intranet-core | Unidades, vínculos, permissões, fluxos, dados de trabalho, ficheiros privados e auditoria. |
 | Frontend | Tema de blocos arn-intranet | HTML, CSS, theme.json, padrões, templates e JavaScript para interação. |
 | Editor | Editor de blocos integrado no WordPress | Edição de conteúdos por utilizadores autorizados. Blocos e opções disponíveis conforme a função. |
 | Componentes dinâmicos | JavaScript e pacotes WordPress | React quando necessário para blocos ou componentes do editor. Sem aplicação frontend autónoma na arquitetura base. |
-| Base de dados | MariaDB 11.4 LTS, como alvo inicial | Instância mantida pela ARN. MySQL 8.4 LTS é alternativa se corresponder ao padrão operacional da DCSI. A escolha final é registada em PEN-04. |
-| Servidor | Máquina virtual Linux LTS, Nginx e PHP-FPM | Ambiente dedicado à aplicação, com TLS, controlo de rede e proteção do armazenamento. Dimensionamento a validar. |
+| Base de dados | MySQL Community Server 8.4 LTS x64 | Serviço Windows. A matriz MySQL inclui Windows Server 2019. Base própria do portal, acesso local e credenciais restritas. [W14] |
+| Servidor | VM Windows Server 2019 Standard x64, pretendida em 192.168.17.151 | Confirmar funções AD DS/DNS, recursos, atualizações e serviços antes de instalar. |
+| Servidor web | IIS 10, CGI/FastCGI e URL Rewrite | Site e Application Pool exclusivos do portal. Regras de encaminhamento em web.config e HTTPS no nome canónico. [W13] [W16] |
 | Identidade | Google Workspace por OpenID Connect | Identidade institucional, com autorização local no portal. |
 | Cliente OIDC | OpenID Connect Generic Client, candidato preferencial | Plugin comunitário de código aberto. Homologar a versão mantida com o WordPress e o PHP escolhidos. [W6] |
 | Ficheiros | Armazenamento privado sob controlo da ARN | Entrega através de autorização no servidor. Abrange anexos, imagens, miniaturas e versões. |
-| Ambiente local | Docker com wp-env | Reprodução do ambiente de desenvolvimento. Docker não é requisito automático para produção. [W10] |
+| Ambiente local | wp-env com Docker em estação de desenvolvimento compatível | Apoia desenvolvimento e testes WordPress. A homologação de produção exige Windows/IIS. Não instalar Docker Desktop ou wp-env na VM de produção. [W10] |
 | Ferramentas | WP-CLI, Composer e npm | Gestão técnica, dependências PHP e construção de recursos do tema e dos blocos. |
 | Qualidade | WordPress Coding Standards, PHPUnit e testes de navegador | Verificar regras de acesso, estados, integrações e fluxos completos. |
 | Colaboração | GitHub, branches e pull requests | Histórico de alterações e revisão. As tarefas ficam inicialmente registadas neste README. |
 
 O Hosting Handbook do WordPress recomenda PHP 8.4 ou superior e distingue versões mantidas de versões aceites apenas por compatibilidade. A seleção das versões de produção deve seguir suporte ativo ou de segurança e compatibilidade verificada. O mínimo técnico de execução não serve, por si só, como critério para uma instalação nova. [W1]
 
+MySQL 8.4 LTS substitui a preferência inicial por MariaDB nesta VM. A política de pacotes MariaDB Community identifica Windows Server 2019 como plataforma descontinuada em janeiro de 2024. Por isso, esta revisão não assume MariaDB 11.4 como combinação oficialmente suportada nesse sistema. [W14] [W15]
+
 ### 3.3 Alternativas consideradas
 
 | Opção | Avaliação para este projeto |
 | --- | --- |
 | WordPress integrado, tema próprio e plugin institucional | Proposta base. Reúne CMS e aplicação, preserva os mecanismos WordPress e concentra a manutenção. |
+| Windows com IIS, PHP por FastCGI e MySQL | Proposta de alojamento nativo para o ambiente indicado. A homologação cobre WordPress, extensões e controlos específicos do IIS. |
 | WordPress como backend e frontend separado em Next.js | Acrescenta aplicação, integração, sessões e manutenção. Reavaliar apenas se uma necessidade concreta o justificar. |
 | Conjunto de plugins independentes para RH, tarefas, suporte e intranet | Exige validar integração de permissões, dados e atualizações. Aproveitar componentes adequados, mantendo as regras da ARN centralizadas. |
 
@@ -143,6 +154,103 @@ Cada dependência deve ter função identificada, licença conhecida, manutenç�
 O cliente OIDC é um candidato, ainda sem aprovação técnica para produção. A homologação deve validar autenticação Google, assinatura e claims, bloqueio de contas não autorizadas, associação de identidades e revogação local. Se falhar os critérios, avaliar uma integração com biblioteca oficial mantida, sem escrever um protocolo de autenticação próprio.
 
 Plugins de pagamento, licenças comerciais e serviços externos adicionais exigem uma necessidade definida e decisão de aquisição. Não existe aquisição prevista nesta versão.
+
+<a id="infraestrutura-windows"></a>
+### 3.5 Infraestrutura Windows e rede observada
+
+Os dados seguintes resultam da indicação do responsável do projeto e das três capturas de configuração fornecidas em 8 de outubro de 2026. Não resultam de uma inspeção remota ao servidor.
+
+| Elemento | Informação disponível | Tratamento no plano |
+| --- | --- | --- |
+| Sistema operativo | Windows Server 2019 Standard, 64 bits | Base do plano Windows. Confirmar atualizações antes da instalação. |
+| Virtualização | VM indicada pelo utilizador e adaptador Microsoft Hyper-V visível | Inventariar recursos atribuídos e capacidade do anfitrião. |
+| Memória | 4,51 GB apresentados nas propriedades do sistema | Valor reportado, não memória livre. Verificar eventual memória dinâmica e consumo atual. |
+| Processador | Intel Xeon Silver 4114 apresentado ao sistema | O modelo não indica quantas vCPU estão atribuídas à VM. |
+| IPv4 do alvo | 192.168.17.151 | Endereço pretendido para instalação, sujeito à validação das funções da VM. |
+| Máscara | 255.255.255.0 | Rede local 192.168.17.0/24. |
+| Gateway | 192.168.17.1 | Equipamento de encaminhamento indicado na configuração. |
+| DHCP | Desativado no adaptador observado | Manter o planeamento de endereço fixo. |
+| DNS configurado no adaptador | 192.168.17.151 | Confirmar serviço DNS e zonas. Não substituir por DNS público na configuração de um membro do domínio. |
+| Domínio Active Directory | arn.local | Domínio da infraestrutura Windows. |
+| Gestão de funções | AD DS e DNS visíveis no Server Manager | Indício de funções existentes. Confirmar se são locais, ativas e se a VM é controlador de domínio. |
+| VPN | Acesso por VPN confirmado como requisito | Sub-rede de clientes, rotas, DNS e regras de firewall ainda por inventariar. |
+
+O gateway .1 não define o conjunto de endereços livres. O endereço de rede é 192.168.17.0 e o de broadcast é 192.168.17.255. Qualquer novo endereço deve ser verificado no inventário e nos serviços de atribuição existentes.
+
+### 3.6 Localização da aplicação e funções de domínio
+
+O alvo solicitado continua registado como 192.168.17.151. A presença da consola Active Directory e do DNS apontado ao próprio endereço não prova, isoladamente, que esta VM é o controlador de domínio ativo.
+
+Antes de instalar IIS, PHP ou MySQL, confirmar a função efetiva da VM, serviços existentes, aplicações alojadas, portas ocupadas e cópias de segurança.
+
+| Situação verificada | Orientação de implantação |
+| --- | --- |
+| VM membro do domínio, com recursos e coexistência validados | Preparar WordPress nesse servidor, com site, pool, base de dados e pastas próprios. |
+| VM é controlador de domínio | Rever a localização. A recomendação é usar outra VM Windows membro do domínio para o portal e manter AD DS/DNS no servidor atual. Atribuir à aplicação um endereço próprio aprovado. |
+| Função da VM ainda não confirmada | Concluir o desenho documental e manter a instalação dependente da verificação INF-01/02. |
+
+A separação recomendada decorre da orientação Microsoft para proteger controladores de domínio como sistemas de finalidade específica, com software e administração restritos. Não equivale a afirmar que IIS é tecnicamente incapaz de executar nesse sistema. [W19]
+
+Esta documentação não determina despromoção do controlador, alteração do IP existente, substituição de DNS ou migração do domínio. Uma eventual mudança do host da aplicação será registada como decisão de implantação.
+
+### 3.7 Configuração proposta para IIS e serviços
+
+Criar um site IIS e um Application Pool exclusivos do portal. Usar ApplicationPoolIdentity e conceder ACL NTFS à identidade desse pool. Não executar PHP com conta de administrador do domínio. As identidades de pool permitem separar o acesso de cada aplicação aos ficheiros. [W17]
+
+Configuração de referência:
+
+- IIS 10 com CGI/FastCGI, conteúdo estático, documentos predefinidos, logging e URL Rewrite.
+- PHP 8.4 x64 NTS, obtido de distribuição oficial, associado ao handler php-cgi.exe. Usar php.exe apenas nas tarefas CLI.
+- Runtime Visual C++ v14 x64 mantido e compatível com o binário PHP. Homologar o conjunto na tarefa INF-06. [W13] [W24]
+- Extensões necessárias ao conjunto escolhido, incluindo mysqli, curl, openssl, mbstring, fileinfo, zip, intl e tratamento de imagens. Validar OPcache e os limites de memória e uploads.
+- Pool em 64 bits e sem runtime .NET para a aplicação PHP. Definir reciclagem e limites a partir dos ensaios, evitando interromper trabalhos longos.
+- Autenticação anónima no IIS configurada para usar a identidade do pool, permitindo à aplicação processar a entrada e o callback OIDC. A autorização de conteúdos pertence ao WordPress. Não ativar implicitamente autenticação integrada Windows ou Basic para o portal. [W25]
+- Binding HTTPS associado ao nome canónico aprovado, com certificado correspondente. Configurar WordPress para usar esse mesmo endereço.
+- Regras web.config limitadas ao site, preservando o encaminhamento de permalinks, REST, administração e callback real do plugin.
+- MySQL 8.4 LTS como serviço Windows, com diretório de dados e conta de serviço próprios. Escutar em loopback para o acesso local do PHP.
+- Base de dados exclusiva do portal, conta da aplicação limitada a essa base e procedimento de manutenção para alterações de esquema.
+
+O Application Pool limita o processo e os acessos ao sistema de ficheiros. As permissões por funcionário e por direção continuam a exigir verificação no plugin.
+
+<a id="dns-identidade"></a>
+### 3.8 DNS, HTTPS e identidade
+
+| Nome ou sistema | Finalidade |
+| --- | --- |
+| arn.local | Domínio Active Directory existente. |
+| Google Workspace institucional | Autenticação dos funcionários, conforme DEC-04. |
+| intranet.arn.gw | Nome canónico proposto para o portal. Precisa de validação e configuração. |
+| 192.168.17.151 | IP pretendido para o serviço, se a localização for confirmada. |
+
+As regras Google para aplicações web exigem HTTPS, host admissível e sufixo público válido. O callback de produção não deve usar o IP privado nem um nome terminado em .local. A proposta intranet.arn.gw permite manter arn.local para AD e utilizar um nome adequado ao login Google. [W5]
+
+O nome do portal deve resolver para o endereço privado aprovado através do DNS usado na rede ARN e na VPN. O caminho exato do callback será o fornecido pelo plugin homologado, não um caminho inventado nesta fase. O browser regressa ao portal pela rede ou VPN. O servidor efetua a troca de código com o Google através de ligação de saída.
+
+A alteração DNS deve limitar-se ao nome necessário e respeitar as zonas atuais. Se não existir configuração equivalente, avaliar uma zona interna intranet.arn.gw com registo A na raiz. Evitar criar uma zona arn.gw incompleta que oculte os registos públicos utilizados pelo correio e pelos restantes serviços. A documentação Microsoft descreve zonas e resolução diferenciada por contexto. [W20]
+
+Para HTTPS, a proposta preferencial é certificado público para o nome do portal, com emissão e renovação ACME DNS-01. O desafio usa um registo TXT público e funciona sem expor o servidor web à Internet. A emissão depende de controlo autorizado do DNS e de um procedimento de renovação e instalação no IIS. [W21]
+
+Como alternativa, usar PKI interna se a ARN assegurar confiança na cadeia do certificado em todos os dispositivos autorizados, incluindo os que entram pela VPN. Distribuir confiança aos equipamentos geridos e definir procedimento para os restantes. Estabelecer VPN não instala automaticamente essa confiança. [W22]
+
+O domínio AD e as OUs não alteram a opção Google Workspace. Autenticação AD, AD FS e sincronização de identidades são decisões futuras distintas, sem dependência automática para o MVP.
+
+### 3.9 Fluxos de rede e firewall
+
+As regras serão aplicadas no Windows Firewall e nos equipamentos competentes, preservando as funções AD DS, DNS e VPN existentes.
+
+| Fluxo | Política proposta |
+| --- | --- |
+| Clientes ARN para o portal | TCP 443, a partir das redes internas autorizadas. A rede observada é 192.168.17.0/24. |
+| Clientes VPN para o portal | TCP 443, a partir da sub-rede ou origem efetiva da VPN, depois de verificada. Não presumir que pertence ao mesmo /24. |
+| HTTP para o portal | TCP 80 apenas para redirecionamento interno, se necessário. ACME DNS-01 não exige abertura pública desta porta. |
+| PHP para MySQL na mesma VM | Ligação por loopback, com MySQL sem escuta na LAN. Sem publicação da porta 3306. |
+| Administração Windows | RDP apenas a partir de origens e contas administrativas autorizadas pela DCSI. |
+| Resolução DNS | Usar o DNS institucional. O DNS interno deve continuar a resolver os nomes externos necessários. |
+| Saída para Google | HTTPS dos browsers e do servidor para os serviços necessários ao OIDC. Considerar proxies, validação de certificados e sincronização de hora. |
+| Certificados e atualizações | Saída estritamente necessária pelos mecanismos aprovados de emissão, renovação e distribuição. |
+| Internet para o portal | Sem publicação ou encaminhamento público para o IIS, a base de dados ou o RDP. |
+
+Acesso por VPN, DNS interno e sessão WordPress são controlos complementares. A resolução do nome não substitui as regras de rede, e estar na rede não concede acesso ao conteúdo.
 
 <a id="organizacao"></a>
 ## 4. Estrutura institucional e funcionários
@@ -194,6 +302,14 @@ O cadastro inicial deve partir de uma lista validada por RH, com identificação
 A importação deve oferecer validação prévia, detetar duplicados e unidades inexistentes, apresentar erros por registo e produzir resumo de alterações. Uma importação não deve atribuir privilégios técnicos nem desativar pessoas por mera ausência numa lista incompleta.
 
 A correspondência com a conta Google exige identidade validada e registo local autorizado. Ficheiros reais de importação permanecem nos sistemas internos aprovados.
+
+### 4.5 OUs do Active Directory como referência futura
+
+A imagem do Active Directory mostra uma OU ARN com várias OUs filhas. As OUs representam organização técnica, delegação e políticas, sem equivalência automática com o organograma institucional. [W18]
+
+O catálogo de nove unidades confirmado para o portal mantém-se. O futuro mapeamento deve tratar diferenças como NIC no AD e NIC.gw no portal. As entradas observadas DCT-QOS e DCGT&QoS não serão fundidas automaticamente com DCT-Q&S.
+
+O mapeamento, eventual importação e sincronização com AD ficam para uma fase posterior. Quando necessário, inventariar em leitura, relacionar identificadores das OUs com as unidades do portal, resolver ambiguidades e validar o resultado. A pertença a uma OU não atribui funções WordPress nem substitui a autorização de acesso.
 
 <a id="permissoes"></a>
 ## 5. Perfis e permissões
@@ -376,7 +492,9 @@ O plugin deve separar acesso aos dados, regras de negócio, autorização e apre
 
 WordPress dispõe de diretórios e URLs próprios para uploads. Proteger a página de um documento não demonstra proteção do ficheiro. A arquitetura deve tratar a entrega do binário como uma operação autorizada. [W11]
 
-Proposta: guardar ficheiros institucionais fora da área servida diretamente pelo servidor web. O portal valida sessão, conta, permissão e objeto antes de entregar o ficheiro. Nginx pode efetuar a entrega interna após essa validação, sem disponibilizar uma URL pública de origem.
+Proposta: guardar ficheiros institucionais fora da raiz física do site IIS. O plugin valida sessão, conta, permissão e objeto e entrega o ficheiro através de streaming controlado em PHP. Não criar um diretório virtual IIS nem uma partilha de utilizadores que permita contornar esta verificação.
+
+A entrega deve validar o identificador do ficheiro, resolver apenas caminhos internos autorizados, impedir travessia de diretórios e emitir cabeçalhos adequados ao tipo de conteúdo. Homologar ficheiros maiores, pedidos parciais quando necessários e consumo de memória. Uma futura otimização da entrega exige manter a autorização por objeto.
 
 Imagens, miniaturas, pré-visualizações, galerias, anexos de notícias em análise e versões anteriores seguem a mesma regra. A biblioteca de media, endpoints e listagens não devem permitir a um autor consultar os ficheiros privados de outro.
 
@@ -385,6 +503,26 @@ O autor de uma notícia mantém acesso aos próprios ficheiros durante edição.
 Definir lista de tipos admitidos, limites por ficheiro e por envio, validação do tipo real e tratamento de ficheiros suspeitos. Bloquear executáveis e ficheiros ativos não autorizados. Os valores operacionais serão aprovados em PEN-08.
 
 Uma alteração ao documento pai deve atualizar a autorização das versões, derivados e caches. A aprovação não deve ser contornada pela substituição posterior do ficheiro já aprovado.
+
+#### Organização proposta das pastas Windows
+
+Os caminhos seguintes são exemplos de planeamento. A existência e capacidade do volume D: não foram verificadas. Usar o volume de dados aprovado durante o inventário.
+
+| Caminho de referência | Finalidade | Acesso de serviço |
+| --- | --- | --- |
+| D:\ARN\Portal\public | Raiz física IIS com WordPress, tema e plugins | Leitura e execução para o pool. Escrita de código apenas pelo processo de manutenção autorizado. |
+| D:\ARN\Portal\private | Ficheiros institucionais e derivados privados | Acesso do serviço para guardar e transmitir após autorização. Sem diretório virtual IIS nem partilha para funcionários. |
+| D:\ARN\Portal\runtime | Temporários de upload, processamento e cache local controlada | Escrita limitada ao serviço. Sem execução de uploads como código. |
+| D:\ARN\Portal\config | Configuração protegida e segredos necessários ao serviço | Leitura mínima pelo processo. Alteração apenas por administradores autorizados. |
+| D:\ARN\Portal\logs | Registos de aplicação e processamento | Escrita pelo serviço e leitura por operadores autorizados. |
+| D:\ARN\Data\MySQL | Dados do serviço MySQL | Acesso pela identidade do MySQL. Sem acesso direto pelo pool IIS. |
+| Destino de backup fora da VM | Cópias protegidas e recuperáveis | Identidade de backup e operadores autorizados. Destino a definir. |
+
+Rever heranças NTFS para evitar permissões amplas de escrita. As ACL protegem o sistema de ficheiros entre processos e contas do Windows. O plugin continua responsável por decidir qual funcionário pode receber cada ficheiro.
+
+As regras de localização e entrega abrangem também os uploads nativos e as imagens que o editor de blocos produz. Não deve existir uma segunda cópia desprotegida em wp-content/uploads.
+
+O CMS mantém a edição de conteúdos, menus e configurações autorizadas na base de dados. Alterações a ficheiros de código seguem o procedimento de entrega técnica.
 
 ### 8.4 Relação com os sistemas existentes
 
@@ -631,13 +769,33 @@ Definir volume de utilizadores, simultaneidade, documentos, tamanhos e metas de 
 
 Separar desenvolvimento, homologação e produção. A homologação deve representar as versões de produção e usar dados fictícios ou devidamente preparados.
 
-Prever execução de tarefas agendadas por agendador do servidor, monitorização de disponibilidade, erros de aplicação, armazenamento, autenticação e falhas de notificações.
+Prever execução de tarefas agendadas pelo Agendador de Tarefas do Windows, monitorização de disponibilidade, erros de aplicação, armazenamento, autenticação e falhas de notificações.
 
 Atualizações de WordPress, tema, plugins e dependências devem passar por homologação. Preparar restauro e procedimento de recuperação antes de uma alteração com impacto na base de dados.
 
 Backups devem incluir base de dados, ficheiros privados e configuração recuperável. Manter cópia fora do servidor da aplicação sob controlo autorizado. Definir frequência, retenção, RPO e RTO com a DCSI antes da entrada em serviço.
 
 Um teste de restauro precisa de confirmar permissões e acesso a anexos, além de confirmar a existência dos ficheiros.
+
+### 12.5 Operação específica no Windows
+
+O inventário deve medir RAM disponível, carga atual, vCPU, armazenamento, latência de disco e consumo das funções existentes. Os 4,51 GB observados não demonstram capacidade livre para a aplicação.
+
+Como ponto de partida de dimensionamento para uma VM dedicada ao portal e MySQL, avaliar 4 vCPU e 8 GB de RAM. Trata-se de uma referência de planeamento, sujeita à disponibilidade do anfitrião, ao volume documental e aos ensaios de carga. Não representa requisito oficial do WordPress nem garantia de desempenho.
+
+Configurar tarefas agendadas para executar trabalhos pendentes, manutenção e verificações de backup. Usar php.exe ou WP-CLI sob identidade restrita, registar o resultado e impedir execuções sobrepostas. Quando o agendador assumir integralmente os eventos WordPress, ajustar WP-Cron para evitar duplicação.
+
+Recolher logs IIS, erros PHP, eventos Windows, estado de MySQL e auditoria da aplicação. Definir rotação, retenção, alertas de espaço e monitorização da validade do certificado. Manter os registos fora da raiz publicável.
+
+Usar homologação Windows/IIS para verificar caminhos, ACL NTFS, web.config, FastCGI, extensões, certificados e downloads. Um teste bem-sucedido num contentor de desenvolvimento não prova funcionamento equivalente no IIS.
+
+O processo inicial de entrega será conduzido pela DCSI através de um pacote de versão revisto e identificado pelo commit. Os runners GitHub alojados externamente não têm, por pressuposto, acesso à rede 192.168.17.0/24. Não criar exposição pública da VM para permitir implantação. Uma futura automação exige agente ou canal interno aprovado e isolado da infraestrutura de domínio.
+
+Antes de atualizar, preparar cópias consistentes da base de dados, ficheiros, configuração e ACL necessárias. Separar os dados persistentes do pacote de código. Repor a aplicação e a sua base de dados segundo o procedimento validado.
+
+Se a VM também exercer funções AD, a recuperação do domínio é um processo diferente. Não usar a reversão integral de um checkpoint dessa VM como procedimento automático de desfazer uma atualização WordPress. Definir a recuperação da aplicação sem afetar AD DS/DNS.
+
+Windows Server 2019 encontra-se em suporte alargado, com término previsto em janeiro de 2029. Registar revisão do ciclo de vida e plano de atualização antes desse limite. [W23]
 
 <a id="fases"></a>
 ## 13. Entregas por fases
@@ -724,24 +882,24 @@ Uma área funcional não corresponde automaticamente a uma conta GitHub. A pesso
 
 ### 15.2 Estado e prioridades
 
-Estados de tarefas: Por iniciar, Pronta, Em curso, Em revisão, Bloqueada e Concluída.
+Estados de tarefas: Por iniciar, Pronta, Em curso, Em revisão, Bloqueada, Adiada e Concluída.
 
 Prioridades: P0 para condições de acesso e fundação, P1 para funções essenciais do módulo e P2 para evolução.
 
-A documentação base fica registada nesta versão. Todas as tarefas de implementação abaixo começam Por iniciar. Uma tarefa só fica Concluída com evidência e validação do resultado.
+A documentação base fica registada nesta versão. As tarefas de implementação começam Por iniciar. As validações institucionais indicadas pelo responsável ficam Adiadas nesta etapa de planeamento técnico. Uma tarefa só fica Concluída com evidência e validação do resultado.
 
 ### 15.3 Backlog inicial
 
 | ID | Tarefa | Responsável funcional / técnico | Dependência | Estado | Resultado verificável |
 | --- | --- | --- | --- | --- | --- |
-| F0-01 | Validar organograma, nomes, tipos e responsáveis | RH + coordenação | PEN-01 | Por iniciar | Estrutura validada para configurar US-A03 e US-ARN-01. |
-| F0-02 | Validar matriz de funções e delegações | Coordenação + DCSI + RH | F0-01 | Por iniciar | Quem atribui cada função e respetivo âmbito. |
-| F0-03 | Definir servidor, rede, DNS, HTTPS e capacidade | DCSI | PEN-03/04 | Por iniciar | Condições de alojamento e acesso interno verificadas. |
+| F0-01 | Validar organograma, nomes, tipos e responsáveis | RH + coordenação | PEN-01 | Adiada | Estrutura validada para configurar US-A03 e US-ARN-01. |
+| F0-02 | Validar matriz de funções e delegações | Coordenação + DCSI + RH | F0-01 | Adiada | Quem atribui cada função e respetivo âmbito. |
+| F0-03 | Inventariar e validar infraestrutura Windows, rede, DNS, HTTPS e capacidade | DCSI | PEN-03/04/13 | Por iniciar | Inventário e desenho de implantação Windows aprovados para o host de aplicação validado. |
 | F0-04 | Definir cliente Google e procedimento de acessos | DCSI | PEN-02/03/10 | Por iniciar | Plano OIDC, autorização local e saída de funcionários. |
-| F0-05 | Validar melhorias e repositórios necessários a F1 | RH + editorial + TI | PEN-05/07/08, apenas âmbito F1 | Por iniciar | Decisões sobre cadastro, documentos, notícias, comunicados e tarefas. Pedidos e férias são detalhados em F2-01. |
+| F0-05 | Validar melhorias e repositórios necessários a F1 | RH + editorial + TI | PEN-05/07/08, apenas âmbito F1 | Adiada | Decisões sobre cadastro, documentos, notícias, comunicados e tarefas. Pedidos e férias são detalhados em F2-01. |
 | F0-06 | Detalhar dados, estados, migrações e contratos de F1 | Backend + QA | F0-01/02/05 | Por iniciar | Modelo de F1 e critérios de integridade revisáveis. O detalhe dos modelos administrativos pertence a F2. |
-| F0-07 | Designar executantes, prioridades e datas | Coordenação | PEN-11 | Por iniciar | Responsável individual e prazo por tarefa selecionada. |
-| F1-01 | Preparar ambiente de desenvolvimento e homologação | DCSI + desenvolvimento | F0-03/04 | Por iniciar | Instalação reproduzível com dados de teste. |
+| F0-07 | Designar executantes, prioridades e datas | Coordenação | PEN-11 | Adiada | Responsável individual e prazo por tarefa selecionada. |
+| F1-01 | Preparar desenvolvimento e homologação Windows/IIS | DCSI + desenvolvimento | F0-03/04, INF-06 | Por iniciar | Instalação reproduzível e homologação representativa de produção com dados de teste. |
 | F1-02 | Homologar OIDC e associação de contas | Backend + DCSI | F1-01, F0-04 | Por iniciar | US-F01 e critérios de identidade aprovados. |
 | F1-03 | Implementar funções, âmbitos e estado de conta | Backend + QA | F0-02/06, F1-02 | Por iniciar | US-A01/02, US-S03 e US-ARN-02/03 verificados. |
 | F1-04 | Implementar auditoria e eventos de notificação | Backend | F1-03 | Por iniciar | US-A04, US-S01 e US-ARN-10 com acesso protegido. |
@@ -756,8 +914,8 @@ A documentação base fica registada nesta versão. Todas as tarefas de implemen
 | F1-13 | Implementar tarefas e acompanhamento de equipa | Backend + frontend + responsáveis | F1-04/05/06 | Por iniciar | US-F04/05, US-M02/03 e continuidade básica. |
 | F1-14 | Integrar painel e pesquisa básica | Backend + frontend | F1-07/09/11/12/13 | Por iniciar | US-F02, US-S02 e acessos por objeto. |
 | F1-15 | Completar administração e parâmetros do CMS | Backend + DCSI | F1-05/09/11/12/13 | Por iniciar | US-A05 e operações de gestão sem editar código. |
-| F1-16 | Validar segurança, acessibilidade e restauro | QA + DCSI + utilizadores piloto | F1-14/15, PEN-08/09/10 | Por iniciar | Critérios de F1 aprovados e evidência registada. |
-| F1-17 | Formar responsáveis e disponibilizar F1 | Coordenação + DCSI + RH + editorial | F1-16, F0-07 | Por iniciar | Operação, suporte e aceitação funcional definidos. |
+| F1-16 | Validar segurança, acessibilidade e restauro | QA + DCSI + utilizadores piloto | F1-14/15, INF-09, PEN-08/09/10 | Por iniciar | Critérios de F1 aprovados e evidência registada. |
+| F1-17 | Formar responsáveis e disponibilizar F1 | Coordenação + DCSI + RH + editorial | F1-16, INF-10, F0-07 | Por iniciar | Operação, suporte e aceitação funcional definidos. |
 | F2-01 | Detalhar tipos de pedido, substituição e modelos administrativos | RH + responsáveis + backend | PEN-05/06, âmbito administrativo | Por iniciar | Formulários, circuitos, dados de férias, estados e migrações de F2 validados. |
 | F2-02 | Implementar pedidos e decisões | Backend + frontend + QA | F2-01, F1-04/08 | Por iniciar | US-F08, US-M04 e US-ARN-06. |
 | F2-03 | Implementar férias e ausências | Backend + RH + QA | F2-02, PEN-05/06 | Por iniciar | US-RH02/04 e US-ARN-07 com origem de saldos definida. |
@@ -768,6 +926,28 @@ A documentação base fica registada nesta versão. Todas as tarefas de implemen
 | F3-02 | Implementar melhoria selecionada | Responsáveis da melhoria | F3-01 | Por iniciar | História específica e critérios aprovados para a entrega. |
 
 Cada tarefa deve referenciar os códigos das histórias aplicáveis e atualizar a evidência quando concluída. A tabela é o backlog inicial. Ainda não representa Issues criadas, pessoas notificadas ou trabalho atribuído automaticamente no GitHub.
+
+<a id="plano-infraestrutura"></a>
+### 15.4 Plano técnico de preparação no Windows
+
+As tarefas INF detalham a preparação e verificação da infraestrutura dentro do mesmo projeto. Não constituem instalações já executadas. As pendências institucionais adiadas não impedem documentar ou avaliar tecnicamente este plano.
+
+Executar primeiro a preparação e as verificações INF-04 a INF-08 em homologação Windows, com nome DNS, cliente OAuth, segredos e dados próprios desse ambiente. A instalação de produção recebe a configuração validada através do procedimento de entrega. A homologação não deve reutilizar o endereço de produção nem interferir nos serviços do domínio.
+
+| ID | Tarefa técnica | Responsável | Dependência | Estado | Evidência esperada |
+| --- | --- | --- | --- | --- | --- |
+| INF-01 | Inventariar funções, recursos, volumes, serviços, bindings e backups da VM | DCSI | DEC-11 | Por iniciar | Papel efetivo da VM, incluindo controlador de domínio ou membro, registado sem alterações às funções. |
+| INF-02 | Validar localização do portal e coexistência | DCSI | INF-01, PEN-13 | Por iniciar | Confirmar .151 como host adequado ou aprovar VM Windows membro separada e IP próprio. |
+| INF-03 | Dimensionar aplicação, MySQL, ficheiros e crescimento | DCSI | INF-02, PEN-04 | Por iniciar | Recursos, capacidade de disco e cenário de carga definidos. |
+| INF-04 | Preparar nome interno, DNS e alcance pela VPN | DCSI | INF-02, PEN-03 | Por iniciar | Nome canónico resolve na LAN/VPN e restantes nomes arn.gw continuam corretos. |
+| INF-05 | Obter certificado e preparar confiança e renovação | DCSI | INF-04 | Por iniciar | Certificado e cadeia disponíveis, distribuição de confiança prevista e procedimento de renovação preparado. |
+| INF-06 | Preparar IIS, FastCGI, PHP, MySQL, pastas, ACL e binding HTTPS | DCSI + backend | INF-03/05 | Por iniciar | Serviços mantidos, pool isolado, base local, armazenamento privado e HTTPS inicialmente verificado no site configurado. |
+| INF-07 | Verificar identidade Google no percurso LAN e VPN | DCSI + backend | INF-06, F1-02 | Por iniciar | Callback real registado, login concluído nas duas redes e nenhuma publicação pública necessária. |
+| INF-08 | Preparar tarefas agendadas, logs, alertas e backups | DCSI | INF-06, PEN-09 | Por iniciar | Execução controlada, falhas observáveis e cópias consistentes fora da VM. |
+| INF-09 | Homologar rede, IIS, anexos, carga e restauro | DCSI + QA | INF-07/08, F1-14/15 | Por iniciar | Testes da secção 17.4 com evidência, incluindo instalação do certificado renovado no binding IIS. |
+| INF-10 | Preparar pacote de entrega e recuperação da aplicação | DCSI + desenvolvimento | F1-16 | Por iniciar | Versão identificada por commit, configuração protegida e recuperação sem reversão indevida do AD. |
+
+O mapeamento de OUs, a sincronização AD e o preenchimento dos responsáveis institucionais continuam reservados para a fase apropriada. Nenhuma tarefa INF exige pressupor essas integrações já existentes.
 
 <a id="colaboracao"></a>
 ## 16. Forma de colaboração no repositório
@@ -848,17 +1028,35 @@ A revisão deve incluir testes das regras críticas e validação funcional pela
 
 Esta versão foi preparada como documentação. Os cenários desta secção são critérios de trabalho futuro, não resultados de testes de uma aplicação existente.
 
+### 17.4 Homologação específica Windows e rede
+
+| Verificação | Resultado esperado |
+| --- | --- |
+| Função da VM | Host da aplicação aprovado após confirmar AD DS/DNS e eventual papel de controlador de domínio. |
+| DNS na LAN e VPN | Nome canónico resolve para o IP interno aprovado. Registos públicos necessários de arn.gw continuam a resolver. |
+| HTTPS | Certificado corresponde ao nome e cadeia é confiável. Procedimento de renovação e instalação no binding IIS verificado em homologação. |
+| IIS e WordPress | Permalinks, REST, CMS e callback OIDC funcionam com web.config e FastCGI. |
+| Login Google | Fluxo completo a partir da LAN e da VPN, incluindo regresso do browser ao portal. |
+| Bloqueio de rede | Acesso fora das origens autorizadas recusado sem depender apenas do DNS. |
+| MySQL | Serviço acessível pela aplicação local. Porta da base de dados não acessível a clientes da LAN. |
+| Pastas e media | Pool tem apenas os acessos necessários. Ficheiros e derivados privados não existem em caminhos públicos alternativos. |
+| Tarefas agendadas | Trabalhos executam com identidade adequada, sem sobreposição e com registo de falha. |
+| Desempenho | Comportamento dentro das metas aprovadas, sem degradar funções de infraestrutura existentes. |
+| Recuperação | Base de dados, ficheiros, configuração e ACL recuperados em ambiente isolado. AD DS/DNS preservados. |
+
 <a id="pendencias"></a>
 ## 18. Decisões pendentes
 
 Estas pendências têm resultado esperado e momento de resolução. Não impedem documentar a arquitetura, mas condicionam a implementação correspondente.
 
+Nesta revisão, por indicação do responsável, ficam adiadas as definições institucionais de PEN-01, PEN-05, PEN-06, PEN-07 e PEN-11. A revisão concentra-se na infraestrutura. As validações de negócio continuam a ser necessárias antes de ativar os respetivos dados e processos, sem exigir resposta nesta etapa.
+
 | ID | Informação ou decisão necessária | Responsável | Resolver antes de |
 | --- | --- | --- | --- |
 | PEN-01 | Designações completas, departamentos, responsáveis e hierarquia. Confirmar tipo e posição de NIC.gw e DCT-Q&S. Validar órgãos de apoio. | RH + coordenação | Configurar organograma e importar pessoas. |
 | PEN-02 | Confirmar que todos os funcionários autorizados possuem conta Workspace. Definir tratamento de exceções e responsáveis pela identidade. | DCSI + RH | Ativar login. |
-| PEN-03 | Aprovar nome DNS, certificado, endereço de retorno OIDC, rotas VPN e conectividade de saída Google. | DCSI | Homologar autenticação. |
-| PEN-04 | Dimensionar servidor e armazenamento. Escolher base de dados e versões. Definir carga e metas de resposta. | DCSI | Preparar homologação. |
+| PEN-03 | Aprovar nome do portal, desenho DNS, estratégia de certificado, origens e rotas VPN e saída Google. Prever callback conforme o plugin escolhido. A comprovação do callback real pertence a F1-02 e INF-07. | DCSI | Preparar DNS e integração OIDC. |
+| PEN-04 | Inventariar recursos e armazenamento. Aprovar versões candidatas de IIS, PHP 8.4 x64 NTS e MySQL 8.4 LTS, carga e metas de resposta. A compatibilidade executada pertence a INF-06/F1-01 e a homologação integrada a INF-09. | DCSI | Dimensionar e preparar homologação. |
 | PEN-05 | Identificar fonte oficial de funcionários, documentos, férias e saldos. Definir atualização e validação inicial. | RH + responsáveis documentais | Cadastro inicial e cada módulo dependente. |
 | PEN-06 | Validar tipos de pedido, regras de férias, etapas, substituições e tratamento dos pedidos do próprio aprovador. | RH + responsáveis institucionais | Desenvolver F2. |
 | PEN-07 | Nomear equipa editorial. Confirmar públicos, comunicados institucionais, rejeição com motivo e regra de aprovação da própria notícia. | Coordenação + editorial | Ativar publicação. |
@@ -867,6 +1065,7 @@ Estas pendências têm resultado esperado e momento de resolução. Não impedem
 | PEN-10 | Definir duração e inatividade de sessão, MFA, encerramento, desativação e eventual recuperação técnica local. | DCSI | Disponibilizar F1. |
 | PEN-11 | Identificar colaboradores GitHub, revisores, capacidade, prioridades e calendário. | Coordenação | Iniciar tarefas de implementação. |
 | PEN-12 | Decidir se serão usados emails de notificação, em que eventos e por que canal institucional. | DCSI + donos dos processos | Ativar canal adicional. |
+| PEN-13 | Confirmar funções efetivas de 192.168.17.151 e o host final da aplicação. Se for DC, rever coexistência e aprovar VM Windows membro separada. | DCSI | Instalar componentes do portal. |
 
 <a id="fontes"></a>
 ## 19. Fontes e histórico de decisões
@@ -880,6 +1079,8 @@ Foram analisadas as fontes institucionais disponibilizadas no projeto, incluindo
 O Plano Estratégico associa a intranet a comunicação interna, partilha de conhecimento e serviços. Os documentos de organização incluem diagnósticos e propostas com nomenclaturas diferentes. A lista inicial deste README segue a confirmação do responsável do projeto em 8 de outubro de 2026.
 
 As referências internas servem de contexto. O repositório não incorpora os documentos de origem nem transforma propostas institucionais em atos aprovados.
+
+As três capturas de configuração acrescentadas nesta revisão sustentam o inventário Windows e de rede da secção 3.5. Não demonstram capacidade livre, saúde dos serviços ou função efetiva de controlador de domínio. Os identificadores de produto, MAC e outros dados sem utilidade para o plano não são reproduzidos.
 
 ### 19.2 Referências técnicas
 
@@ -897,6 +1098,19 @@ Referências consultadas em 8 de outubro de 2026. Confirmar versões e compatibi
 - [W10] [WordPress, wp-env](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-env/) e [WP-CLI](https://developer.wordpress.org/cli/commands/).
 - [W11] [WordPress, wp_upload_dir](https://developer.wordpress.org/reference/functions/wp_upload_dir/).
 - [W12] [WordPress, Theme Structure](https://developer.wordpress.org/themes/core-concepts/theme-structure/).
+- [W13] [PHP, Installation with IIS for Windows](https://www.php.net/manual/en/install.windows.iis.php) e [distribuições oficiais PHP para Windows](https://www.php.net/downloads.php?os=windows&version=8.4).
+- [W14] [MySQL, Supported Platforms](https://www.mysql.com/support/supportedplatforms/database.html) e [instalação MySQL 8.4 no Windows](https://dev.mysql.com/doc/refman/8.4/en/windows-installation.html).
+- [W15] [MariaDB Community, Platform Deprecation Policy](https://mariadb.com/docs/release-notes/community-server/about/platform-deprecation-policy).
+- [W16] [Microsoft IIS, URL Rewrite](https://www.iis.net/downloads/microsoft/url-rewrite).
+- [W17] [Microsoft IIS, Application Pool Identities](https://learn.microsoft.com/en-us/iis/manage/configuring-security/application-pool-identities).
+- [W18] [Microsoft, Reviewing OU Design Concepts](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/reviewing-ou-design-concepts).
+- [W19] [Microsoft, Securing Domain Controllers Against Attack](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/security-best-practices/securing-domain-controllers-against-attack).
+- [W20] [Microsoft, DNS Architecture](https://learn.microsoft.com/en-us/windows-server/networking/dns/dns-architecture) e [Split-Brain DNS Deployment](https://learn.microsoft.com/en-us/windows-server/networking/dns/deploy/split-brain-dns-deployment).
+- [W21] [Let's Encrypt, DNS-01 Challenge](https://letsencrypt.org/docs/challenge-types/#dns-01-challenge).
+- [W22] [Microsoft, distribuição de certificados por Group Policy](https://learn.microsoft.com/en-us/windows-server/identity/ad-fs/deployment/distribute-certificates-to-client-computers-by-using-group-policy).
+- [W23] [Microsoft, Windows Server 2019 Lifecycle](https://learn.microsoft.com/en-us/lifecycle/products/windows-server-2019).
+- [W24] [Microsoft, Visual C++ Redistributable suportado](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170).
+- [W25] [Microsoft IIS, Anonymous Authentication](https://learn.microsoft.com/en-us/iis/configuration/system.webserver/security/authentication/anonymousauthentication).
 
 ### 19.3 Registo de decisões desta versão
 
@@ -908,5 +1122,9 @@ Referências consultadas em 8 de outubro de 2026. Confirmar versões e compatibi
 | 2026-10-08 | Catálogo com DRE, DRAJDC, DMAO, DF, DRH, DCSI, DREC, NIC.gw e DCT-Q&S | Confirmado pelo responsável do projeto. |
 | 2026-10-08 | Aprovação de notícias por equipa editorial designada | Confirmado nas perguntas de definição. |
 | 2026-10-08 | Arquitetura, 46 histórias consolidadas, 12 complementos e backlog inicial | Documentado para orientar desenvolvimento e validação funcional. |
+| 2026-10-08 | VM Windows em 192.168.17.151 e ambiente arn.local | Alvo indicado pelo responsável e inventário apoiado nas capturas. Instalação depende de validação técnica. |
+| 2026-10-08 | IIS, PHP FastCGI e MySQL 8.4 LTS | Proposta técnica atualizada para Windows Server 2019. Substitui a referência inicial a Linux/Nginx e MariaDB. |
+| 2026-10-08 | DNS interno, HTTPS, pastas Windows, operação e tarefas INF | Planeamento documentado nesta versão 0.2. Execução por iniciar. |
+| 2026-10-08 | Definições institucionais, colaboradores e calendário | Adiadas por indicação do responsável nesta revisão. |
 
-Próximo passo de projeto: resolver as pendências F0, designar executantes e validar os critérios do primeiro conjunto de tarefas. A implementação começa apenas numa etapa de trabalho própria.
+O próximo trabalho técnico é confirmar as funções e capacidade da VM e validar a localização da aplicação, conforme INF-01/02. As definições institucionais ficam para depois. Esta versão conclui o planeamento documental da infraestrutura, com instalação e configuração reservadas para uma etapa de execução própria.
