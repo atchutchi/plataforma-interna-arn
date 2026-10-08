@@ -2,7 +2,7 @@
 
 Documento de referência para desenvolver e acompanhar a plataforma interna da Autoridade Reguladora Nacional das TIC da Guiné-Bissau.
 
-Versão da documentação: 0.3. Data: 8 de outubro de 2026. Portal em servidor Windows independente do domínio.
+Versão da documentação: 0.4. Data: 8 de outubro de 2026. IP do portal atualizado e contas administrativas iniciais identificadas.
 
 Estado do projeto: definição funcional e técnica. Esta entrega prepara apenas o README. As funcionalidades, configurações, contas, testes de aplicação e ambientes descritos neste documento são trabalho futuro.
 
@@ -18,6 +18,7 @@ O objetivo é disponibilizar um CMS WordPress privado, organizado pela estrutura
    - [Plano técnico de preparação](#plano-infraestrutura)
 4. [Estrutura institucional e funcionários](#organizacao)
 5. [Perfis e permissões](#permissoes)
+   - [Contas administrativas iniciais](#administradores-iniciais)
 6. [Estrutura de páginas e gestão pelo CMS](#paginas)
 7. [Autenticação e ciclo de vida do acesso](#autenticacao)
 8. [Dados, documentos e armazenamento](#dados)
@@ -67,17 +68,18 @@ O âmbito corrente é a documentação. A criação de código, instalação de 
 | DEC-01 | Plataforma | WordPress como CMS. |
 | DEC-02 | Entrega atual | Trabalhar apenas no README.md deste repositório. |
 | DEC-03 | Organização | Integrar os funcionários por direção e demais unidades orgânicas. |
-| DEC-04 | Autenticação | Usar as contas institucionais Google Workspace. |
+| DEC-04 | Autenticação | Usar as contas institucionais do Google Workspace já utilizado pela ARN, no domínio arn.gw. |
 | DEC-05 | Alojamento | Usar um servidor Windows na infraestrutura interna da ARN. A natureza física ou virtual do novo host será inventariada. |
 | DEC-06 | Rede | Permitir acesso apenas pela rede ARN ou por VPN. |
 | DEC-07 | Desenvolvimento | Entregar por fases. |
 | DEC-08 | Notícias | Submissão pelos funcionários e aprovação por equipa editorial designada. |
 | DEC-09 | Unidades iniciais | DRE, DRAJDC, DMAO, DF, DRH, DCSI, DREC, NIC.gw e DCT-Q&S. |
 | DEC-10 | Requisitos | Rever as histórias fornecidas e documentar melhorias necessárias. |
-| DEC-11 | Servidor do portal | Preparar a instalação no servidor existente Panthera-Onca, indicado no anexo com IP 192.168.17.204 e grupo WORKGROUP. Validar recursos e coexistência antes de instalar. Esta decisão substitui o alvo .151 da versão 0.2. |
+| DEC-11 | Servidor do portal | Preparar a instalação no servidor Panthera-Onca, em WORKGROUP, com IP de referência 192.168.17.205, corrigido pelo responsável nesta versão. Validar configuração, recursos e coexistência antes de instalar. |
 | DEC-12 | Prioridade desta revisão | Detalhar arquitetura e infraestrutura. Manter para depois nomes completos, hierarquia institucional, equipa editorial, colaboradores, fontes oficiais de dados e documentos, circuitos e calendário. |
 | DEC-13 | Controlador de domínio | O responsável confirmou que 192.168.17.151 é controlador de domínio de arn.local. Mantém as funções AD DS e DNS. |
 | DEC-14 | Associação ao domínio | O servidor do portal está na rede ARN e fora do domínio. O plano mantém WORKGROUP, sem exigir adesão a arn.local para WordPress ou Google Workspace. |
+| DEC-15 | Administração inicial | Registar as três contas administrativas indicadas pelo responsável na secção 5.4, com autenticação Google e atribuição explícita de permissões no portal. |
 
 DEC-04 atualiza a forma de executar US-F01. A página da ARN disponibiliza a entrada institucional e encaminha a autenticação para o Google. A palavra-passe é introduzida no serviço Google, segundo a política da instituição.
 
@@ -100,7 +102,7 @@ Esta separação permite alterar o design sem perder a estrutura das unidades, o
 
 ~~~mermaid
 flowchart TD
-    Rede["Clientes na rede ARN ou VPN"] -->|"HTTPS"| IIS["IIS 10 em 192.168.17.204"]
+    Rede["Clientes na rede ARN ou VPN"] -->|"HTTPS"| IIS["IIS 10 em 192.168.17.205"]
     Rede -->|"Resolução de nomes"| DNS["DNS e AD DS em 192.168.17.151"]
     IIS --> PHP["PHP x64 NTS por FastCGI"]
     PHP --> Portal["WordPress ARN"]
@@ -112,7 +114,7 @@ flowchart TD
     Core --> Logs["Auditoria"]
 ~~~
 
-A ligação ao Google representa autenticação. O servidor 192.168.17.204 permanece em WORKGROUP. O DNS institucional em .151 resolve o nome interno do portal, e o acesso continua limitado à rede ARN ou VPN. O AD DS não participa no login da aplicação nesta arquitetura.
+A ligação ao Google representa autenticação. O servidor 192.168.17.205 permanece em WORKGROUP. O DNS institucional em .151 resolve o nome interno do portal, e o acesso continua limitado à rede ARN ou VPN. O AD DS não participa no login da aplicação nesta arquitetura.
 
 ### 3.2 Stack de referência
 
@@ -125,7 +127,7 @@ A ligação ao Google representa autenticação. O servidor 192.168.17.204 perma
 | Editor | Editor de blocos integrado no WordPress | Edição de conteúdos por utilizadores autorizados. Blocos e opções disponíveis conforme a função. |
 | Componentes dinâmicos | JavaScript e pacotes WordPress | React quando necessário para blocos ou componentes do editor. Sem aplicação frontend autónoma na arquitetura base. |
 | Base de dados | MySQL Community Server 8.4 LTS x64 | Serviço Windows. A matriz MySQL inclui Windows Server 2019. Base própria do portal, acesso local e credenciais restritas. [W14] |
-| Servidor | Windows Server 2019 Standard no host 192.168.17.204, em WORKGROUP | Dados reportados no anexo. Inventariar recursos, atualizações, serviços e coexistência antes de instalar. |
+| Servidor | Windows Server 2019 Standard no host com IP de referência 192.168.17.205, em WORKGROUP | Sistema e grupo reportados no anexo, IP corrigido pelo responsável. Inventariar configuração, recursos, atualizações, serviços e coexistência. |
 | Servidor web | IIS 10, CGI/FastCGI e URL Rewrite | Site e Application Pool exclusivos do portal. Regras de encaminhamento em web.config e HTTPS no nome canónico. [W13] [W16] |
 | Identidade | Google Workspace por OpenID Connect | Identidade institucional, com autorização local no portal. |
 | Cliente OIDC | OpenID Connect Generic Client, candidato preferencial | Plugin comunitário de código aberto. Homologar a versão mantida com o WordPress e o PHP escolhidos. [W6] |
@@ -161,14 +163,14 @@ Plugins de pagamento, licenças comerciais e serviços externos adicionais exige
 <a id="infraestrutura-windows"></a>
 ### 3.5 Infraestrutura Windows e rede observada
 
-O responsável confirmou em 8 de outubro de 2026 que .151 é controlador de domínio e indicou outro servidor da rede para alojar o portal. O anexo complementar apresenta um resumo com os dados de Panthera-Onca, em .204 e WORKGROUP. Os valores desse resumo são informação comunicada, a confirmar no inventário do host. Não foi efetuada inspeção remota.
+O responsável confirmou em 8 de outubro de 2026 que .151 é controlador de domínio e indicou Panthera-Onca para alojar o portal. O anexo complementar apresenta um resumo do sistema, recursos e grupo WORKGROUP desse servidor. Nesta revisão, o responsável corrigiu o IP de referência do portal para 192.168.17.205. Esse endereço orienta o planeamento e não é apresentado como uma leitura do anexo anterior. A configuração efetiva e os restantes dados comunicados serão conferidos no inventário do host. Não foi efetuada inspeção remota.
 
 | Equipamento | Papel definido | Relação com o domínio |
 | --- | --- | --- |
 | 192.168.17.151 | Controlador de domínio e DNS institucional | Controlador de arn.local, confirmado pelo responsável. |
-| 192.168.17.204, Panthera-Onca | Host escolhido para o futuro portal WordPress e a sua base de dados | Servidor independente, em WORKGROUP. Não está associado a arn.local. |
+| 192.168.17.205, Panthera-Onca | Host escolhido para o futuro portal WordPress e a sua base de dados | Servidor independente, em WORKGROUP. Não está associado a arn.local. |
 
-Inventário comunicado para o servidor do portal:
+Dados comunicados para o servidor do portal, com o IP atualizado pelo responsável:
 
 | Elemento | Informação disponível | Tratamento no plano |
 | --- | --- | --- |
@@ -178,10 +180,10 @@ Inventário comunicado para o servidor do portal:
 | Natureza do host | Ainda não confirmada para este servidor | Inventariar hardware ou recursos atribuídos, conforme se trate de instalação física ou VM. |
 | Memória | 32 GB reportados | Não representam RAM livre ou reservada ao portal. Medir utilização e margem disponível. |
 | Processador | Intel Xeon Silver 4114 reportado | Confirmar capacidade disponível e processadores lógicos ou vCPU, conforme o host. |
-| IPv4 do alvo | 192.168.17.204 | Endereço escolhido para o portal. Confirmar estabilidade e ausência de conflito no inventário. |
+| IPv4 do alvo | 192.168.17.205 | Endereço de referência corrigido pelo responsável. Conferir configuração efetiva, estabilidade e ausência de conflito no inventário. |
 | Máscara | 255.255.255.0 | Rede local 192.168.17.0/24. |
 | Gateway | 192.168.17.1 | Equipamento de encaminhamento indicado na configuração. |
-| Estabilidade do endereço | Método de atribuição ainda por inventariar em .204 | Validar endereço fixo ou reserva institucional adequada, sem presumir a configuração DHCP deste host. |
+| Estabilidade do endereço | Método de atribuição ainda por inventariar em .205 | Validar endereço fixo ou reserva institucional adequada, sem presumir a configuração DHCP deste host. |
 | DNS configurado no adaptador | 192.168.17.151 | Usar o DNS institucional para nomes internos e externos necessários. A utilização desse DNS não associa o servidor ao domínio. |
 | Grupo de trabalho | WORKGROUP | Administração e identidades de serviço locais. Sem dependência de autenticação Windows integrada. |
 | VPN | Acesso por VPN confirmado como requisito | Sub-rede de clientes, rotas, DNS e regras de firewall ainda por inventariar. |
@@ -190,22 +192,22 @@ O gateway .1 não define o conjunto de endereços livres. O endereço de rede é
 
 ### 3.6 Localização da aplicação e funções de domínio
 
-O host escolhido para a aplicação é 192.168.17.204. O papel de .151 como controlador de domínio está confirmado pelo responsável e deixa de ser uma questão em aberto. A preparação de IIS, PHP, MySQL e ficheiros privados será feita no servidor .204, após inventariar serviços existentes, portas, volumes, atualizações e capacidade.
+O host escolhido para a aplicação é 192.168.17.205. O papel de .151 como controlador de domínio está confirmado pelo responsável e deixa de ser uma questão em aberto. A preparação de IIS, PHP, MySQL e ficheiros privados será feita no servidor .205, após inventariar serviços existentes, portas, volumes, atualizações e capacidade.
 
 | Componente | Localização e responsabilidade |
 | --- | --- |
-| WordPress, PHP, IIS, MySQL e documentos do portal | Servidor 192.168.17.204, em WORKGROUP. |
+| WordPress, PHP, IIS, MySQL e documentos do portal | Servidor 192.168.17.205, em WORKGROUP. |
 | Active Directory e DNS | Servidor 192.168.17.151, no domínio arn.local. |
 | Autenticação dos funcionários | Google Workspace por OIDC. |
 | Autorizações funcionais | WordPress e plugin institucional, conforme função, unidade e objeto. |
 
-Estar na rede ARN permite comunicação IP. A associação ao domínio Windows é uma opção de gestão distinta. A arquitetura proposta usa identidade própria do Application Pool, base de dados local e autenticação Google por HTTPS, pelo que não exige associar .204 a arn.local. A Microsoft documenta identidades de pool sem necessidade de criar contas de domínio, e o fluxo Google é definido entre browser, aplicação e serviço de identidade. [W17] [W5]
+Estar na rede ARN permite comunicação IP. A associação ao domínio Windows é uma opção de gestão distinta. A arquitetura proposta usa identidade própria do Application Pool, base de dados local e autenticação Google por HTTPS, pelo que não exige associar .205 a arn.local. A Microsoft documenta identidades de pool sem necessidade de criar contas de domínio, e o fluxo Google é definido entre browser, aplicação e serviço de identidade. [W17] [W5]
 
-A separação entre o portal e o controlador segue a orientação Microsoft de limitar software e administração nos controladores de domínio. Uma adesão futura de .204 a arn.local exigirá um motivo operacional e decisão própria. Não é pré-requisito desta entrega. [W19]
+A separação entre o portal e o controlador segue a orientação Microsoft de limitar software e administração nos controladores de domínio. Uma adesão futura de .205 a arn.local exigirá um motivo operacional e decisão própria. Não é pré-requisito desta entrega. [W19]
 
 ### 3.7 Configuração proposta para IIS e serviços
 
-Criar um site IIS e um Application Pool exclusivos do portal em .204. Usar ApplicationPoolIdentity e conceder ACL NTFS à identidade local IIS AppPool\ARNPortal, se ARNPortal for o nome aprovado para o pool. O nome é uma proposta de configuração. As identidades de pool permitem separar o acesso de cada aplicação aos ficheiros sem criar uma conta de domínio. [W17]
+Criar um site IIS e um Application Pool exclusivos do portal em .205. Usar ApplicationPoolIdentity e conceder ACL NTFS à identidade local IIS AppPool\ARNPortal, se ARNPortal for o nome aprovado para o pool. O nome é uma proposta de configuração. As identidades de pool permitem separar o acesso de cada aplicação aos ficheiros sem criar uma conta de domínio. [W17]
 
 Definir contas administrativas locais nominativas para os operadores autorizados e identidades restritas para os serviços e tarefas. Gerir credenciais e recuperação pelo procedimento institucional. As contas de administração do Windows são distintas das contas Google dos funcionários e das funções de gestão do CMS.
 
@@ -231,19 +233,19 @@ O Application Pool limita o processo e os acessos ao sistema de ficheiros. As pe
 | --- | --- |
 | arn.local | Domínio Active Directory existente, com controlador em 192.168.17.151. |
 | Google Workspace institucional | Autenticação dos funcionários, conforme DEC-04. |
-| intranet.arn.gw | Nome canónico proposto para o portal, a resolver internamente para 192.168.17.204. Precisa de validação e configuração. |
-| 192.168.17.204 | IP escolhido para o servidor do portal em WORKGROUP. |
+| intranet.arn.gw | Nome canónico proposto para o portal, a resolver internamente para 192.168.17.205. Precisa de validação e configuração. |
+| 192.168.17.205 | IP escolhido para o servidor do portal em WORKGROUP. |
 | 192.168.17.151 | DNS institucional usado pelo servidor do portal e controlador de domínio. |
 
 As regras Google para aplicações web exigem HTTPS, host admissível e sufixo público válido. O callback de produção não deve usar o IP privado nem um nome terminado em .local. A proposta intranet.arn.gw permite manter arn.local para AD e utilizar um nome adequado ao login Google. [W5]
 
-O nome de produção proposto deve resolver para 192.168.17.204 através do DNS usado na rede ARN e na VPN. O nome e o endereço de homologação serão próprios desse ambiente. O caminho exato do callback será o fornecido pelo plugin homologado, não um caminho inventado nesta fase. O browser regressa ao portal pela rede ou VPN. O servidor efetua a troca de código com o Google através de ligação de saída.
+O nome de produção proposto deve resolver para 192.168.17.205 através do DNS usado na rede ARN e na VPN. O nome e o endereço de homologação serão próprios desse ambiente. O caminho exato do callback será o fornecido pelo plugin homologado, não um caminho inventado nesta fase. O browser regressa ao portal pela rede ou VPN. O servidor efetua a troca de código com o Google através de ligação de saída.
 
-A alteração DNS deve limitar-se ao nome necessário e respeitar as zonas atuais. No DNS institucional .151, se não existir configuração equivalente, avaliar uma zona interna intranet.arn.gw com registo A na raiz apontado para .204. A DCSI cria e gere esse registo, sem depender do registo dinâmico do servidor WORKGROUP no AD. Evitar criar uma zona arn.gw incompleta que oculte os registos públicos utilizados pelo correio e pelos restantes serviços. A documentação Microsoft descreve zonas e resolução diferenciada por contexto. [W20]
+A alteração DNS deve limitar-se ao nome necessário e respeitar as zonas atuais. No DNS institucional .151, se não existir configuração equivalente, avaliar uma zona interna intranet.arn.gw com registo A na raiz apontado para .205. A DCSI cria e gere esse registo, sem depender do registo dinâmico do servidor WORKGROUP no AD. Evitar criar uma zona arn.gw incompleta que oculte os registos públicos utilizados pelo correio e pelos restantes serviços. A documentação Microsoft descreve zonas e resolução diferenciada por contexto. [W20]
 
 Para HTTPS, a proposta preferencial é certificado público para o nome do portal, com emissão e renovação ACME DNS-01. O desafio usa um registo TXT público e funciona sem expor o servidor web à Internet. A emissão depende de controlo autorizado do DNS e de um procedimento de renovação e instalação no IIS. [W21]
 
-Como alternativa, usar PKI interna se a ARN assegurar confiança na cadeia do certificado em todos os dispositivos autorizados, incluindo os que entram pela VPN. GPO de domínio pode apoiar equipamentos associados e abrangidos pela política. Para .204 e outros equipamentos fora do domínio, definir instalação e renovação explícitas da confiança e dos certificados nos repositórios apropriados. Estabelecer VPN não instala automaticamente essa confiança. [W22] [W28]
+Como alternativa, usar PKI interna se a ARN assegurar confiança na cadeia do certificado em todos os dispositivos autorizados, incluindo os que entram pela VPN. GPO de domínio pode apoiar equipamentos associados e abrangidos pela política. Para .205 e outros equipamentos fora do domínio, definir instalação e renovação explícitas da confiança e dos certificados nos repositórios apropriados. Estabelecer VPN não instala automaticamente essa confiança. [W22] [W28]
 
 Nas chamadas HTTPS originadas por WordPress/PHP, validar a cadeia no cliente HTTP utilizado. O WordPress admite um ficheiro próprio de autoridades de certificação. A homologação deve testar estes pedidos, além do browser, mantendo ativa a verificação TLS. [W29]
 
@@ -251,16 +253,16 @@ O domínio AD e as OUs não alteram a opção Google Workspace. Autenticação A
 
 ### 3.9 Fluxos de rede e firewall
 
-As regras serão aplicadas no Windows Firewall de .204 e nos equipamentos competentes, preservando as funções AD DS, DNS e VPN existentes. Identificar o perfil de rede efetivamente ativo em .204 e aplicar regras restritas nesse perfil. Não pressupor que um servidor em WORKGROUP recebe o perfil ou as GPO do domínio. [W26]
+As regras serão aplicadas no Windows Firewall de .205 e nos equipamentos competentes, preservando as funções AD DS, DNS e VPN existentes. Identificar o perfil de rede efetivamente ativo em .205 e aplicar regras restritas nesse perfil. Não pressupor que um servidor em WORKGROUP recebe o perfil ou as GPO do domínio. [W26]
 
 | Fluxo | Política proposta |
 | --- | --- |
 | Clientes ARN para o portal | TCP 443, a partir das redes internas autorizadas. A rede observada é 192.168.17.0/24. |
 | Clientes VPN para o portal | TCP 443, a partir da sub-rede ou origem efetiva da VPN, depois de verificada. Não presumir que pertence ao mesmo /24. |
 | HTTP para o portal | TCP 80 apenas para redirecionamento interno, se necessário. ACME DNS-01 não exige abertura pública desta porta. |
-| PHP para MySQL no mesmo servidor .204 | Ligação por loopback, com MySQL sem escuta na LAN. Sem publicação da porta 3306. |
+| PHP para MySQL no mesmo servidor .205 | Ligação por loopback, com MySQL sem escuta na LAN. Sem publicação da porta 3306. |
 | Administração Windows | RDP apenas a partir de origens e contas administrativas autorizadas pela DCSI. |
-| Resolução DNS | Consultar o DNS institucional .151 a partir de .204 e dos clientes autorizados, por UDP/TCP 53. Preservar a resolução dos nomes externos necessários. |
+| Resolução DNS | Consultar o DNS institucional .151 a partir de .205 e dos clientes autorizados, por UDP/TCP 53. Preservar a resolução dos nomes externos necessários. |
 | Saída para Google | HTTPS dos browsers e do servidor para os serviços necessários ao OIDC. Considerar proxies, validação de certificados e sincronização de hora. |
 | Certificados e atualizações | Saída estritamente necessária pelos mecanismos aprovados de emissão, renovação e distribuição. |
 | Internet para o portal | Sem publicação ou encaminhamento público para o IIS, a base de dados ou o RDP. |
@@ -372,6 +374,23 @@ Todas estas audiências são internas. “Publicado” significa disponível aos
 
 A autorização deve ser aplicada nas páginas, consultas à base de dados, APIs, pesquisa, exportações, contagens, notificações e ficheiros. Ocultar um botão ou filtrar apenas o menu não cumpre este requisito.
 
+<a id="administradores-iniciais"></a>
+### 5.4 Contas administrativas iniciais
+
+O responsável indicou as seguintes contas institucionais para a administração inicial da plataforma:
+
+| Conta Google Workspace | Função indicada | Estado |
+| --- | --- | --- |
+| ferreira.atchutchi@arn.gw | Administração da plataforma | Designada para a configuração inicial. Ativação por executar. |
+| clayton.correia@arn.gw | Administração da plataforma | Designada para a configuração inicial. Ativação por executar. |
+| admin@arn.gw | Administração da plataforma | Designada para a configuração inicial. Ativação por executar. |
+
+Google Workspace fornece a identidade. O WordPress e o plugin institucional atribuem os perfis e capabilities locais, mantendo a distinção entre administração de acessos e administração técnica da secção 5.2. O domínio arn.gw, o nome do email ou um privilégio na consola Google não concedem automaticamente privilégios no portal. [W3] [W5]
+
+A configuração inicial deve confirmar a identidade Google que autentica com cada conta indicada e associá-la ao registo local autorizado. O vínculo segue a validação do emissor e do identificador estável sub da secção 7.2. Conferir a conta efetiva de autenticação quando o endereço indicado funcionar como alias, sem atribuir privilégios apenas por coincidência de email. As atribuições, alterações e revogações ficam registadas em auditoria.
+
+Estas contas identificam os administradores iniciais do portal. As competências efetivas e a sua ativação são preparadas em F0-04, F1-02 e F1-03. A designação de operadores Windows, colaboradores GitHub e equipa editorial segue os respetivos processos já documentados.
+
 <a id="paginas"></a>
 ## 6. Estrutura de páginas e gestão pelo CMS
 
@@ -435,7 +454,7 @@ O endereço de retorno OIDC precisa de estar acessível ao browser na rede inter
 
 ### 7.2 Requisitos da integração Google
 
-Usar Authorization Code Flow, endereço HTTPS de retorno registado exatamente e cliente OAuth institucional. Validar assinatura, emissor, destinatário, expiração, state e nonce. Validar o domínio institucional pela claim hd e associar a identidade estável por sub. O sufixo do email não substitui estas verificações. Pedir apenas openid, email e profile. [W5]
+Usar Authorization Code Flow, endereço HTTPS de retorno registado exatamente e cliente OAuth institucional. Validar assinatura, emissor, destinatário, expiração, state e nonce. Para a configuração inicial da ARN, validar a claim hd com o valor arn.gw e associar a identidade estável por sub. O sufixo do email não substitui estas verificações. Pedir apenas openid, email e profile. [W5]
 
 O primeiro vínculo a uma conta previamente cadastrada deve ser controlado. Uma mudança de email não deve criar outro funcionário. Uma conta com o mesmo email e identificador Google diferente exige nova validação.
 
@@ -794,11 +813,11 @@ Um teste de restauro precisa de confirmar permissões e acesso a anexos, além d
 
 ### 12.5 Operação específica no Windows
 
-O inventário de .204 deve confirmar os 32 GB reportados, medir RAM disponível, carga de CPU, armazenamento, latência de disco e consumo dos serviços existentes. Confirmar se o host é físico ou virtual e, quando aplicável, os recursos atribuídos. A memória total comunicada não demonstra capacidade livre nem reserva exclusiva para o portal.
+O inventário de .205 deve confirmar os 32 GB reportados, medir RAM disponível, carga de CPU, armazenamento, latência de disco e consumo dos serviços existentes. Confirmar se o host é físico ou virtual e, quando aplicável, os recursos atribuídos. A memória total comunicada não demonstra capacidade livre nem reserva exclusiva para o portal.
 
 Dimensionar WordPress, processos PHP, MySQL, documentos e crescimento a partir dessa medição. Definir limites de memória e concorrência compatíveis com as outras aplicações do servidor. Homologar com volume e utilização representativos antes de fixar os parâmetros de produção.
 
-Como .204 permanece em WORKGROUP, a DCSI documenta e aplica a configuração local de contas, atualizações, proteção do sistema, firewall e sincronização de hora. A gestão não depende de GPO de arn.local nem de uma conta de computador nesse domínio. Validar uma fonte de hora autorizada para suportar TLS, expiração dos tokens e auditoria. A hierarquia temporal do AD não é aplicada automaticamente a este host. [W26] [W27]
+Como .205 permanece em WORKGROUP, a DCSI documenta e aplica a configuração local de contas, atualizações, proteção do sistema, firewall e sincronização de hora. A gestão não depende de GPO de arn.local nem de uma conta de computador nesse domínio. Validar uma fonte de hora autorizada para suportar TLS, expiração dos tokens e auditoria. A hierarquia temporal do AD não é aplicada automaticamente a este host. [W26] [W27]
 
 Configurar tarefas agendadas para executar trabalhos pendentes, manutenção e verificações de backup. Usar php.exe ou WP-CLI sob identidade local restrita, registar o resultado e impedir execuções sobrepostas. Quando o agendador assumir integralmente os eventos WordPress, ajustar WP-Cron para evitar duplicação.
 
@@ -806,13 +825,13 @@ Recolher logs IIS, erros PHP, eventos Windows, estado de MySQL e auditoria da ap
 
 Usar homologação Windows/IIS para verificar caminhos, ACL NTFS, web.config, FastCGI, extensões, certificados e downloads. Um teste bem-sucedido num contentor de desenvolvimento não prova funcionamento equivalente no IIS.
 
-O processo inicial de entrega será conduzido pela DCSI através de um pacote de versão revisto e identificado pelo commit. Os runners GitHub alojados externamente não têm, por pressuposto, acesso à rede 192.168.17.0/24. Não criar exposição pública do servidor .204 para permitir implantação. Uma futura automação exige agente ou canal interno aprovado e isolado da infraestrutura de domínio.
+O processo inicial de entrega será conduzido pela DCSI através de um pacote de versão revisto e identificado pelo commit. Os runners GitHub alojados externamente não têm, por pressuposto, acesso à rede 192.168.17.0/24. Não criar exposição pública do servidor .205 para permitir implantação. Uma futura automação exige agente ou canal interno aprovado e isolado da infraestrutura de domínio.
 
 Antes de atualizar, preparar cópias consistentes da base de dados, ficheiros, configuração e ACL necessárias. Separar os dados persistentes do pacote de código. Repor a aplicação e a sua base de dados segundo o procedimento validado.
 
-A identidade do processo IIS tem permissões locais sobre os dados da aplicação. Para backups remotos, definir um agente ou uma identidade técnica autorizada no destino, com credenciais protegidas e acesso limitado às cópias necessárias. Não pressupor permissões de uma conta de computador do domínio para .204. Testar a cópia e o restauro no contexto real dessa identidade.
+A identidade do processo IIS tem permissões locais sobre os dados da aplicação. Para backups remotos, definir um agente ou uma identidade técnica autorizada no destino, com credenciais protegidas e acesso limitado às cópias necessárias. Não pressupor permissões de uma conta de computador do domínio para .205. Testar a cópia e o restauro no contexto real dessa identidade.
 
-A recuperação do portal incide sobre a aplicação em .204 e preserva os outros serviços eventualmente alojados nesse servidor. O controlador e DNS em .151 mantêm o seu procedimento de recuperação independente. Desfazer uma atualização WordPress não inclui reverter o controlador de domínio.
+A recuperação do portal incide sobre a aplicação em .205 e preserva os outros serviços eventualmente alojados nesse servidor. O controlador e DNS em .151 mantêm o seu procedimento de recuperação independente. Desfazer uma atualização WordPress não inclui reverter o controlador de domínio.
 
 Windows Server 2019 encontra-se em suporte alargado, com término previsto em janeiro de 2029. Registar revisão do ciclo de vida e plano de atualização antes desse limite. [W23]
 
@@ -913,14 +932,14 @@ A documentação base fica registada nesta versão. As tarefas de implementaçã
 | --- | --- | --- | --- | --- | --- |
 | F0-01 | Validar organograma, nomes, tipos e responsáveis | RH + coordenação | PEN-01 | Adiada | Estrutura validada para configurar US-A03 e US-ARN-01. |
 | F0-02 | Validar matriz de funções e delegações | Coordenação + DCSI + RH | F0-01 | Adiada | Quem atribui cada função e respetivo âmbito. |
-| F0-03 | Inventariar e validar infraestrutura Windows, rede, DNS, HTTPS e capacidade | DCSI | PEN-03/04, DEC-11/13/14 | Por iniciar | Inventário e desenho de implantação aprovados para .204 em WORKGROUP, com AD/DNS preservados em .151. |
-| F0-04 | Definir cliente Google e procedimento de acessos | DCSI | PEN-02/03/10 | Por iniciar | Plano OIDC, autorização local e saída de funcionários. |
+| F0-03 | Inventariar e validar infraestrutura Windows, rede, DNS, HTTPS e capacidade | DCSI | PEN-03/04, DEC-11/13/14 | Por iniciar | Inventário e desenho de implantação aprovados para .205 em WORKGROUP, com AD/DNS preservados em .151. |
+| F0-04 | Definir cliente Google e procedimento de acessos | DCSI | PEN-02/03/10, DEC-15 | Por iniciar | Plano OIDC, vínculo das contas administrativas da secção 5.4, competências locais e saída de funcionários. |
 | F0-05 | Validar melhorias e repositórios necessários a F1 | RH + editorial + TI | PEN-05/07/08, apenas âmbito F1 | Adiada | Decisões sobre cadastro, documentos, notícias, comunicados e tarefas. Pedidos e férias são detalhados em F2-01. |
 | F0-06 | Detalhar dados, estados, migrações e contratos de F1 | Backend + QA | F0-01/02/05 | Por iniciar | Modelo de F1 e critérios de integridade revisáveis. O detalhe dos modelos administrativos pertence a F2. |
 | F0-07 | Designar executantes, prioridades e datas | Coordenação | PEN-11 | Adiada | Responsável individual e prazo por tarefa selecionada. |
 | F1-01 | Preparar desenvolvimento e homologação Windows/IIS | DCSI + desenvolvimento | F0-03/04, INF-06 | Por iniciar | Instalação reproduzível e homologação representativa de produção com dados de teste. |
 | F1-02 | Homologar OIDC e associação de contas | Backend + DCSI | F1-01, F0-04 | Por iniciar | US-F01 e critérios de identidade aprovados. |
-| F1-03 | Implementar funções, âmbitos e estado de conta | Backend + QA | F0-02/06, F1-02 | Por iniciar | US-A01/02, US-S03 e US-ARN-02/03 verificados. |
+| F1-03 | Implementar funções, âmbitos e estado de conta | Backend + QA | F0-02/06, F1-02, DEC-15 | Por iniciar | US-A01/02, US-S03 e US-ARN-02/03 verificados. Contas administrativas iniciais com permissões atribuídas explicitamente e auditadas. |
 | F1-04 | Implementar auditoria e eventos de notificação | Backend | F1-03 | Por iniciar | US-A04, US-S01 e US-ARN-10 com acesso protegido. |
 | F1-05 | Implementar unidades, cadastro e importação | Backend + RH | F0-01, F1-03/04 | Por iniciar | US-A03, US-RH01 e importação validada. |
 | F1-06 | Criar tema, navegação e componentes CMS | Frontend + editorial | F1-01/03 | Por iniciar | Interface responsiva e componentes editáveis. |
@@ -951,14 +970,14 @@ Cada tarefa deve referenciar os códigos das histórias aplicáveis e atualizar 
 
 As tarefas INF detalham a preparação e verificação da infraestrutura dentro do mesmo projeto. Não constituem instalações já executadas. As pendências institucionais adiadas não impedem documentar ou avaliar tecnicamente este plano.
 
-Executar primeiro a preparação e as verificações INF-04 a INF-08 em homologação Windows/IIS em WORKGROUP, com nome DNS, cliente OAuth, segredos e dados próprios desse ambiente. A instalação de produção em .204 recebe a configuração validada através do procedimento de entrega. A homologação não deve reutilizar o endereço de produção nem interferir nos serviços do domínio.
+Executar primeiro a preparação e as verificações INF-04 a INF-08 em homologação Windows/IIS em WORKGROUP, com nome DNS, cliente OAuth, segredos e dados próprios desse ambiente. A instalação de produção em .205 recebe a configuração validada através do procedimento de entrega. A homologação não deve reutilizar o endereço de produção nem interferir nos serviços do domínio.
 
 | ID | Tarefa técnica | Responsável | Dependência | Estado | Evidência esperada |
 | --- | --- | --- | --- | --- | --- |
-| INF-01 | Inventariar funções, recursos, volumes, serviços, bindings e backups de .204 | DCSI | DEC-11/13/14 | Por iniciar | Dados do anexo conferidos, natureza física ou virtual identificada, capacidade e serviços registados. Sem alterações ao domínio. |
-| INF-02 | Validar coexistência e administração local do portal em .204 | DCSI | INF-01, DEC-14 | Por iniciar | Instalação planeada no host escolhido em WORKGROUP, com gestão local, serviços e portas compatíveis. |
-| INF-03 | Dimensionar aplicação, MySQL, ficheiros e crescimento em .204 | DCSI | INF-02, PEN-04 | Por iniciar | Recursos disponíveis, limites, capacidade de disco e cenário de carga definidos. |
-| INF-04 | Preparar nome interno, DNS e alcance pela VPN | DCSI | INF-02, PEN-03 | Por iniciar | DNS institucional resolve o ambiente em teste. Plano de produção aponta o nome do portal para .204. LAN, VPN e restantes nomes arn.gw preservados. |
+| INF-01 | Inventariar funções, recursos, volumes, serviços, bindings e backups de .205 | DCSI | DEC-11/13/14 | Por iniciar | IP corrigido pelo responsável e dados do anexo conferidos no host. Natureza física ou virtual, capacidade e serviços registados. Sem alterações ao domínio. |
+| INF-02 | Validar coexistência e administração local do portal em .205 | DCSI | INF-01, DEC-14 | Por iniciar | Instalação planeada no host escolhido em WORKGROUP, com gestão local, serviços e portas compatíveis. |
+| INF-03 | Dimensionar aplicação, MySQL, ficheiros e crescimento em .205 | DCSI | INF-02, PEN-04 | Por iniciar | Recursos disponíveis, limites, capacidade de disco e cenário de carga definidos. |
+| INF-04 | Preparar nome interno, DNS e alcance pela VPN | DCSI | INF-02, PEN-03 | Por iniciar | DNS institucional resolve o ambiente em teste. Plano de produção aponta o nome do portal para .205. LAN, VPN e restantes nomes arn.gw preservados. |
 | INF-05 | Obter certificado e preparar confiança e renovação | DCSI | INF-04 | Por iniciar | Certificado e cadeia disponíveis, distribuição de confiança prevista e procedimento de renovação preparado. |
 | INF-06 | Preparar IIS, FastCGI, PHP, MySQL, pastas, ACL e binding HTTPS | DCSI + backend | INF-03/05 | Por iniciar | Serviços mantidos em WORKGROUP, identidade local do pool, base local, armazenamento privado e HTTPS inicialmente verificado no site configurado. |
 | INF-07 | Verificar identidade Google no percurso LAN e VPN | DCSI + backend | INF-06, F1-02 | Por iniciar | Callback real registado, login concluído nas duas redes e nenhuma publicação pública necessária. |
@@ -1051,18 +1070,19 @@ Esta versão foi preparada como documentação. Os cenários desta secção são
 
 | Verificação | Resultado esperado |
 | --- | --- |
-| Alvo e separação de serviços | Produção prevista em .204, com WORKGROUP e coexistência validados. AD DS/DNS permanecem em .151. Homologação usa endereço próprio. |
-| DNS na LAN e VPN | Nome do ambiente em teste resolve para o IP correspondente. O nome de produção proposto aponta para .204. Registos públicos necessários de arn.gw continuam a resolver. |
+| Alvo e separação de serviços | Produção prevista em .205, com WORKGROUP e coexistência validados. AD DS/DNS permanecem em .151. Homologação usa endereço próprio. |
+| DNS na LAN e VPN | Nome do ambiente em teste resolve para o IP correspondente. O nome de produção proposto aponta para .205. Registos públicos necessários de arn.gw continuam a resolver. |
 | HTTPS | Certificado corresponde ao nome e cadeia é confiável. Procedimento de renovação e instalação no binding IIS verificado em homologação. |
 | IIS e WordPress | Permalinks, REST, CMS e callback OIDC funcionam com web.config e FastCGI. |
 | Login Google | Fluxo completo a partir da LAN e da VPN, incluindo regresso do browser ao portal. |
+| Administração inicial | As três contas da secção 5.4 recebem apenas as competências locais atribuídas. Um funcionário comum do mesmo domínio não recebe privilégios administrativos. |
 | Bloqueio de rede | Acesso fora das origens autorizadas recusado. Regras aplicadas ao perfil de firewall efetivamente ativo no servidor WORKGROUP. |
 | MySQL | Serviço acessível pela aplicação local. Porta da base de dados não acessível a clientes da LAN. |
 | Pastas e media | Pool tem apenas os acessos necessários. Ficheiros e derivados privados não existem em caminhos públicos alternativos. |
 | Gestão em WORKGROUP | Contas locais, identidades de serviço, atualizações, certificados e sincronização de hora funcionam sem depender de GPO ou conta de computador de arn.local. |
 | Tarefas agendadas | Trabalhos executam com identidade local adequada, sem sobreposição e com registo de falha. |
 | Desempenho | Comportamento dentro das metas aprovadas, sem degradar funções de infraestrutura existentes. |
-| Recuperação | Backup remoto acessível pela identidade autorizada e dados, configuração e ACL recuperados em ambiente isolado. Outros serviços de .204 e AD DS/DNS em .151 preservados. |
+| Recuperação | Backup remoto acessível pela identidade autorizada e dados, configuração e ACL recuperados em ambiente isolado. Outros serviços de .205 e AD DS/DNS em .151 preservados. |
 
 <a id="pendencias"></a>
 ## 18. Decisões pendentes
@@ -1074,9 +1094,9 @@ Nesta revisão, por indicação do responsável, ficam adiadas as definições i
 | ID | Informação ou decisão necessária | Responsável | Resolver antes de |
 | --- | --- | --- | --- |
 | PEN-01 | Designações completas, departamentos, responsáveis e hierarquia. Confirmar tipo e posição de NIC.gw e DCT-Q&S. Validar órgãos de apoio. | RH + coordenação | Configurar organograma e importar pessoas. |
-| PEN-02 | Confirmar que todos os funcionários autorizados possuem conta Workspace. Definir tratamento de exceções e responsáveis pela identidade. | DCSI + RH | Ativar login. |
+| PEN-02 | As três contas administrativas iniciais estão identificadas na secção 5.4. Confirmar a identidade autenticável de cada uma e que os restantes funcionários autorizados possuem conta Workspace. Definir tratamento de exceções e responsáveis pela identidade. | DCSI + RH | Ativar login. |
 | PEN-03 | Aprovar nome do portal, desenho DNS, estratégia de certificado, origens e rotas VPN e saída Google. Prever callback conforme o plugin escolhido. A comprovação do callback real pertence a F1-02 e INF-07. | DCSI | Preparar DNS e integração OIDC. |
-| PEN-04 | Inventariar recursos, armazenamento e serviços de .204, incluindo natureza física ou virtual e capacidade disponível. Aprovar versões candidatas de IIS, PHP 8.4 x64 NTS e MySQL 8.4 LTS, carga e metas de resposta. A compatibilidade executada pertence a INF-06/F1-01 e a homologação integrada a INF-09. | DCSI | Dimensionar e preparar homologação. |
+| PEN-04 | Inventariar recursos, armazenamento e serviços de .205, incluindo natureza física ou virtual e capacidade disponível. Aprovar versões candidatas de IIS, PHP 8.4 x64 NTS e MySQL 8.4 LTS, carga e metas de resposta. A compatibilidade executada pertence a INF-06/F1-01 e a homologação integrada a INF-09. | DCSI | Dimensionar e preparar homologação. |
 | PEN-05 | Identificar fonte oficial de funcionários, documentos, férias e saldos. Definir atualização e validação inicial. | RH + responsáveis documentais | Cadastro inicial e cada módulo dependente. |
 | PEN-06 | Validar tipos de pedido, regras de férias, etapas, substituições e tratamento dos pedidos do próprio aprovador. | RH + responsáveis institucionais | Desenvolver F2. |
 | PEN-07 | Nomear equipa editorial. Confirmar públicos, comunicados institucionais, rejeição com motivo e regra de aprovação da própria notícia. | Coordenação + editorial | Ativar publicação. |
@@ -1086,7 +1106,7 @@ Nesta revisão, por indicação do responsável, ficam adiadas as definições i
 | PEN-11 | Identificar colaboradores GitHub, revisores, capacidade, prioridades e calendário. | Coordenação | Iniciar tarefas de implementação. |
 | PEN-12 | Decidir se serão usados emails de notificação, em que eventos e por que canal institucional. | DCSI + donos dos processos | Ativar canal adicional. |
 
-PEN-13 resolvida nesta versão: o responsável confirmou .151 como controlador de domínio e escolheu .204 em WORKGROUP para o portal, conforme DEC-11/13/14. O inventário e a validação operacional de .204 permanecem Por iniciar em INF-01/02 e PEN-04. A confirmação da localização não substitui a validação operacional nem significa que a instalação foi executada.
+PEN-13 resolvida nesta versão: o responsável confirmou .151 como controlador de domínio e escolheu .205 em WORKGROUP para o portal, conforme DEC-11/13/14. O inventário e a validação operacional de .205 permanecem Por iniciar em INF-01/02 e PEN-04. A confirmação da localização não substitui a validação operacional nem significa que a instalação foi executada.
 
 <a id="fontes"></a>
 ## 19. Fontes e histórico de decisões
@@ -1101,7 +1121,7 @@ O Plano Estratégico associa a intranet a comunicação interna, partilha de con
 
 As referências internas servem de contexto. O repositório não incorpora os documentos de origem nem transforma propostas institucionais em atos aprovados.
 
-As três capturas iniciais apresentam o ambiente de .151. O responsável confirmou depois a função de controlador de domínio e indicou o servidor .204 para a aplicação. O novo anexo image(3).png é uma captura de um resumo de dados de Panthera-Onca, não uma sessão de inspeção realizada neste trabalho. O inventário da secção 3.5 distingue essas fontes e mantém a verificação de recursos, serviços e configuração como trabalho futuro. Identificadores de produto, MAC e dados sem utilidade para o plano não são reproduzidos.
+As três capturas iniciais apresentam o ambiente de .151. O responsável confirmou depois a função de controlador de domínio e escolheu Panthera-Onca para a aplicação. O anexo image(3).png é uma captura de um resumo desse servidor, não uma sessão de inspeção realizada neste trabalho. O IP de referência foi posteriormente corrigido pelo responsável para .205, que prevalece no planeamento atual. O inventário da secção 3.5 distingue essas fontes e mantém a verificação de recursos, serviços e configuração como trabalho futuro. As três contas administrativas da secção 5.4 também foram indicadas diretamente pelo responsável. Identificadores de produto, MAC e dados sem utilidade para o plano não são reproduzidos.
 
 ### 19.2 Referências técnicas
 
@@ -1147,11 +1167,13 @@ Referências consultadas em 8 de outubro de 2026. Confirmar versões e compatibi
 | 2026-10-08 | Catálogo com DRE, DRAJDC, DMAO, DF, DRH, DCSI, DREC, NIC.gw e DCT-Q&S | Confirmado pelo responsável do projeto. |
 | 2026-10-08 | Aprovação de notícias por equipa editorial designada | Confirmado nas perguntas de definição. |
 | 2026-10-08 | Arquitetura, 46 histórias consolidadas, 12 complementos e backlog inicial | Documentado para orientar desenvolvimento e validação funcional. |
-| 2026-10-08 | Alvo inicial .151 e ambiente arn.local na versão 0.2 | Localização da aplicação substituída pela escolha de .204 na versão 0.3. .151 permanece como AD DS/DNS. |
+| 2026-10-08 | Alvo inicial .151 e ambiente arn.local na versão 0.2 | A aplicação passou para Panthera-Onca na versão 0.3. .151 permanece como AD DS/DNS. O IP atual do plano está em DEC-11. |
 | 2026-10-08 | IIS, PHP FastCGI e MySQL 8.4 LTS | Proposta técnica atualizada para Windows Server 2019. Substitui a referência inicial a Linux/Nginx e MariaDB. |
-| 2026-10-08 | DNS interno, HTTPS, pastas Windows, operação e tarefas INF | Planeamento introduzido na versão 0.2 e ajustado a .204/WORKGROUP na versão 0.3. Execução por iniciar. |
-| 2026-10-08 | .151 confirmado como controlador de arn.local e .204 escolhido para o portal | Decisão do responsável. PEN-13 resolvida quanto à identificação e localização. |
+| 2026-10-08 | DNS interno, HTTPS, pastas Windows, operação e tarefas INF | Planeamento introduzido na versão 0.2, adaptado ao WORKGROUP na versão 0.3 e ao IP corrigido na versão 0.4. Execução por iniciar. |
+| 2026-10-08 | .151 confirmado como controlador de arn.local e Panthera-Onca escolhido para o portal | Decisão do responsável. PEN-13 resolvida quanto à identificação e localização. |
 | 2026-10-08 | Servidor Panthera-Onca em WORKGROUP, com 32 GB reportados | Dados comunicados no novo anexo. Inventário e coexistência pendentes, sem exigir adesão ao domínio. |
+| 2026-10-08 | IP de referência corrigido de 192.168.17.204 para 192.168.17.205 na versão 0.4 | Indicação direta do responsável. Arquitetura, DNS, operação e tarefas passam a usar .205. A configuração do servidor não foi alterada nesta entrega documental. |
+| 2026-10-08 | Google Workspace já utilizado pela ARN e três contas administrativas indicadas | Registadas na secção 5.4. Perfis locais e ativação serão executados na implementação. |
 | 2026-10-08 | Definições institucionais, colaboradores e calendário | Adiadas por indicação do responsável nesta revisão. |
 
-O próximo trabalho técnico é inventariar os recursos e serviços de .204 e validar a coexistência e gestão local, conforme INF-01/02. A localização está escolhida, com aplicação em WORKGROUP e AD DS/DNS separados em .151. As definições institucionais ficam para depois. A instalação e configuração permanecem reservadas para a etapa de execução.
+O próximo trabalho técnico é inventariar os recursos e serviços de .205 e validar a coexistência e gestão local, conforme INF-01/02. A localização está escolhida, com aplicação em WORKGROUP e AD DS/DNS separados em .151. As definições institucionais ficam para depois. A instalação e configuração permanecem reservadas para a etapa de execução.
