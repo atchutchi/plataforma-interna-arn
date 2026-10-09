@@ -27,7 +27,7 @@ final class LocalFixtureAccessTest extends TestCase {
 	 */
 	protected function setUp(): void {
 		ArnWordPressDoubles::reset();
-		ArnWordPressDoubles::$users = array(
+		ArnWordPressDoubles::$users    = array(
 			10 => new WP_User( 10, LocalFixtureUser::LOGIN, LocalFixtureUser::EMAIL ),
 			20 => new WP_User( 20, 'utilizador.real', 'pessoa@arn.gw' ),
 		);
@@ -76,11 +76,11 @@ final class LocalFixtureAccessTest extends TestCase {
 	 */
 	public static function disabledEnvironments(): array {
 		return array(
-			'flag retirada'         => array( 'local', false ),
-			'desenvolvimento'       => array( 'development', true ),
-			'base em homologacao'   => array( 'staging', true ),
-			'base em producao'      => array( 'production', true ),
-			'producao sem flag'     => array( 'production', false ),
+			'flag retirada'       => array( 'local', false ),
+			'desenvolvimento'     => array( 'development', true ),
+			'base em homologacao' => array( 'staging', true ),
+			'base em producao'    => array( 'production', true ),
+			'producao sem flag'   => array( 'production', false ),
 		);
 	}
 
@@ -103,7 +103,7 @@ final class LocalFixtureAccessTest extends TestCase {
 	public function testMarkedFixtureCannotEscapeByChangingItsProfile(): void {
 		ArnWordPressDoubles::$users[10] = new WP_User( 10, 'outro.login', 'outro@example.test' );
 		ArnWordPressDoubles::$meta[10]  = array( LocalFixtureUser::META_KEY => '1' );
-		$guard                         = new LocalFixtureAccess( 'production', true );
+		$guard                          = new LocalFixtureAccess( 'production', true );
 
 		self::assertInstanceOf( WP_Error::class, $guard->filterAuthentication( ArnWordPressDoubles::$users[10] ) );
 		self::assertFalse( $guard->filterCurrentUser( 10 ) );
@@ -163,10 +163,10 @@ final class LocalFixtureAccessTest extends TestCase {
 		$guard = new LocalFixtureAccess( 'production', false );
 		$guard->register();
 		$expected = array(
-			'authenticate'                                    => array( 'filterAuthentication', 1 ),
-			'determine_current_user'                           => array( 'filterCurrentUser', 1 ),
-			'allow_password_reset'                             => array( 'filterPasswordReset', 2 ),
-			'wp_is_application_passwords_available_for_user'   => array( 'filterApplicationPasswords', 2 ),
+			'authenticate'           => array( 'filterAuthentication', 1 ),
+			'determine_current_user' => array( 'filterCurrentUser', 1 ),
+			'allow_password_reset'   => array( 'filterPasswordReset', 2 ),
+			'wp_is_application_passwords_available_for_user' => array( 'filterApplicationPasswords', 2 ),
 		);
 
 		foreach ( $expected as $hook => $details ) {

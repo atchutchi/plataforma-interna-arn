@@ -24,14 +24,6 @@ final class PrivatePortalTest extends TestCase {
 	 */
 	protected function setUp(): void {
 		ArnWordPressDoubles::reset();
-		$GLOBALS['wp'] = (object) array( 'query_vars' => array( 'rest_route' => '/wp/v2/posts' ) );
-	}
-
-	/**
-	 * Remove apenas o contexto de rota criado por estes testes.
-	 */
-	protected function tearDown(): void {
-		unset( $GLOBALS['wp'] );
 	}
 
 	/**

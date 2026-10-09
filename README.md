@@ -1325,7 +1325,7 @@ Evidência da revisão de código, em 9 de outubro de 2026:
 | Dependências Node | `npm ci --ignore-scripts --no-audit --no-fund` instalou as dependências do lockfile. Esta instalação não executou os scripts de instalação dos pacotes. |
 | `npm test` | 54 testes aprovados, incluindo bindings LAN/IPv6, isolamento dos projetos, falhas do Docker, seleção do ambiente de testes e execução da ajuda real da CLI wp-env. Os cenários Docker usam respostas controladas. |
 | `npm run lint` e `npm run build` | Aprovados. Abrangem a sintaxe JavaScript e o contrato estrutural da fundação. Não equivalem a PHPCS nem a um teste do editor. |
-| Sintaxe PHP | Os 23 ficheiros PHP do plugin, tema e testes passaram o parser PHP 8.4.25 em WebAssembly, com `TOKEN_PARSE`. |
+| Sintaxe PHP | Os 28 ficheiros PHP do plugin, tema e testes passaram o parser PHP 8.4.25 em WebAssembly, com `TOKEN_PARSE`. |
 | Comportamento PHP | 329 asserções do plugin, 75 do tema e 69 da hierarquia aprovadas em verificações pontuais de revisão. Foram usadas as classes reais e adaptadores WordPress em memória. Estes testes não utilizam PHPUnit nem um WordPress integrado. |
 | Modelo Compose | O Compose oficial v5.6.0, com checksum verificado, normalizou HTTP e MariaDB em `127.0.0.1`. Os overrides de desenvolvimento e testes também foram conferidos, com diretórios Compose distintos. A prova executou apenas `version` e `config`, com configurações e cache isoladas, sem arrancar contentores. |
 | CI no GitHub | Os jobs Node e PHP verificam cada SHA publicado. A execução final e os resultados de PHPUnit e PHPCS ficam associados à PR #2. O resultado de um commit anterior não substitui a verificação das alterações seguintes. |
