@@ -1,0 +1,93 @@
+{
+  "$schema": "https://schemas.wp.org/wp/7.1/theme.json",
+  "version": 3,
+  "settings": {
+    "appearanceTools": true,
+    "layout": {
+      "contentSize": "42rem",
+      "wideSize": "72rem"
+    },
+    "color": {
+      "palette": [
+        {
+          "slug": "base",
+          "name": "Fundo",
+          "color": "#f4f7f8"
+        },
+        {
+          "slug": "surface",
+          "name": "Superfície",
+          "color": "#ffffff"
+        },
+        {
+          "slug": "ink",
+          "name": "Texto",
+          "color": "#1b242c"
+        },
+        {
+          "slug": "primary",
+          "name": "Primária provisória",
+          "color": "#0b3a5b"
+        },
+        {
+          "slug": "accent",
+          "name": "Acento provisório",
+          "color": "#1f6b4a"
+        }
+      ]
+    },
+    "typography": {
+      "fontFamilies": [
+        {
+          "slug": "system",
+          "name": "Sistema",
+          "fontFamily": "\"Segoe UI\", Candara, sans-serif"
+        }
+      ]
+    },
+    "spacing": {
+      "units": ["px", "rem", "%"]
+    },
+    "useRootPaddingAwareAlignments": true
+  },
+  "styles": {
+    "color": {
+      "background": "var(--wp--preset--color--base)",
+      "text": "var(--wp--preset--color--ink)"
+    },
+    "typography": {
+      "fontFamily": "var(--wp--preset--font-family--system)",
+      "fontSize": "1.0625rem",
+      "lineHeight": "1.6"
+    },
+    "elements": {
+      "link": {
+        "color": {
+          "text": "var(--wp--preset--color--primary)"
+        },
+        ":hover": {
+          "color": {
+            "text": "var(--wp--preset--color--accent)"
+          }
+        }
+      },
+      "heading": {
+        "typography": {
+          "lineHeight": "1.25"
+        }
+      }
+    }
+  },
+  "templateParts": [
+    {
+      "name": "header",
+      "title": "Cabeçalho",
+      "area": "header"
+    },
+    {
+      "name": "footer",
+      "title": "Rodapé",
+      "area": "footer"
+    }
+  ]
+}

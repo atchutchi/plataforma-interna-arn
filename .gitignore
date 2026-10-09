@@ -1,0 +1,33 @@
+# Dependências geradas.
+/node_modules/
+/vendor/
+
+# Segredos e overrides locais. Os exemplos versionados ficam de fora desta lista.
+.env
+.env.*
+!.env.example
+auth.json
+*.pem
+*.key
+
+# wp-env e dados locais. O núcleo do WordPress é obtido pelo ambiente.
+.wp-env.override.json
+.wp-env.test.override.json
+/.wp-env/
+/wp-env/
+/wordpress/
+/wp-content/uploads/
+/wp-content/upgrade/
+/wp-content/cache/
+/wp-content/debug.log
+
+# Ferramentas e resultados de teste.
+.phpunit.cache/
+.phpunit.result.cache
+/coverage/
+*.log
+
+# Sistema.
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,26 @@
+{
+  "name": "arn-intranet",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Plataforma interna da ARN. Fundação local F1-01.",
+  "engines": {
+    "node": ">=24.21.0 <25"
+  },
+  "scripts": {
+    "env:start": "wp-env start",
+    "env:stop": "wp-env stop",
+    "env:start:tests": "wp-env start --config=.wp-env.test.json",
+    "env:stop:tests": "wp-env stop --config=.wp-env.test.json",
+    "env:status": "wp-env status",
+    "env:check": "node scripts/check-env.mjs",
+    "build": "node scripts/build.mjs",
+    "lint": "node scripts/lint.mjs",
+    "test": "node --test tests/node/foundation.test.mjs",
+    "test:php": "wp-env --config=.wp-env.test.json run cli --env-cwd=arn-repo vendor/bin/phpunit -c phpunit.xml.dist",
+    "lint:php": "wp-env run cli --env-cwd=arn-repo vendor/bin/phpcs",
+    "composer:install": "wp-env run cli --env-cwd=arn-repo composer install --no-interaction --no-progress --prefer-dist"
+  },
+  "devDependencies": {
+    "@wordpress/env": "11.17.0"
+  }
+}
