@@ -2,9 +2,9 @@
 
 Documento de referência para desenvolver e acompanhar a plataforma interna da Autoridade Reguladora Nacional das TIC da Guiné-Bissau.
 
-Versão da documentação: 0.6. Data: 9 de outubro de 2026. Lista institucional recebida, preparação do desenvolvimento em dois computadores e Panthera-Onca confirmado em 192.168.17.205, como servidor membro de arn.local.
+Versão da documentação: 0.8. Data: 9 de outubro de 2026. O marco local de F1-01 foi iniciado por Albertina4264 e revisto para integração a pedido de Atchutchi na [PR #2](https://github.com/atchutchi/plataforma-interna-arn/pull/2). Panthera-Onca continua em 192.168.17.205, como servidor membro de arn.local, sem instalação nesta entrega.
 
-Estado do projeto: documentação preparada para iniciar o desenvolvimento local. Esta entrega altera apenas o README. O responsável pediu um prompt para começar a implementação no Cursor e trabalhar com um colaborador em outro computador. A secção 16 define esse arranque. Não existem ainda funcionalidades, ambientes instalados ou testes de aplicação executados por esta entrega.
+Estado do projeto: a fundação local está em curso. O repositório inclui configuração wp-env, plugin e tema mínimos, scripts e testes das regras de acesso fictício. A revisão da branch `chore/albertina4264-F1-01-fundacao` corrige o arranque dos comandos, o isolamento das portas, o bloqueio da conta fictícia já guardada e a apresentação do aviso local. O registo inicial da colaboradora observou Git 2.55.0 e Node.js 24.21.0 no Windows, sem WSL, Docker, PHP ou Composer. WordPress 7.1.3, PHP 8.4 e MariaDB 11.8 estão fixados para os contentores, cuja execução integrada continua por validar. F1-01 não está concluída: faltam o arranque nos dois PCs e a homologação Windows/IIS. A secção 16.6 distingue as verificações de código dos testes ainda pendentes.
 
 O objetivo é disponibilizar um CMS WordPress privado, organizado pela estrutura da ARN, onde os funcionários consultam informação, colaboram e acompanham os processos autorizados para a sua função.
 
@@ -61,7 +61,7 @@ Os módulos previstos são:
 
 A implementação seguirá as 46 histórias do anexo User Stories Portal Interno Empresa Com Notícias, adaptadas às decisões confirmadas neste documento. As melhorias da secção 10 complementam essas histórias e conservam a rastreabilidade dos códigos originais.
 
-O âmbito desta entrega é a documentação. O arranque local no Cursor, pedido pelo responsável, passa a ser o próximo trabalho de execução e segue a secção 16.6. A configuração institucional do Google Workspace, a importação de dados reais e a instalação na rede ARN continuam sujeitas às dependências das respetivas tarefas.
+O arranque local segue a secção 16.6. A configuração institucional do Google Workspace, a importação de dados reais e a instalação na rede ARN continuam sujeitas às dependências das respetivas tarefas.
 
 <a id="decisoes"></a>
 ## 2. Decisões confirmadas e propostas
@@ -939,7 +939,7 @@ F3 admite integração com sistemas institucionais, grupos transversais, automa�
 <a id="codigo"></a>
 ## 14. Organização futura do código
 
-A tabela seguinte descreve a organização prevista. No momento desta revisão, apenas o README existe no repositório. O Cursor deve começar por conferir a árvore atual, para aproveitar ficheiros que os colaboradores tenham entretanto criado.
+A tabela seguinte descreve a organização prevista. A fundação local versiona o plugin, o tema, a configuração wp-env e as ferramentas indicadas abaixo. Já existem `src/Autoloader.php`, `src/Access/` com a política de portal privado e o modo fictício local, e `src/Organization/` com o modelo de unidade, a hierarquia sem ciclos e o catálogo documental. Os restantes módulos continuam por criar. O Cursor deve conferir a árvore atual antes de acrescentar ficheiros.
 
 | Caminho previsto | Finalidade |
 | --- | --- |
@@ -1017,11 +1017,11 @@ A documentação base fica registada nesta versão. As tarefas de implementaçã
 | F0-05 | Validar melhorias e repositórios necessários a F1 | RH + editorial + TI | PEN-05/07/08, apenas âmbito F1 | Adiada | Decisões sobre cadastro, documentos, notícias, comunicados e tarefas. Pedidos e férias são detalhados em F2-01. |
 | F0-06 | Detalhar dados, estados, migrações e contratos de F1 | Backend + QA | F0-01/02/05 | Por iniciar | Modelo de F1 e critérios de integridade revisáveis. O detalhe dos modelos administrativos pertence a F2. |
 | F0-07 | Designar executantes, prioridades e datas | Coordenação | PEN-11 | Adiada | Responsável individual e prazo por tarefa selecionada. |
-| F1-01 | Preparar desenvolvimento e homologação Windows/IIS | DCSI + desenvolvimento | Arranque local: secções 16.4 a 16.6. Homologação: F0-03/04, INF-06. | Por iniciar | Primeiro marco: ambiente local reproduzível nos dois PCs. Segundo marco: homologação representativa Windows/IIS. Concluir a tarefa exige ambos, com evidência e dados de teste. |
+| F1-01 | Preparar desenvolvimento e homologação Windows/IIS | Albertina4264 prepara o marco local. Revisão para integração pedida por Atchutchi na PR #2. Homologação: DCSI + desenvolvimento. | Arranque local: secções 16.4 a 16.6. Homologação: F0-03/04, INF-06. | Em curso | Configuração, plugin e tema mínimos versionados e revistos. Corrigidos os comandos wp-env, o isolamento das portas, o acesso à fixture persistida e o aviso do tema. Evidência e limites na secção 16.6 e na PR #2. Faltam executar WordPress/PHP/MariaDB em Docker nos PCs, gerar composer.lock no contentor e homologar Windows/IIS/MySQL 8.4. A integração do código não conclui a tarefa. |
 | F1-02 | Homologar OIDC e associação de contas | Backend + DCSI | F1-01, F0-04 | Por iniciar | US-F01 e critérios de identidade aprovados. |
 | F1-03 | Implementar funções, âmbitos e estado de conta | Backend + QA | F0-02/06, F1-02, DEC-15 | Por iniciar | US-A01/02, US-S03 e US-ARN-02/03 verificados. Contas administrativas iniciais com permissões atribuídas explicitamente e auditadas. |
 | F1-04 | Implementar auditoria e eventos de notificação | Backend | F1-03 | Por iniciar | US-A04, US-S01 e US-ARN-10 com acesso protegido. |
-| F1-05 | Implementar unidades, cadastro e importação | Backend + RH | F0-01, F1-03/04 | Por iniciar | US-A03, US-RH01 e importação validada. |
+| F1-05 | Implementar unidades, cadastro e importação | Backend + RH | F0-01, F1-03/04 | Por iniciar | US-A03, US-RH01 e importação validada. Preparação já feita na fundação: modelo `Organization\Unit` com identificador estável, `UnitHierarchy` que recusa ciclos e identificadores repetidos, e `DocumentaryCatalog` com as 37 entradas da secção 4.1, sem pessoas e sem relações confirmadas. Persistência, cadastro e importação continuam por fazer. |
 | F1-06 | Criar tema, navegação e componentes CMS | Frontend + editorial | F1-01/03 | Por iniciar | Interface responsiva e componentes editáveis. |
 | F1-07 | Implementar diretório e perfil | Frontend + backend + RH | F1-05/06 | Por iniciar | US-F03/10 e US-M01 verificados. |
 | F1-08 | Implementar armazenamento e entrega privada | Backend + DCSI + QA | F0-03/06, F1-03/04 | Por iniciar | US-ARN-05 verificado por URL, API e derivados. |
@@ -1227,7 +1227,7 @@ git push -u origin chore/atchutchi-F1-01-fundacao
 
 Nos seguintes, usar git push na mesma branch. Abrir PR para main e registar o que foi verificado. Push envia commits para o GitHub. Não instala o portal em Panthera-Onca nem transfere a base de dados.
 
-No estado documental atual não existem package.json ou lockfiles. npm ci só passa a funcionar depois de a primeira entrega os criar. A partir desse marco, os dois PCs seguem o mesmo fluxo, sem gerar projetos independentes: [W40]
+Desde o marco local de F1-01 existem `package.json` e `package-lock.json`. Os dois PCs instalam as mesmas versões com npm ci, sem gerar projetos independentes: [W40]
 
 ~~~bash
 nvm install
@@ -1236,12 +1236,12 @@ npm ci
 npm run env:start
 ~~~
 
-env:start será um script criado na primeira entrega. A URL e as portas reais devem ser confirmadas no resultado. Para terminar, usar o script env:stop, preservando os dados locais.
+`npm run env:start` inicia o ambiente e `npm run env:stop` termina-o, preservando os dados locais. A URL e as portas reais confirmam-se no resultado de `npm run env:status` e `npm run env:check`.
 
 <a id="primeira-entrega"></a>
 ### 16.6 Primeira entrega local e divisão do trabalho
 
-O primeiro marco de F1-01 é preparar uma base comum, numa única branch, para evitar que cada computador crie uma estrutura incompatível. Proposta de organização: Atchutchi conduz a fundação e o segundo colaborador revê e repete a instalação após a PR. Os nomes GitHub e a distribuição final ficam registados antes de cada tarefa passar a Em curso.
+O primeiro marco de F1-01 é preparar uma base comum, numa única branch, para evitar que cada computador crie uma estrutura incompatível. A proposta inicial atribuía a condução a Atchutchi. Em 9 de outubro de 2026 só existia `main`, sem outra branch nem pull request, e Albertina4264 iniciou este marco. Atchutchi revê a PR. Não criar uma segunda fundação em paralelo.
 
 | Marco | Entrega | Evidência esperada |
 | --- | --- | --- |
@@ -1249,6 +1249,90 @@ O primeiro marco de F1-01 é preparar uma base comum, numa única branch, para e
 | Repetição no segundo PC | O colaborador atualiza main depois da integração e executa os mesmos comandos. | Ambiente inicia com a mesma versão e sem passos locais ocultos. |
 | Backend | Desenvolvimento das tarefas selecionadas de identidade, autorização e organização, seguindo as dependências. | Regras e testes das histórias correspondentes. |
 | Frontend | Tema, padrões, navegação e componentes com dados fictícios e contratos de acesso definidos. | Edição no CMS, interação, responsividade e acessibilidade verificadas. |
+
+#### Registo do marco local
+
+Executante inicial: Albertina4264. Revisão técnica para integração pedida por Atchutchi na [PR #2](https://github.com/atchutchi/plataforma-interna-arn/pull/2). Branch: `chore/albertina4264-F1-01-fundacao`. Estado: Em curso. F1-01 não fica concluída nesta entrega.
+
+Versões fixadas, ainda sem execução do contentor neste PC:
+
+| Peça | Versão configurada | Observação |
+| --- | --- | --- |
+| Node.js | 24.21.0 | Observada no Windows deste PC. `.nvmrc` repete esta versão. No Ubuntu do outro PC, usar nvm. |
+| @wordpress/env | 11.17.0 | Dependência local, com `package-lock.json`. |
+| WordPress | 7.1.3 | Pacote oficial indicado em `.wp-env.json`. Não chegou a abrir aqui. |
+| PHP | 8.4 | `phpVersion` do wp-env. A imagem exata confirma-se quando o contentor arrancar. |
+| MariaDB | 11.8 | LTS, imagem `mariadb:11.8`. Não substitui a verificação de MySQL 8.4 na homologação. |
+| PHPUnit | 11.5.57 | Declarado em `composer.json`. `composer.lock` ainda não existe. |
+| WPCS | 3.4.1 | Declarado em `composer.json`. O phpcs corre no contentor. |
+
+Comandos da fundação, a partir da raiz:
+
+~~~bash
+nvm install
+nvm use
+npm ci
+npm run env:start
+npm run env:check
+npm run build
+npm run lint
+npm test
+~~~
+
+O ambiente de testes usa outra base e a porta 8890. Não ativa o acesso fictício:
+
+~~~bash
+npm run env:start:tests
+npm run env:check:tests
+npm run composer:install
+npm run test:php
+npm run lint:php
+npm run env:stop:tests
+~~~
+
+`npm run env:stop` para o ambiente de desenvolvimento. Não usar `destroy`, `cleanup` nem `reset` sobre volumes que já tenham dados.
+
+O `@wordpress/env` 11.17.0 ainda cria um segundo ambiente legado, com a mesma configuração, quando `testsEnvironment` não é `false`. As duas configurações desligam essa opção. A documentação mais recente chama a opção de descontinuada; nesta versão instalada o código só a respeita quando o valor é falso. O isolamento dos testes fica em `.wp-env.test.json`.
+
+A configuração Compose produzida diretamente pelo `@wordpress/env` 11.17.0 não limita as portas a localhost. Por isso, os comandos npm passam por `scripts/wp-env.mjs`, que fornece ao Compose um ficheiro temporário com os bindings HTTP e MariaDB em `127.0.0.1`. O mesmo controlo acompanha o arranque, o bootstrap, os comandos PHP e a gestão do ambiente. O ficheiro temporário é removido no fim de cada comando. O mecanismo utiliza `COMPOSE_ENV_FILES`, documentado pelo Docker. [W41]
+
+Antes de arrancar, o script pede ao Compose que interprete uma configuração de prova, sem criar contentores. Se a versão instalada não confirmar ambos os bindings em `127.0.0.1`, o arranque falha. Usar os comandos npm documentados. A execução direta de `wp-env start` não aplica este controlo. Depois de arrancar, `npm run env:check` ou `npm run env:check:tests` inspeciona os contentores do projeto selecionado e reprova qualquer publicação fora de loopback, incluindo um IP concreto da rede local. Também reprova serviços essenciais parados ou respostas incompletas.
+
+As portas HTTP predefinidas são 8888 para desenvolvimento e 8890 para testes. A MariaDB recebe uma porta livre, sempre em loopback. Se houver conflito de HTTP, definir uma porta numérica no ficheiro `.wp-env.override.json` ou `.wp-env.test.override.json` correspondente. O arranque não troca a porta HTTP automaticamente. Não exportar variáveis `WP_ENV_*PORT` nem `COMPOSE_PROJECT_NAME` nesta sessão, pois o script recusa esses valores para preservar os bindings e a separação dos projetos. Manter `testsEnvironment=false` e `phpmyadmin=false` também nos overrides.
+
+A conta local fictícia é `ana.teste`, com email `ana.teste@example.test`, papel `subscriber` e palavra-passe `fixture-local-ana`. O plugin só a cria e permite a sua utilização quando `WP_ENVIRONMENT_TYPE` é `local` e `ARN_ALLOW_FICTIONAL_LOCAL_ACCESS` é o booleano verdadeiro. As novas fixtures recebem o metadado `_arn_intranet_local_fixture=1`. A combinação original de login e email identifica as fixtures legadas. Uma coincidência isolada não transforma outra conta numa fixture. Com o plugin ativo, retirar a flag ou mudar o ambiente bloqueia novos logins, identidades obtidas por cookies, recuperação e application passwords dessa conta. Na primeira tentativa de reutilização de uma sessão, os tokens da fixture são revogados. A conta e a autoria dos conteúdos ficam preservadas.
+
+O ambiente de testes não define essa flag e usa o tipo `development`. As contas da secção 5.4 não são criadas nem promovidas. A palavra-passe predefinida do wp-env, `admin` / `password`, pertence à ferramenta e não é uma credencial Google. O bloqueio implementado nesta fundação abrange a fixture do plugin. A autenticação Google e as permissões gerais do portal pertencem às tarefas seguintes.
+
+No registo inicial da colaboradora, `npm test`, `npm run lint` e `npm run build` foram executados. `npm run env:check` terminou a avisar que o Docker não estava disponível. O arranque original gerou a configuração e parou com `spawn docker ENOENT`, antes de descarregar imagens ou criar contentores. O nome da conta Windows desse PC contém um espaço e entra no `useradd` da imagem. O clone de trabalho deve ficar no Ubuntu, como a secção 16.5 pede. `npm run test:php` e `npm run lint:php` não foram executados nessa entrega. A sessão não era administrador e não instalou WSL nem Docker. A licença institucional do Docker Desktop continua por confirmar.
+
+Registo da colaboradora no segundo avanço, commit `518ad38`, no mesmo dia: autoloader PSR-4 do plugin, portal privado, modelo de unidades e workflow GitHub. `Access\PrivatePortal` redireciona páginas sem sessão para a entrada e exige autenticação na REST e no admin-ajax, exceto o heartbeat. Também desliga feeds e sitemaps, retira links de descoberta e recusa arquivos de autor a visitantes sem sessão. Os arquivos de autor continuam acessíveis a utilizadores autenticados. A regra pura está em `PrivatePortalPolicy`, com testes. O ficheiro `.github/workflows/verificacao.yml` corre Node e PHP em cada push e pull request. Para verificar o PHP no seu PC sem Docker, a colaboradora registou PHP 8.4.25 com Composer temporário, PHPUnit 11.5.57 com 38 testes e 190 asserções aprovados e PHPCS sem erros em 19 ficheiros. A [CI desse commit](https://github.com/atchutchi/plataforma-interna-arn/actions/runs/37949294902) também passou. `vendor/` não é versionado e `composer.lock` continua por gerar no contentor.
+
+#### Revisão para integração na PR #2
+
+O bootstrap passa a executar o binário `bin/wp-env` do pacote instalado. O módulo `lib/cli.js` apenas exporta a CLI e não executava os comandos quando chamado diretamente. Composer, PHPUnit e PHPCS passam a selecionar explicitamente `.wp-env.test.json`. A verificação das portas usa o estado do wp-env e os IDs do respetivo projeto Compose, sem aprovar ou reprovar contentores de outros projetos.
+
+O tema mantém o aviso de desenvolvimento apenas quando o ambiente WordPress é `local`, mesmo que o padrão tenha sido expandido e guardado pelo editor. Os grupos do cabeçalho, rodapé e templates incluem no HTML os estilos declarados nos atributos dos blocos. O CSS do tema fica também disponível no editor.
+
+A revisão incorporou o commit concorrente `518ad38`, preservando os três commits da colaboradora. A guarda REST passa a validar a sessão depois da verificação de cookies e nonce feita pelo core. Um resultado `true` anterior não permite acesso se o utilizador atual tiver sido removido. Pedidos `XMLRPC_REQUEST` recebem 403 no início de `init`, antes do dispatcher, incluindo pingbacks e métodos sem autenticação. A hierarquia passa a recusar uma unidade ativa sob um superior desativado em `fromList`, `add` e `reparent`, preservando o estado quando a operação falha e mantendo as relações inativas para histórico.
+
+Esta proteção PHP não controla ficheiros estáticos servidos diretamente pelo servidor web. A entrega privada de documentos, anexos e derivados continua em F1-08. Os testes de caminhos da política não demonstram proteção dos ficheiros em `uploads`.
+
+Evidência da revisão de código, em 9 de outubro de 2026:
+
+| Verificação | Resultado e alcance |
+| --- | --- |
+| Dependências Node | `npm ci --ignore-scripts --no-audit --no-fund` instalou as dependências do lockfile. Esta instalação não executou os scripts de instalação dos pacotes. |
+| `npm test` | 54 testes aprovados, incluindo bindings LAN/IPv6, isolamento dos projetos, falhas do Docker, seleção do ambiente de testes e execução da ajuda real da CLI wp-env. Os cenários Docker usam respostas controladas. |
+| `npm run lint` e `npm run build` | Aprovados. Abrangem a sintaxe JavaScript e o contrato estrutural da fundação. Não equivalem a PHPCS nem a um teste do editor. |
+| Sintaxe PHP | Os 28 ficheiros PHP do plugin, tema e testes passaram o parser PHP 8.4.25 em WebAssembly, com `TOKEN_PARSE`. |
+| Comportamento PHP | 329 asserções do plugin, 75 do tema e 69 da hierarquia aprovadas em verificações pontuais de revisão. Foram usadas as classes reais e adaptadores WordPress em memória. Estes testes não utilizam PHPUnit nem um WordPress integrado. |
+| Modelo Compose | O Compose oficial v5.6.0, com checksum verificado, normalizou HTTP e MariaDB em `127.0.0.1`. Os overrides de desenvolvimento e testes também foram conferidos, com diretórios Compose distintos. A prova executou apenas `version` e `config`, com configurações e cache isoladas, sem arrancar contentores. |
+| CI no GitHub | Os jobs Node e PHP verificam cada SHA publicado. A execução final e os resultados de PHPUnit e PHPCS ficam associados à PR #2. O resultado de um commit anterior não substitui a verificação das alterações seguintes. |
+
+A suite Node e as verificações PHP em WebAssembly correram em Linux com Node.js 24.19.0. O runtime 24.21.0 disponível nessa sessão não conseguiu executar JavaScript. O requisito do projeto continua a ser Node.js 24.21.0 e não foi reduzido para acomodar o ambiente de revisão. Repetir `npm ci`, os testes e o arranque na versão exigida nos PCs de desenvolvimento.
+
+Ficam pendentes o arranque real de WordPress/PHP/MariaDB, os bindings efetivos confirmados por `env:check` e `env:check:tests`, a geração de `composer.lock` no contentor, a repetição de PHPUnit e PHPCS nesse ambiente, a ativação do tema/plugin, a edição no Gutenberg e a autenticação com cookies reais. A homologação Windows/IIS/MySQL 8.4 também continua pendente. Estes resultados permitem acompanhar o avanço da fundação e não concluem F1-01 nem demonstram que o portal está pronto para utilização.
 
 A fundação deve criar apenas a estrutura usada no primeiro marco, evitando ficheiros vazios para todos os módulos futuros. Deve incluir AGENTS.md curto com as regras de colaboração, comandos realmente disponíveis e referência a este README. O Cursor reconhece esse ficheiro como instrução do projeto. [W31]
 
@@ -1468,7 +1552,7 @@ A lista recebida esclarece parcialmente PEN-01 e PEN-05, e o responsável confir
 | PEN-08 | Aprovar dados partilhados no perfil, tipos e limites de anexos, classificação, conservação e arquivo. | RH + DCSI + responsáveis documentais | Carregar dados reais e documentos. |
 | PEN-09 | Definir backups, retenção, RPO, RTO e responsabilidade por recuperação e incidentes. | DCSI | Disponibilizar F1. |
 | PEN-10 | Definir duração e inatividade de sessão, MFA, encerramento, desativação e eventual recuperação técnica local. | DCSI | Disponibilizar F1. |
-| PEN-11 | Confirmado trabalho de Atchutchi e um colaborador em PCs separados. Registar o utilizador GitHub do colaborador, acesso ao repositório e executante/revisor da tarefa selecionada. Capacidade global e calendário continuam por definir. | Coordenação | Identificar executante antes de cada tarefa. Validar plano global antes de assumir datas de entrega. |
+| PEN-11 | Confirmado trabalho de Atchutchi e Albertina4264 em PCs separados. Albertina4264 executa o marco local de F1-01 e Atchutchi é o revisor previsto. Falta confirmar o acesso de escrita ao repositório e o calendário global. | Coordenação | Identificar executante antes de cada tarefa. Validar plano global antes de assumir datas de entrega. |
 | PEN-12 | Decidir se serão usados emails de notificação, em que eventos e por que canal institucional. | DCSI + donos dos processos | Ativar canal adicional. |
 
 PEN-13 resolvida quanto à identificação e localização: .151 é o controlador de domínio e Panthera-Onca, em .205, é o servidor membro de arn.local escolhido para o portal, conforme DEC-11/13/14. O inventário e a validação operacional de .205 permanecem Por iniciar em INF-01/02 e PEN-04. A confirmação da localização não substitui a validação operacional nem significa que a instalação foi executada.
@@ -1533,6 +1617,7 @@ Referências de infraestrutura consultadas em 8 de outubro de 2026 e de desenvol
 - [W38] [GitHub flow](https://docs.github.com/en/get-started/using-github/github-flow), [convidar colaboradores](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/repository-access-and-collaboration/inviting-collaborators-to-a-personal-repository) e [branches protegidas](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).
 - [W39] [Microsoft, sistemas de ficheiros WSL](https://learn.microsoft.com/en-us/windows/wsl/filesystems) e [GitHub, email de commits](https://docs.github.com/en/account-and-profile/how-tos/email-preferences/setting-your-commit-email-address).
 - [W40] [npm, npm ci](https://docs.npmjs.com/cli/v11/commands/npm-ci/).
+- [W41] [Docker Compose, COMPOSE_ENV_FILES e precedência das variáveis](https://docs.docker.com/compose/how-tos/environment-variables/envvars/#compose_env_files).
 
 ### 19.3 Registo de decisões desta versão
 
@@ -1556,5 +1641,8 @@ Referências de infraestrutura consultadas em 8 de outubro de 2026 e de desenvol
 | 2026-10-09 | Departamentos-ARN.docx, com 37 entradas e 73 nomes | Transcrição pedida pelo responsável, conferida e incluída na secção 4.1. Validações operacionais pendentes na secção 4.6. |
 | 2026-10-09 | Desenvolvimento conjunto em computadores separados | Confirmado pelo responsável. Documentados instalações, Git, revisão, primeiro marco local e prompt para o Cursor. Nenhum ambiente instalado nesta entrega. |
 | 2026-10-09 | Preparação local com WSL 2, Node 24 e wp-env | Proposta comum aos dois PCs. Licença Docker institucional e diferença MariaDB local/MySQL de homologação explicitadas. |
+| 2026-10-09 | Marco local de F1-01 iniciado por Albertina4264 | WordPress 7.1.3, PHP 8.4, MariaDB 11.8 e @wordpress/env 11.17.0 fixados. Plugin e tema mínimos adicionados. WordPress não foi executado neste PC. F1-01 permanece Em curso. |
+| 2026-10-09 | Portal privado, autoloader, modelo de unidades e CI | Guarda inicial de páginas, REST e AJAX, catálogo documental das 37 unidades com relações Documental ou Pendente e verificações GitHub. No commit 518ad38, 38 testes PHP e PHPCS aprovados. Sem alteração à secção 4 nem a decisões institucionais. |
+| 2026-10-09 | Revisão da fundação para integração na PR #2, a pedido de Atchutchi | Preservados os três commits da colaboradora. Corrigidos os comandos wp-env, bindings, fixture persistida, guarda REST após validação do core, entrada XML-RPC, hierarquia de unidades ativas e aviso local. Evidência e limites na secção 16.6. F1-01 permanece Em curso. |
 
-O próximo trabalho de desenvolvimento é preparar os dois PCs e executar o primeiro marco local de F1-01, conforme a secção 16.6 e o prompt da secção 16.7. O inventário de .205 e a validação de coexistência, políticas e acessos administrativos continuam previstos em INF-01/02 para a infraestrutura. O portal ficará em Panthera-Onca, membro de arn.local, com AD DS/DNS em .151. A lista institucional está documentada e as validações remanescentes continuam identificadas. Esta entrega não instalou a aplicação nem alterou servidores ou contas.
+Depois da integração da PR #2, ambos os colaboradores atualizam `main` e repetem o arranque nos respetivos PCs, com WSL 2, Ubuntu 24.04, Node.js 24.21.0 e Docker Desktop licenciado, seguindo a secção 16.6. Falta gerar `composer.lock` no contentor, executar as verificações PHP, confirmar as versões efetivas e os bindings reais em localhost. O inventário de .205 e a validação de coexistência, políticas e acessos administrativos continuam previstos em INF-01/02. O portal ficará em Panthera-Onca, membro de arn.local, com AD DS/DNS em .151. A lista institucional está documentada e as validações remanescentes continuam identificadas. Esta entrega não instalou a aplicação na ARN nem alterou servidores ou contas.

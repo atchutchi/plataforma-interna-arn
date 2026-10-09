@@ -1,0 +1,29 @@
+.arn-skip-link {
+  position: absolute;
+  left: 1rem;
+  top: 0;
+  transform: translateY(-120%);
+  background: #ffffff;
+  color: #0b3a5b;
+  padding: 0.5rem 0.75rem;
+  z-index: 10;
+}
+
+.arn-skip-link:focus {
+  transform: none;
+}
+
+.arn-header .wp-block-site-title a,
+.arn-header .wp-block-site-tagline {
+  color: #ffffff;
+}
+
+.arn-local-notice {
+  border-left: 4px solid #1f6b4a;
+}
+
+@media (max-width: 40rem) {
+  .arn-header {
+    align-items: flex-start;
+  }
+}
