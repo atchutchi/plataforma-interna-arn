@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Carrega o CSS e o comportamento do salto para o conteúdo.
  */
 function arn_intranet_enqueue_assets(): void {
-	$style_path = get_theme_file_path( 'assets/css/theme.css' );
+	$style_path  = get_theme_file_path( 'assets/css/theme.css' );
 	$script_path = get_theme_file_path( 'assets/js/navigation.js' );
 
 	wp_enqueue_style(

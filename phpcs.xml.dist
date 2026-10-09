@@ -15,6 +15,11 @@
 		<exclude name="WordPress.NamingConventions.ValidFunctionName"/>
 	</rule>
 
+	<!-- As mensagens das exceções de domínio vão para logs e testes, não para HTML. Quem as apresentar escapa na saída. -->
+	<rule ref="WordPress.Security.EscapeOutput.ExceptionNotEscaped">
+		<exclude-pattern>*/src/Organization/*</exclude-pattern>
+	</rule>
+
 	<config name="minimum_supported_wp_version" value="7.1"/>
 	<config name="testVersion" value="8.4-"/>
 </ruleset>

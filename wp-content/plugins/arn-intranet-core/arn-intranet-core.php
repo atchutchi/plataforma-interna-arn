@@ -21,13 +21,23 @@ declare(strict_types=1);
 
 use Arn\Intranet\Access\LocalAccessPolicy;
 use Arn\Intranet\Access\LocalFixtureUser;
+use Arn\Intranet\Access\PrivatePortal;
+use Arn\Intranet\Autoloader;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-require_once __DIR__ . '/src/Access/LocalAccessPolicy.php';
-require_once __DIR__ . '/src/Access/LocalFixtureUser.php';
+require_once __DIR__ . '/src/Autoloader.php';
+
+Autoloader::register( __DIR__ . '/src' );
+
+/**
+ * Traduções do plugin. As strings de origem já estão em português de Portugal.
+ */
+function arn_intranet_core_load_textdomain(): void {
+	load_plugin_textdomain( 'arn-intranet-core', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+}
 
 /**
  * Ambiente efetivo. Sem WordPress, a decisão fica fechada.
@@ -102,5 +112,8 @@ function arn_intranet_core_admin_notices(): void {
 	}
 }
 
+add_action( 'init', 'arn_intranet_core_load_textdomain' );
 add_action( 'init', 'arn_intranet_core_maybe_prepare_local_fixture' );
 add_action( 'admin_notices', 'arn_intranet_core_admin_notices' );
+
+PrivatePortal::register();

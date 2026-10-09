@@ -8,9 +8,19 @@ const requiredFiles = [
   'package.json',
   'composer.json',
   'AGENTS.md',
+  '.github/workflows/verificacao.yml',
+  'phpunit.xml.dist',
+  'phpcs.xml.dist',
   'wp-content/plugins/arn-intranet-core/arn-intranet-core.php',
+  'wp-content/plugins/arn-intranet-core/src/Autoloader.php',
   'wp-content/plugins/arn-intranet-core/src/Access/LocalAccessPolicy.php',
   'wp-content/plugins/arn-intranet-core/src/Access/LocalFixtureUser.php',
+  'wp-content/plugins/arn-intranet-core/src/Access/PrivatePortalPolicy.php',
+  'wp-content/plugins/arn-intranet-core/src/Access/PrivatePortal.php',
+  'wp-content/plugins/arn-intranet-core/src/Organization/Unit.php',
+  'wp-content/plugins/arn-intranet-core/src/Organization/UnitHierarchy.php',
+  'wp-content/plugins/arn-intranet-core/src/Organization/DocumentaryCatalog.php',
+  'tests/phpunit/bootstrap.php',
   'wp-content/themes/arn-intranet/style.css',
   'wp-content/themes/arn-intranet/theme.json',
   'wp-content/themes/arn-intranet/functions.php',
@@ -24,11 +34,15 @@ const requiredFiles = [
   'wp-content/themes/arn-intranet/assets/js/navigation.js',
 ];
 
+// Pessoas da secção 4.1. Unidades podem aparecer no catálogo; nomes de pessoas não.
 const forbiddenOutsideReadme = [
   'Herry Mané',
   'Atchutchi Ferreira',
   'Clayton Correia',
   'Lyssarides Pereira',
+  'Frederik Djata',
+  'Edmundo Oliveira',
+  'Nivaldo Pereira',
 ];
 
 function readJson(path) {
@@ -176,6 +190,33 @@ export function checkFoundation(root) {
 
   if (fixture.includes('@arn.gw') || fixture.includes('administrator')) {
     errors.push('A conta fictícia não pode ser institucional nem administradora.');
+  }
+
+  const catalog = readFileSync(
+    join(root, 'wp-content/plugins/arn-intranet-core/src/Organization/DocumentaryCatalog.php'),
+    'utf8'
+  );
+
+  if (/ParentStatus::(Confirmada|Raiz)/.test(catalog)) {
+    errors.push('O catálogo documental não pode declarar relações confirmadas antes da validação de RH.');
+  }
+
+  for (const acronym of ['DSU', 'DSGI', 'DSIC']) {
+    const pattern = new RegExp(`new Unit\\(\\s*'${acronym}',\\s*'${acronym}',\\s*null,`);
+
+    if (!pattern.test(catalog)) {
+      errors.push(`O catálogo não pode inventar a designação de ${acronym}.`);
+    }
+  }
+
+  if (!catalog.includes("'DRE-DGE', 'DGE'") || !catalog.includes("'DREC-DGE', 'DGE'")) {
+    errors.push('As duas unidades DGE precisam de identificadores distintos e da sigla original.');
+  }
+
+  const mainPlugin = plugin;
+
+  if (!mainPlugin.includes('PrivatePortal::register()')) {
+    errors.push('O plugin tem de registar o portal privado.');
   }
 
   const files = [];

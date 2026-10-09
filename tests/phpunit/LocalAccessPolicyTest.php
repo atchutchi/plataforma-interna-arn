@@ -41,12 +41,12 @@ final class LocalAccessPolicyTest extends TestCase {
 	 */
 	public static function fictionalAccessCases(): array {
 		return array(
-			'local autorizado'       => array( 'local', true, true ),
-			'local sem flag'         => array( 'local', false, false ),
-			'desenvolvimento'        => array( 'development', true, false ),
-			'homologacao'            => array( 'staging', true, false ),
-			'producao'               => array( 'production', true, false ),
-			'ambiente desconhecido'  => array( '', true, false ),
+			'local autorizado'      => array( 'local', true, true ),
+			'local sem flag'        => array( 'local', false, false ),
+			'desenvolvimento'       => array( 'development', true, false ),
+			'homologacao'           => array( 'staging', true, false ),
+			'producao'              => array( 'production', true, false ),
+			'ambiente desconhecido' => array( '', true, false ),
 		);
 	}
 
