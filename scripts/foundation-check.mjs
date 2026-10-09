@@ -243,7 +243,8 @@ export function checkFoundation(root) {
     }
 
     const policyFile = rel.endsWith('src/Access/LocalAccessPolicy.php')
-      || rel.endsWith('tests/phpunit/LocalAccessPolicyTest.php');
+      || rel.endsWith('tests/phpunit/LocalAccessPolicyTest.php')
+      || rel.endsWith('tests/phpunit/LocalFixtureAccessTest.php');
 
     if (!policyFile && source.includes('@arn.gw')) {
       errors.push(`${rel} referencia o domínio institucional fora da política de não promoção.`);

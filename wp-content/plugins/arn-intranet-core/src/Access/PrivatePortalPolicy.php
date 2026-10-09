@@ -51,6 +51,15 @@ final class PrivatePortalPolicy {
 	}
 
 	/**
+	 * O portal não recebe pedidos XML-RPC, mesmo com sessão ou para pingbacks.
+	 *
+	 * @param bool $is_xmlrpc_request WordPress identificou a entrada XML-RPC.
+	 */
+	public static function xmlRpcRequestAllowed( bool $is_xmlrpc_request ): bool {
+		return ! $is_xmlrpc_request;
+	}
+
+	/**
 	 * A REST sem sessão fica fechada, exceto os prefixos expressamente listados.
 	 *
 	 * @param string $route Rota REST, por exemplo /wp/v2/users.

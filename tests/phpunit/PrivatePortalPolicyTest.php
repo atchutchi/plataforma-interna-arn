@@ -69,6 +69,14 @@ final class PrivatePortalPolicyTest extends TestCase {
 	}
 
 	/**
+	 * A entrada XML-RPC fica fechada sem impedir os pedidos normais do CMS.
+	 */
+	public function testXmlRpcRequestsAreAlwaysRefused(): void {
+		self::assertFalse( PrivatePortalPolicy::xmlRpcRequestAllowed( true ) );
+		self::assertTrue( PrivatePortalPolicy::xmlRpcRequestAllowed( false ) );
+	}
+
+	/**
 	 * As superfícies públicas desligadas incluem feeds, sitemaps, oEmbed e XML-RPC.
 	 */
 	public function testPublicSurfacesAreDisabled(): void {

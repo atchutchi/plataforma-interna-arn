@@ -23,4 +23,9 @@ final class LocalFixtureUser {
 	public const ROLE = 'subscriber';
 
 	public const PASSWORD = 'fixture-local-ana';
+
+	/**
+	 * Identifica a fixture mesmo que o perfil seja alterado no ambiente local.
+	 */
+	public const META_KEY = '_arn_intranet_local_fixture';
 }

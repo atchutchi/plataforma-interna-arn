@@ -36,6 +36,16 @@ final class HierarchyException extends RuntimeException {
 	}
 
 	/**
+	 * Uma unidade ativa não pode depender de um superior desativado.
+	 *
+	 * @param string $id        Unidade ativa.
+	 * @param string $parent_id Superior desativado.
+	 */
+	public static function inactiveParent( string $id, string $parent_id ): self {
+		return new self( sprintf( 'A unidade ativa %s não pode depender do superior desativado %s.', $id, $parent_id ) );
+	}
+
+	/**
 	 * A relação criaria um ciclo.
 	 *
 	 * @param string[] $path Caminho do ciclo.

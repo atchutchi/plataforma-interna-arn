@@ -20,8 +20,10 @@ final class PrivatePortal {
 	 * Regista os hooks.
 	 */
 	public static function register(): void {
+		add_action( 'init', array( self::class, 'refuseXmlRpcRequest' ), 0 );
 		add_action( 'template_redirect', array( self::class, 'requireSessionForFrontend' ), 0 );
-		add_filter( 'rest_authentication_errors', array( self::class, 'requireSessionForRest' ), 99 );
+		// O core verifica o nonce e pode retirar a identidade na prioridade 100.
+		add_filter( 'rest_authentication_errors', array( self::class, 'requireSessionForRest' ), 101 );
 		add_action( 'admin_init', array( self::class, 'requireSessionForAjax' ), 0 );
 
 		add_filter( 'xmlrpc_enabled', '__return_false' );
@@ -68,7 +70,7 @@ final class PrivatePortal {
 	 * @return WP_Error|null|true
 	 */
 	public static function requireSessionForRest( $result ) {
-		if ( ! empty( $result ) ) {
+		if ( $result instanceof WP_Error ) {
 			return $result;
 		}
 
@@ -94,6 +96,24 @@ final class PrivatePortal {
 			__( 'Esta API exige sessão iniciada.', 'arn-intranet-core' ),
 			array( 'status' => 401 )
 		);
+	}
+
+	/**
+	 * Recusa o pedido XML-RPC antes de o dispatcher e as classes IXR existirem.
+	 * xmlrpc_enabled, por si só, não desativa pingbacks nem métodos públicos.
+	 */
+	public static function refuseXmlRpcRequest(): void {
+		$is_xmlrpc = defined( 'XMLRPC_REQUEST' ) && XMLRPC_REQUEST;
+
+		if ( PrivatePortalPolicy::xmlRpcRequestAllowed( $is_xmlrpc ) ) {
+			return;
+		}
+
+		status_header( 403 );
+		nocache_headers();
+		header( 'Content-Type: text/plain; charset=UTF-8' );
+		echo esc_html__( 'XML-RPC não está disponível neste portal.', 'arn-intranet-core' );
+		exit;
 	}
 
 	/**

@@ -26,7 +26,7 @@ final class UnitHierarchy {
 	 *
 	 * @param Unit[] $units Unidades.
 	 *
-	 * @throws HierarchyException Em identificador repetido, superior desconhecido ou ciclo.
+	 * @throws HierarchyException Em identificador repetido, superior inválido ou ciclo.
 	 */
 	public static function fromList( array $units ): self {
 		$hierarchy = new self();
@@ -40,7 +40,7 @@ final class UnitHierarchy {
 		}
 
 		foreach ( $hierarchy->units as $unit ) {
-			$hierarchy->assertParentExists( $unit );
+			$hierarchy->assertParentIsValid( $unit );
 			$hierarchy->assertNoCycle( $unit->id, $unit->parent_id );
 		}
 
@@ -52,14 +52,14 @@ final class UnitHierarchy {
 	 *
 	 * @param Unit $unit Unidade.
 	 *
-	 * @throws HierarchyException Em identificador repetido, superior desconhecido ou ciclo.
+	 * @throws HierarchyException Em identificador repetido ou superior inválido.
 	 */
 	public function add( Unit $unit ): void {
 		if ( isset( $this->units[ $unit->id ] ) ) {
 			throw HierarchyException::duplicateId( $unit->id );
 		}
 
-		$this->assertParentExists( $unit );
+		$this->assertParentIsValid( $unit );
 		$this->units[ $unit->id ] = $unit;
 	}
 
@@ -70,14 +70,14 @@ final class UnitHierarchy {
 	 * @param string|null  $parent_id Novo superior.
 	 * @param ParentStatus $status    Estado da relação.
 	 *
-	 * @throws HierarchyException Se a unidade ou o superior não existirem, ou se criar ciclo.
+	 * @throws HierarchyException Se a unidade não existir, o superior for inválido ou se criar ciclo.
 	 */
 	public function reparent( string $id, ?string $parent_id, ParentStatus $status ): void {
 		$unit = $this->get( $id );
 
 		$this->assertNoCycle( $id, $parent_id );
 		$updated = $unit->withParent( $parent_id, $status );
-		$this->assertParentExists( $updated );
+		$this->assertParentIsValid( $updated );
 		$this->units[ $id ] = $updated;
 	}
 
@@ -202,15 +202,23 @@ final class UnitHierarchy {
 	}
 
 	/**
-	 * O superior tem de existir.
+	 * O superior tem de existir e permanecer ativo enquanto a subordinada está ativa.
 	 *
 	 * @param Unit $unit Unidade.
 	 *
-	 * @throws HierarchyException Se o superior for desconhecido.
+	 * @throws HierarchyException Se o superior for desconhecido ou estiver inativo para uma unidade ativa.
 	 */
-	private function assertParentExists( Unit $unit ): void {
-		if ( null !== $unit->parent_id && ! isset( $this->units[ $unit->parent_id ] ) ) {
+	private function assertParentIsValid( Unit $unit ): void {
+		if ( null === $unit->parent_id ) {
+			return;
+		}
+
+		if ( ! isset( $this->units[ $unit->parent_id ] ) ) {
 			throw HierarchyException::unknownParent( $unit->id, $unit->parent_id );
+		}
+
+		if ( $unit->active && ! $this->units[ $unit->parent_id ]->active ) {
+			throw HierarchyException::inactiveParent( $unit->id, $unit->parent_id );
 		}
 	}
 

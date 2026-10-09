@@ -11,6 +11,7 @@ Na raiz, com Node.js 24.21.0:
 ```bash
 npm ci
 npm run env:start
+npm run env:check
 npm run env:stop
 npm run build
 npm run lint
@@ -21,13 +22,16 @@ O ambiente de testes é separado e usa `.wp-env.test.json`:
 
 ```bash
 npm run env:start:tests
+npm run env:check:tests
 npm run composer:install
 npm run test:php
 npm run lint:php
 npm run env:stop:tests
 ```
 
-`npm run env:check` confirma se o wp-env está em execução e se as portas ficam só em localhost. O `@wordpress/env` 11.17.0 publica o HTTP e pode publicar a MariaDB em todas as interfaces; o check falha nesse caso e isso não conta como ambiente fechado no PC. As duas configurações desligam `testsEnvironment`, porque esta versão ainda cria o ambiente legado quando a opção não é `false`. O ambiente de testes próprio é `.wp-env.test.json`.
+Usa os scripts npm: `scripts/wp-env.mjs` fornece bindings HTTP e MariaDB em `127.0.0.1` através de `COMPOSE_ENV_FILES`. Antes do arranque, confirma essa capacidade com `docker compose config`, sem criar contentores. Executar `wp-env start` diretamente não aplica o controlo. Não exportes `WP_ENV_*PORT` nem `COMPOSE_PROJECT_NAME`. Se precisares de outra porta HTTP, usa um valor numérico no override JSON correspondente. O arranque não muda a porta HTTP automaticamente.
+
+`npm run env:check` e `npm run env:check:tests` confirmam o estado e os bindings reais do projeto selecionado. Qualquer publicação fora de loopback falha, incluindo IPs específicos da LAN. As duas configurações mantêm `testsEnvironment=false` e `phpmyadmin=false`, também nos overrides. O ambiente de testes próprio é `.wp-env.test.json`.
 
 PHP, Composer, MariaDB e WordPress vêm dos contentores. Não há `mysqlVersion`: a base local configurada é MariaDB 11.8 e não prova compatibilidade com MySQL 8.4. `composer.lock` só deve ser gerado com `npm run composer:install`, dentro do contentor. Sem Docker, PHPUnit e phpcs podem correr com um PHP 8.4 local e `vendor/` não versionado; isso verifica o código, não o ambiente.
 
@@ -39,7 +43,7 @@ O catálogo `Organization\DocumentaryCatalog` transcreve as unidades da secção
 
 ## Limites
 
-Não acedas a Panthera-Onca, ao controlador de `arn.local`, ao DNS, ao Google Workspace nem a produção. Não cries contas a partir da lista da secção 4. As três contas da secção 5.4 não recebem privilégios por email. O acesso fictício `ana.teste` / `fixture-local-ana` só pode existir com `WP_ENVIRONMENT_TYPE=local` e a flag explícita do `.wp-env.json`.
+Não acedas a Panthera-Onca, ao controlador de `arn.local`, ao DNS, ao Google Workspace nem a produção. Não cries contas a partir da lista da secção 4. As três contas da secção 5.4 não recebem privilégios por email. O acesso fictício `ana.teste` / `fixture-local-ana` só é permitido com `WP_ENVIRONMENT_TYPE=local` e a flag explicitamente verdadeira. Uma fixture já guardada também tem de ficar bloqueada quando a condição deixa de se cumprir, preservando contas legítimas e autoria.
 
 F1-01 continua aberta até à homologação Windows/IIS. Não marques a tarefa como concluída só porque a cópia local abre.
 

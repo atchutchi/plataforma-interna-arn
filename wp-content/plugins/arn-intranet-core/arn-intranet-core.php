@@ -20,6 +20,7 @@
 declare(strict_types=1);
 
 use Arn\Intranet\Access\LocalAccessPolicy;
+use Arn\Intranet\Access\LocalFixtureAccess;
 use Arn\Intranet\Access\LocalFixtureUser;
 use Arn\Intranet\Access\PrivatePortal;
 use Arn\Intranet\Autoloader;
@@ -65,11 +66,17 @@ function arn_intranet_core_maybe_prepare_local_fixture(): void {
 		return;
 	}
 
-	if ( ! function_exists( 'username_exists' ) || ! function_exists( 'email_exists' ) || ! function_exists( 'wp_insert_user' ) ) {
+	if ( ! function_exists( 'get_user_by' ) || ! function_exists( 'email_exists' ) || ! function_exists( 'wp_insert_user' ) || ! function_exists( 'update_user_meta' ) ) {
 		return;
 	}
 
-	if ( username_exists( LocalFixtureUser::LOGIN ) || email_exists( LocalFixtureUser::EMAIL ) ) {
+	$existing = get_user_by( 'login', LocalFixtureUser::LOGIN );
+	if ( $existing instanceof WP_User && LocalFixtureAccess::isFixture( $existing ) ) {
+		update_user_meta( $existing->ID, LocalFixtureUser::META_KEY, '1' );
+		return;
+	}
+
+	if ( $existing || email_exists( LocalFixtureUser::EMAIL ) ) {
 		return;
 	}
 
@@ -81,6 +88,7 @@ function arn_intranet_core_maybe_prepare_local_fixture(): void {
 			'display_name' => LocalFixtureUser::DISPLAY_NAME,
 			'role'         => LocalFixtureUser::ROLE,
 			'locale'       => 'pt_PT',
+			'meta_input'   => array( LocalFixtureUser::META_KEY => '1' ),
 		)
 	);
 }
@@ -117,3 +125,8 @@ add_action( 'init', 'arn_intranet_core_maybe_prepare_local_fixture' );
 add_action( 'admin_notices', 'arn_intranet_core_admin_notices' );
 
 PrivatePortal::register();
+
+( new LocalFixtureAccess(
+	arn_intranet_core_environment_type(),
+	arn_intranet_core_fictional_flag()
+) )->register();

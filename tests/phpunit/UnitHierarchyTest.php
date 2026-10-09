@@ -160,6 +160,82 @@ final class UnitHierarchyTest extends TestCase {
 	}
 
 	/**
+	 * Adicionar uma subordinada ativa não pode contornar a desativação do superior.
+	 */
+	public function testAddingActiveChildToInactiveParentLeavesHierarchyUnchanged(): void {
+		$hierarchy = $this->fixture();
+		$hierarchy->deactivate( 'SERV-SOLTO' );
+		$before = $hierarchy->all();
+
+		try {
+			$hierarchy->add( new Unit( 'NOVA', 'N', 'Nova', UnitType::Servico, 'SERV-SOLTO', ParentStatus::Confirmada ) );
+			self::fail( 'Uma unidade ativa não pode depender de um superior desativado.' );
+		} catch ( HierarchyException $exception ) {
+			self::assertStringContainsString( 'SERV-SOLTO', $exception->getMessage() );
+		}
+
+		self::assertSame( $before, $hierarchy->all() );
+		self::assertFalse( $hierarchy->has( 'NOVA' ) );
+	}
+
+	/**
+	 * Mover uma subordinada ativa para um superior desativado preserva a relação anterior.
+	 */
+	public function testReparentingActiveChildToInactiveParentLeavesHierarchyUnchanged(): void {
+		$hierarchy = $this->fixture();
+		$hierarchy->deactivate( 'SERV-SOLTO' );
+		$before = $hierarchy->all();
+
+		try {
+			$hierarchy->reparent( 'DIR-ALFA-DEP1', 'SERV-SOLTO', ParentStatus::Confirmada );
+			self::fail( 'A transferência exige um superior ativo.' );
+		} catch ( HierarchyException $exception ) {
+			self::assertStringContainsString( 'SERV-SOLTO', $exception->getMessage() );
+		}
+
+		self::assertSame( $before, $hierarchy->all() );
+		self::assertSame( 'DIR-ALFA', $hierarchy->get( 'DIR-ALFA-DEP1' )->parent_id );
+	}
+
+	/**
+	 * A lista inicial também recusa relações ativas com superiores desativados, em qualquer ordem.
+	 */
+	public function testInitialListRejectsActiveChildOfInactiveParentInEitherOrder(): void {
+		$parent = new Unit( 'ENCERRADA', 'E', 'Encerrada', UnitType::Outro, null, ParentStatus::Raiz, false );
+		$child  = new Unit( 'ATIVA', 'A', 'Ativa', UnitType::Outro, 'ENCERRADA', ParentStatus::Documental );
+
+		foreach ( array( array( $parent, $child ), array( $child, $parent ) ) as $units ) {
+			try {
+				UnitHierarchy::fromList( $units );
+				self::fail( 'A lista contém um vínculo ativo para um superior desativado.' );
+			} catch ( HierarchyException $exception ) {
+				self::assertStringContainsString( 'ENCERRADA', $exception->getMessage() );
+			}
+		}
+	}
+
+	/**
+	 * Relações entre unidades inativas continuam disponíveis para conservar o histórico.
+	 */
+	public function testInactiveRelationshipsRemainAvailableForHistory(): void {
+		$hierarchy = UnitHierarchy::fromList(
+			array(
+				new Unit( 'ANTIGA-A', 'A', 'Antiga A', UnitType::Outro, null, ParentStatus::Raiz, false ),
+				new Unit( 'ANTIGA-B', 'B', 'Antiga B', UnitType::Outro, null, ParentStatus::Raiz, false ),
+				new Unit( 'SUB-A', 'SA', 'Sub A', UnitType::Outro, 'ANTIGA-A', ParentStatus::Confirmada, false ),
+			)
+		);
+		$hierarchy->add( new Unit( 'SUB-B', 'SB', 'Sub B', UnitType::Outro, 'ANTIGA-A', ParentStatus::Documental, false ) );
+		$hierarchy->reparent( 'SUB-A', 'ANTIGA-B', ParentStatus::Confirmada );
+
+		self::assertSame( 'ANTIGA-B', $hierarchy->get( 'SUB-A' )->parent_id );
+		self::assertSame( 'ANTIGA-A', $hierarchy->get( 'SUB-B' )->parent_id );
+		self::assertFalse( $hierarchy->get( 'SUB-A' )->active );
+		self::assertFalse( $hierarchy->get( 'SUB-B' )->active );
+		self::assertCount( 4, $hierarchy->all() );
+	}
+
+	/**
 	 * Estado e presença de superior têm de ser coerentes.
 	 */
 	public function testParentStatusMustMatchParentPresence(): void {
