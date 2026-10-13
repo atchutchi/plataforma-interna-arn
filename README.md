@@ -1003,6 +1003,8 @@ WordPress core e dependências de terceiros devem ser obtidos por um processo re
 
 O padrão de estrutura do tema segue a documentação WordPress. A divisão interna do plugin é proposta específica deste projeto. [W12]
 
+A preparação de F1-02 acrescenta classes puras em `src/Identity/`, sem ligação a hooks ou alteração das guardas existentes. A integração real, a persistência e o ciclo de sessão ainda não estão implementados.
+
 <a id="tarefas"></a>
 ## 15. Responsabilidades e tarefas de desenvolvimento
 
@@ -1042,7 +1044,7 @@ A documentação base fica registada nesta versão. As tarefas de implementaçã
 | F0-06 | Detalhar dados, estados, migrações e contratos de F1 | Backend + QA | F0-01/02/05 | Por iniciar | Modelo de F1 e critérios de integridade revisáveis. O detalhe dos modelos administrativos pertence a F2. |
 | F0-07 | Designar executantes, prioridades e datas | Coordenação | PEN-11 | Adiada | Responsável individual e prazo por tarefa selecionada. |
 | F1-01 | Preparar desenvolvimento e homologação Windows/IIS | Albertina4264 iniciou. Atchutchi validou localmente e pediu revisão via Codex. Homologação: DCSI + desenvolvimento. | Arranque local: secções 16.4 a 16.6. Homologação: F0-03/04, INF-06. | Em curso | Fundação e lockfile integrados pelas PRs #2 e #3. Atchutchi confirmou localhost:8888/8890, 54 testes Node, 63 testes PHP com 284 asserções, lint/build e PHPCS 28/28. CI da PR #3 aprovada. Falta repetição no segundo PC e homologação Windows/IIS/MySQL 8.4, com servidor fora do domínio. |
-| F1-02 | Homologar OIDC e associação de contas | Backend + DCSI | F1-01, F0-04 | Por iniciar | US-F01 e critérios de identidade aprovados. |
+| F1-02 | Homologar OIDC e associação de contas | Codex a pedido de Atchutchi prepara regras testáveis. Homologação: backend + DCSI. | Preparação isolada autorizada nesta sessão. Activação e homologação continuam dependentes de F1-01 e F0-04. | Em curso | OidcConfiguration, LocalIdentityLink e GoogleAccountPolicy com testes fictícios. Configuração externa, vínculo único por emissor/sub e conta activa autorizada. Sem cliente instalado, callback, persistência ou emissão de sessão. US-F01 ainda não está homologada. Evidência na secção 16.8 e em docs/oidc-f1-02.md. |
 | F1-03 | Implementar funções, âmbitos e estado de conta | Backend + QA | F0-02/06, F1-02, DEC-15 | Por iniciar | US-A01/02, US-S03 e US-ARN-02/03 verificados. Contas administrativas iniciais com permissões atribuídas explicitamente e auditadas. |
 | F1-04 | Implementar auditoria e eventos de notificação | Backend | F1-03 | Por iniciar | US-A04, US-S01 e US-ARN-10 com acesso protegido. |
 | F1-05 | Implementar unidades, cadastro e importação | Backend + RH | F0-01, F1-03/04 | Por iniciar | US-A03, US-RH01 e importação validada. Preparação já feita na fundação: modelo `Organization\Unit` com identificador estável, `UnitHierarchy` que recusa ciclos e identificadores repetidos, e `DocumentaryCatalog` com as 37 entradas da secção 4.1, sem pessoas e sem relações confirmadas. Persistência, cadastro e importação continuam por fazer. |
@@ -1521,6 +1523,28 @@ No fim de cada avanço, informa o resultado, os ficheiros alterados, os comandos
 de verificação e respetivos resultados, a branch, o commit, o resultado do push,
 a PR quando existir e o próximo passo para o outro colaborador.
 ~~~
+
+### 16.8 Continuidade e preparação técnica de F1-02
+
+Executante: Codex a pedido de Atchutchi. Branch `feature/atchutchi-F1-02-oidc`, criada de main após a [PR #4](https://github.com/atchutchi/plataforma-interna-arn/pull/4). A revisão documental 0.9 teve revisão independente e CI Node/PHP verde no SHA `7917561e14c4e46a61c33242cbe985fb92231662`. Merge da PR #4: `67627433d03431be2caa102bd9837033ef07cb39`. [CI documental](https://github.com/atchutchi/plataforma-interna-arn/actions/runs/38425255491). Sem deploy.
+
+A [preparação de F1-02](docs/oidc-f1-02.md) implementa apenas configuração externa e resolução de vínculo explícito em memória. O domínio Workspace, Client ID, Client Secret e callback vêm de configuração protegida. Sem flag activa, a configuração devolve null e não lê segredos. A política recebe claims apenas depois da validação OIDC completa por um futuro cliente mantido. Exige hd exacto, email verificado, emissor/sub correspondentes e um único vínculo local activo e autorizado. Não associa por email, não cria contas e não atribui privilégios. Nenhum hook chama estas classes e não existe login real nesta entrega.
+
+O candidato OpenID Connect Generic Client 3.11.3 foi examinado, sem instalação. A via sem JWKS, a procura nativa por sub e o vínculo opcional por email exigem controlos adicionais antes de adopção. Não foi encontrada validação de nonce nos três ficheiros principais examinados. Os limites da análise e as fontes primárias estão no documento F1-02. O candidato continua sujeito a homologação e não se escreveu protocolo próprio.
+
+| Verificação nesta sessão | Resultado e alcance |
+| --- | --- |
+| Suite original em PHP 8.4.26 portátil | 63 testes, 284 asserções e PHPCS 28/28, antes de acrescentar as classes. |
+| RED antes de implementar | 42 novos cenários falharam por ausência das classes. |
+| PHPUnit após implementar | 105 testes, 353 asserções, 0 falhas. Testes puros, sem Google real ou WordPress integrado. |
+| PHPCS após corrigir apontamentos | 34/34 ficheiros aprovados com o ruleset existente. |
+| npm test | 54 testes aprovados, 0 falhas. Node local 24.19.0. O requisito 24.21.0 continua fixado e é verificado pela CI. |
+| npm run lint e npm run build | Aprovados. O build verifica a estrutura e não compila a interface final. |
+| Lockfiles | composer.json e composer.lock preservados. Dependências instaladas em vendor não versionado. |
+
+F1-02 continua Em curso. Faltam cliente mantido aprovado, validação criptográfica e de state/nonce, adaptador WordPress, vínculo persistente com operação autorizada e auditada, bloqueio de credenciais alternativas, dados Google institucionais, callback aprovado e ensaios LAN/VPN/Windows/IIS. F1-01 continua Em curso. A preparação local não conclui F1-03/04/05 nem autoriza começar F2.
+
+O SHA e a CI finais da preparação ficam associados à PR no GitHub. Próximo passo recomendado: homologar o cliente OIDC e definir o contrato persistente de vínculo, sem inventar credenciais ou competências. Os trabalhos seguintes actualizam este registo com a PR e commit integrados.
 
 <a id="verificacao"></a>
 ## 17. Verificação e critérios de conclusão
