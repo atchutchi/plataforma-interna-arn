@@ -2,9 +2,9 @@
 
 Documento de referência para desenvolver e acompanhar a plataforma interna da Autoridade Reguladora Nacional das TIC da Guiné-Bissau.
 
-Versão da documentação: 0.8. Data: 9 de outubro de 2026. O marco local de F1-01 foi iniciado por Albertina4264 e revisto para integração a pedido de Atchutchi na [PR #2](https://github.com/atchutchi/plataforma-interna-arn/pull/2). Panthera-Onca continua em 192.168.17.205, como servidor membro de arn.local, sem instalação nesta entrega.
+Versão da documentação: 0.9. Data: 13 de outubro de 2026. A fundação de Albertina4264 está integrada pela [PR #2](https://github.com/atchutchi/plataforma-interna-arn/pull/2). O lockfile PHP de Atchutchi está integrado pela [PR #3](https://github.com/atchutchi/plataforma-interna-arn/pull/3), commit `2e743c16013e698535e2748bb79c4aa417c5f2b3`. Panthera-Onca, 192.168.17.205, foi retirado de arn.local e deve permanecer fora do domínio. Não houve instalação nesta sessão.
 
-Estado do projeto: a fundação local está em curso. O repositório inclui configuração wp-env, plugin e tema mínimos, scripts e testes das regras de acesso fictício. A revisão da branch `chore/albertina4264-F1-01-fundacao` corrige o arranque dos comandos, o isolamento das portas, o bloqueio da conta fictícia já guardada e a apresentação do aviso local. O registo inicial da colaboradora observou Git 2.55.0 e Node.js 24.21.0 no Windows, sem WSL, Docker, PHP ou Composer. WordPress 7.1.3, PHP 8.4 e MariaDB 11.8 estão fixados para os contentores, cuja execução integrada continua por validar. F1-01 não está concluída: faltam o arranque nos dois PCs e a homologação Windows/IIS. A secção 16.6 distingue as verificações de código dos testes ainda pendentes.
+Estado do projeto: a fundação local está em curso. Existem wp-env, plugin institucional, tema mínimo, portal privado e catálogo documental de 37 unidades. Atchutchi confirmou WordPress local em http://localhost:8888, testes separados em http://localhost:8890, verificações Node e PHP aprovadas e bindings apenas em 127.0.0.1. A secção 16.6 regista essa evidência como fornecida pelo responsável, distinguindo-a das verificações desta sessão. F1-01 continua Em curso até homologação Windows/IIS/MySQL 8.4. OIDC, funções com âmbito, cadastro persistente, importação e ficheiros privados ainda não estão implementados. GitHub é a fonte de verdade. ChatGPT Work/Codex dá continuidade ao desenvolvimento e Cursor é opcional.
 
 O objetivo é disponibilizar um CMS WordPress privado, organizado pela estrutura da ARN, onde os funcionários consultam informação, colaboram e acompanham os processos autorizados para a sua função.
 
@@ -34,7 +34,7 @@ O objetivo é disponibilizar um CMS WordPress privado, organizado pela estrutura
    - [Instalações nos computadores](#instalacao-pcs)
    - [Preparação e comandos Git](#preparacao-git)
    - [Primeira entrega local](#primeira-entrega)
-   - [Prompt para o Cursor](#prompt-cursor)
+   - [Prompt para ChatGPT Work/Codex](#prompt-codex)
 17. [Verificação e critérios de conclusão](#verificacao)
 18. [Decisões pendentes](#pendencias)
 19. [Fontes e histórico de decisões](#fontes)
@@ -71,7 +71,7 @@ O arranque local segue a secção 16.6. A configuração institucional do Google
 | ID | Tema | Decisão |
 | --- | --- | --- |
 | DEC-01 | Plataforma | WordPress como CMS. |
-| DEC-02 | Entrega atual | Atualizar apenas o README.md. Preparar neste documento o arranque posterior da implementação no Cursor, pedido pelo responsável. |
+| DEC-02 | Entrega actual | Desenvolver código e documentação por tarefas, branches e PRs verificadas através de ChatGPT Work/Codex e GitHub. A decisão documental inicial fica no histórico. Cursor é opcional. Sem deploy nesta sessão. |
 | DEC-03 | Organização | Integrar os funcionários por direção e demais unidades orgânicas. |
 | DEC-04 | Autenticação | Usar as contas institucionais do Google Workspace já utilizado pela ARN, no domínio arn.gw. |
 | DEC-05 | Alojamento | Usar um servidor Windows na infraestrutura interna da ARN. A natureza física ou virtual do novo host será inventariada. |
@@ -80,13 +80,16 @@ O arranque local segue a secção 16.6. A configuração institucional do Google
 | DEC-08 | Notícias | Submissão pelos funcionários e aprovação por equipa editorial designada. |
 | DEC-09 | Catálogo institucional | A lista Departamentos-ARN.docx, recebida em 9 de outubro, detalha o catálogo inicial. Transcrição na secção 4.1 e ambiguidades na secção 4.6. |
 | DEC-10 | Requisitos | Rever as histórias fornecidas e documentar melhorias necessárias. |
-| DEC-11 | Servidor do portal | Preparar a instalação no servidor Panthera-Onca, em 192.168.17.205 e membro do domínio arn.local, conforme a informação mais recente do responsável. Validar configuração, recursos e coexistência antes de instalar. |
+| DEC-11 | Servidor do portal | Panthera-Onca, 192.168.17.205, Windows Server 2019 Standard, versão 1809, build 17763, 64 bits. Fora de arn.local por decisão de 13 de outubro de 2026. Produção nativa com IIS, PHP 8.4 x64 NTS/FastCGI e MySQL 8.4 LTS, após homologação. |
 | DEC-12 | Definições institucionais | A arquitetura está documentada e a nova lista fornece unidades e nomes. Permanecem para validação as lacunas de hierarquia, cargos e identidade, a equipa editorial, a distribuição nominal de tarefas, as fontes operacionais, os circuitos e o calendário. |
 | DEC-13 | Controlador de domínio | O responsável confirmou que 192.168.17.151 é controlador de domínio de arn.local. Mantém as funções AD DS e DNS. |
-| DEC-14 | Associação ao domínio | Panthera-Onca é servidor membro de arn.local, conforme correção do responsável. O controlador de domínio continua em .151. A autenticação do portal mantém Google Workspace. |
+| DEC-14 | Associação ao domínio | Panthera-Onca foi retirado de arn.local e deve permanecer fora do domínio. Não depender de GPO, Kerberos, LDAP, conta de computador ou autenticação AD. .151 mantém AD DS/DNS. DNS institucional apenas se aprovado pela DCSI. Esta decisão substitui a versão 0.5. |
 | DEC-15 | Administração inicial | Registar as três contas administrativas indicadas pelo responsável na secção 5.4, com autenticação Google e atribuição explícita de permissões no portal. |
 | DEC-16 | Lista de departamentos e pessoal | Incluir no README a lista fornecida pelo responsável. Registar a grafia de origem, as faltas de informação e os pontos de validação, sem criar contas ou atribuir cargos por inferência. |
 | DEC-17 | Trabalho conjunto | Atchutchi e um colaborador trabalharão em computadores separados. Usar clones independentes, branches por tarefa, commits por avanço verificável e push da branch de trabalho, com revisão antes de integrar em main. |
+
+| DEC-18 | Desenvolvimento | ChatGPT Work/Codex, GitHub e ambiente local separado. Cursor é opcional e não acrescenta dependências ao código. |
+| DEC-19 | Férias | 22 dias úteis por funcionário e por ano civil, repartíveis por vários pedidos prévios. Aprovação final por RH. Sem cadeia adicional presumida. Regras na secção 11.5. |
 
 DEC-04 atualiza a forma de executar US-F01. A página da ARN disponibiliza a entrada institucional e encaminha a autenticação para o Google. A palavra-passe é introduzida no serviço Google, segundo a política da instituição.
 
@@ -110,7 +113,7 @@ Esta separação permite alterar o design sem perder a estrutura das unidades, o
 ~~~mermaid
 flowchart TD
     Rede["Clientes na rede ARN ou VPN"] -->|"HTTPS"| IIS["IIS 10 em 192.168.17.205"]
-    Rede -->|"Resolução de nomes"| DNS["DNS e AD DS em 192.168.17.151"]
+    Rede -->|"DNS institucional se aprovado"| DNS["DNS e AD DS em 192.168.17.151"]
     IIS --> PHP["PHP x64 NTS por FastCGI"]
     PHP --> Portal["WordPress ARN"]
     Google["Google Workspace"] -->|"Identidade OIDC"| Portal
@@ -121,7 +124,7 @@ flowchart TD
     Core --> Logs["Auditoria"]
 ~~~
 
-A ligação ao Google representa a autenticação dos utilizadores do portal. O servidor 192.168.17.205 é membro de arn.local. O DNS institucional em .151 resolverá o nome interno do portal, e o acesso continua limitado à rede ARN ou VPN. A associação do servidor ao AD não substitui o login Google da aplicação.
+A ligação ao Google representa a autenticação dos utilizadores. Panthera-Onca permanece fora de arn.local. O uso de DNS institucional depende de aprovação da DCSI e não cria dependência de AD. O acesso será limitado à rede ARN ou VPN. A aplicação usa Google Workspace e autorização local WordPress, sem GPO, Kerberos ou LDAP.
 
 ### 3.2 Stack de referência
 
@@ -134,12 +137,12 @@ A ligação ao Google representa a autenticação dos utilizadores do portal. O 
 | Editor | Editor de blocos integrado no WordPress | Edição de conteúdos por utilizadores autorizados. Blocos e opções disponíveis conforme a função. |
 | Componentes dinâmicos | JavaScript e pacotes WordPress | React quando necessário para blocos ou componentes do editor. Sem aplicação frontend autónoma na arquitetura base. |
 | Base de dados | MySQL Community Server 8.4 LTS x64 | Serviço Windows. A matriz MySQL inclui Windows Server 2019. Base própria do portal, acesso local e credenciais restritas. [W14] |
-| Servidor | Windows Server 2019 Standard no host 192.168.17.205, membro de arn.local | Sistema reportado no anexo. IP e associação ao domínio confirmados pelo responsável nas correções posteriores. Inventariar configuração, recursos, atualizações, serviços e coexistência. |
+| Servidor | Windows Server 2019 Standard no host 192.168.17.205, fora de arn.local | Sistema reportado no anexo. IP e associação ao domínio confirmados pelo responsável nas correções posteriores. Inventariar configuração, recursos, atualizações, serviços e coexistência. |
 | Servidor web | IIS 10, CGI/FastCGI e URL Rewrite | Site e Application Pool exclusivos do portal. Regras de encaminhamento em web.config e HTTPS no nome canónico. [W13] [W16] |
 | Identidade | Google Workspace por OpenID Connect | Identidade institucional, com autorização local no portal. |
 | Cliente OIDC | OpenID Connect Generic Client, candidato preferencial | Plugin comunitário de código aberto. Homologar a versão mantida com o WordPress e o PHP escolhidos. [W6] |
 | Ficheiros | Armazenamento privado sob controlo da ARN | Entrega através de autorização no servidor. Abrange anexos, imagens, miniaturas e versões. |
-| Ambiente local | Cursor no Windows, WSL 2 com Ubuntu 24.04 LTS e wp-env com Docker | Percurso comum para os dois PCs. Node.js 24 LTS e Git no Ubuntu. wp-env usa MariaDB, com versão fixada, e PHP 8.4. A homologação valida Windows/IIS e MySQL 8.4. Docker Desktop requer licença adequada à utilização institucional e não será instalado no servidor de produção. [W10] [W31] [W32] [W33] [W34] [W35] |
+| Ambiente local | ChatGPT Work/Codex e GitHub, com ambiente local separado em WSL 2, Ubuntu 24.04 LTS e wp-env com Docker | Percurso comum para os dois PCs. Node.js 24 LTS e Git no Ubuntu. wp-env usa MariaDB, com versão fixada, e PHP 8.4. A homologação valida Windows/IIS e MySQL 8.4. Docker Desktop requer licença adequada à utilização institucional e não será instalado no servidor de produção. [W10] [W31] [W32] [W33] [W34] [W35] |
 | Ferramentas | WP-CLI, Composer e npm | Gestão técnica, dependências PHP e construção de recursos do tema e dos blocos. |
 | Qualidade | WordPress Coding Standards, PHPUnit e testes de navegador | Verificar regras de acesso, estados, integrações e fluxos completos. |
 | Colaboração | GitHub, branches e pull requests | Histórico de alterações e revisão. As tarefas ficam inicialmente registadas neste README. |
@@ -170,18 +173,20 @@ Plugins de pagamento, licenças comerciais e serviços externos adicionais exige
 <a id="infraestrutura-windows"></a>
 ### 3.5 Infraestrutura Windows e rede observada
 
-O responsável confirmou em 8 de outubro de 2026 que .151 é controlador de domínio e indicou Panthera-Onca para alojar o portal. O anexo complementar apresenta um resumo anterior do sistema e dos recursos desse servidor. Nas correções posteriores, o responsável definiu 192.168.17.205 e confirmou a associação do servidor a arn.local. Essas indicações mais recentes prevalecem no planeamento. A configuração efetiva e os restantes dados comunicados serão conferidos no inventário do host. Não foi efetuada inspeção remota.
+O responsável confirmou que .151 mantém AD DS e DNS de arn.local. Em 13 de outubro de 2026 confirmou que Panthera-Onca, .205, foi retirado do domínio e deve permanecer fora dele. Windows Server 2019 Standard, WindowsVersion 1809, build 17763 e arquitectura 64 bits foram comunicados nessa decisão. Hyper-V está instalado. WSL não está instalado e wsl.exe não existe no servidor. Não instalar WSL ou Docker Desktop em .205 para executar a intranet. Não foi feita inspeção remota. Os recursos do anexo anterior continuam sujeitos a inventário.
 
 | Equipamento | Papel definido | Relação com o domínio |
 | --- | --- | --- |
 | 192.168.17.151 | Controlador de domínio e DNS institucional | Controlador de arn.local, confirmado pelo responsável. |
-| 192.168.17.205, Panthera-Onca | Host escolhido para o futuro portal WordPress e a sua base de dados | Servidor membro do domínio arn.local, conforme confirmação do responsável. |
+| 192.168.17.205, Panthera-Onca | Host escolhido para o futuro portal WordPress e a sua base de dados | Servidor fora de arn.local, conforme decisão do responsável em 13 de outubro de 2026. |
 
-Dados comunicados para o servidor do portal, com IP e associação ao domínio atualizados pelo responsável:
+Dados comunicados para o servidor do portal. A decisão de 13 de outubro de 2026 substitui as referências anteriores à pertença ao domínio:
 
 | Elemento | Informação disponível | Tratamento no plano |
 | --- | --- | --- |
-| Sistema operativo | Windows Server 2019 Standard | Base do plano Windows. Confirmar instalação e atualizações. |
+| Sistema operativo | Windows Server 2019 Standard, 1809, build 17763, 64 bits | Informação confirmada pelo responsável. Actualizações e recursos efectivos por inventariar. |
+| Hyper-V | Instalado | Não implica que WSL ou Docker estejam disponíveis. |
+| WSL | Não instalado. wsl.exe ausente | Não instalar WSL ou Docker Desktop para alojar o portal. |
 | Nome do servidor | Panthera-Onca | Referência para inventário e administração. O nome web do portal será próprio. |
 | Fabricante | Hewlett Packard Enterprise | Informação do anexo. Não permite concluir se o sistema apresentado é físico ou virtual. |
 | Natureza do host | Ainda não confirmada para este servidor | Inventariar hardware ou recursos atribuídos, conforme se trate de instalação física ou VM. |
@@ -191,8 +196,8 @@ Dados comunicados para o servidor do portal, com IP e associação ao domínio a
 | Máscara | 255.255.255.0 | Rede local 192.168.17.0/24. |
 | Gateway | 192.168.17.1 | Equipamento de encaminhamento indicado na configuração. |
 | Estabilidade do endereço | Método de atribuição ainda por inventariar em .205 | Validar endereço fixo ou reserva institucional adequada, sem presumir a configuração DHCP deste host. |
-| DNS configurado no adaptador | 192.168.17.151 | Usar o DNS institucional e verificar resolução dos nomes internos, serviços de domínio e nomes externos necessários. |
-| Domínio Windows | arn.local | Servidor membro. Conferir comunicação com o controlador, conta de computador e políticas efetivamente aplicadas. |
+| DNS do servidor | Configuração efectiva por validar pela DCSI | Pode consultar .151 se aprovado. Validar nomes internos e externos sem dependência de serviços AD. |
+| Domínio Windows | Fora de arn.local | Manter fora do domínio. Usar configuração local e identidades de serviço locais autorizadas. |
 | VPN | Acesso por VPN confirmado como requisito | Sub-rede de clientes, rotas, DNS e regras de firewall ainda por inventariar. |
 
 O gateway .1 não define o conjunto de endereços livres. O endereço de rede é 192.168.17.0 e o de broadcast é 192.168.17.255. Qualquer novo endereço deve ser verificado no inventário e nos serviços de atribuição existentes.
@@ -203,20 +208,20 @@ O host escolhido para a aplicação é 192.168.17.205. O papel de .151 como cont
 
 | Componente | Localização e responsabilidade |
 | --- | --- |
-| WordPress, PHP, IIS, MySQL e documentos do portal | Servidor 192.168.17.205, membro de arn.local. |
+| WordPress, PHP, IIS, MySQL e documentos do portal | Servidor 192.168.17.205, fora de arn.local. |
 | Active Directory e DNS | Servidor 192.168.17.151, no domínio arn.local. |
 | Autenticação dos funcionários | Google Workspace por OIDC. |
 | Autorizações funcionais | WordPress e plugin institucional, conforme função, unidade e objeto. |
 
-A associação de .205 a arn.local será considerada na gestão do servidor, nas políticas, nos acessos administrativos e na sincronização de hora. O portal mantém identidade própria do Application Pool, base de dados local e autenticação Google por HTTPS. A identidade virtual do pool continua válida num servidor membro do domínio. As permissões do WordPress são atribuídas na aplicação. [W17] [W5]
+A gestão de .205 usa contas e configurações locais autorizadas. O Application Pool terá identidade local própria e a base de dados ficará no mesmo servidor. As permissões funcionais são do WordPress e do plugin. Configurar explicitamente hora, certificados, firewall, manutenção e recuperação, sem pressupor políticas do domínio. [W17] [W5]
 
-A separação entre o portal em .205 e o controlador em .151 segue a orientação Microsoft de limitar software e administração nos controladores de domínio. A associação de Panthera-Onca a arn.local não altera essa separação de funções. [W19]
+O portal em .205 e o controlador em .151 conservam funções separadas. A aplicação não exige associação ao domínio nem alterações a AD DS. [W19]
 
 ### 3.7 Configuração proposta para IIS e serviços
 
 Criar um site IIS e um Application Pool exclusivos do portal em .205. Usar ApplicationPoolIdentity e conceder ACL NTFS à identidade local IIS AppPool\ARNPortal, se ARNPortal for o nome aprovado para o pool. O nome é uma proposta de configuração. As identidades de pool permitem separar o acesso de cada aplicação aos ficheiros sem criar uma conta de domínio. [W17]
 
-Definir contas administrativas nominativas e grupos de acesso autorizados pela DCSI, incluindo contas de domínio conforme a política institucional, e verificar as permissões efetivas em .205. Manter identidades restritas para os serviços e tarefas e gerir credenciais e recuperação pelo procedimento institucional. As contas de administração do Windows são distintas das contas Google dos funcionários e das funções de gestão do CMS.
+Definir contas administrativas locais nominativas e grupos de acesso aprovados pela DCSI. Usar identidades locais restritas para serviços e tarefas. As contas Windows são distintas das contas Google dos funcionários e das funções de gestão do CMS. Não pressupor autenticação ou contas AD em .205.
 
 Configuração de referência:
 
@@ -241,26 +246,26 @@ O Application Pool limita o processo e os acessos ao sistema de ficheiros. As pe
 | arn.local | Domínio Active Directory existente, com controlador em 192.168.17.151. |
 | Google Workspace institucional | Autenticação dos funcionários, conforme DEC-04. |
 | intranet.arn.gw | Nome canónico proposto para o portal, a resolver internamente para 192.168.17.205. Precisa de validação e configuração. |
-| 192.168.17.205 | IP escolhido para o servidor do portal, membro de arn.local. |
-| 192.168.17.151 | DNS institucional usado pelo servidor do portal e controlador de domínio. |
+| 192.168.17.205 | IP escolhido para o servidor do portal, fora de arn.local. |
+| 192.168.17.151 | Controlador AD DS/DNS. Uso como DNS de .205 sujeito a aprovação da DCSI. |
 
 As regras Google para aplicações web exigem HTTPS, host admissível e sufixo público válido. O callback de produção não deve usar o IP privado nem um nome terminado em .local. A proposta intranet.arn.gw permite manter arn.local para AD e utilizar um nome adequado ao login Google. [W5]
 
 O nome de produção proposto deve resolver para 192.168.17.205 através do DNS usado na rede ARN e na VPN. O nome e o endereço de homologação serão próprios desse ambiente. O caminho exato do callback será o fornecido pelo plugin homologado, não um caminho inventado nesta fase. O browser regressa ao portal pela rede ou VPN. O servidor efetua a troca de código com o Google através de ligação de saída.
 
-A alteração DNS deve limitar-se ao nome necessário e respeitar as zonas atuais. No DNS institucional .151, se não existir configuração equivalente, avaliar uma zona interna intranet.arn.gw com registo A na raiz apontado para .205. A DCSI cria e gere o registo do nome web do portal, verificando-o separadamente do registo do computador no domínio. Evitar criar uma zona arn.gw incompleta que oculte os registos públicos utilizados pelo correio e pelos restantes serviços. A documentação Microsoft descreve zonas e resolução diferenciada por contexto. [W20]
+A alteração DNS deve limitar-se ao nome necessário e respeitar as zonas atuais. No DNS institucional .151, se não existir configuração equivalente, avaliar uma zona interna intranet.arn.gw com registo A na raiz apontado para .205. A DCSI cria e gere o registo do nome web do portal, sem criar conta de computador ou associação de .205 ao domínio. Evitar criar uma zona arn.gw incompleta que oculte os registos públicos utilizados pelo correio e pelos restantes serviços. A documentação Microsoft descreve zonas e resolução diferenciada por contexto. [W20]
 
 Para HTTPS, a proposta preferencial é certificado público para o nome do portal, com emissão e renovação ACME DNS-01. O desafio usa um registo TXT público e funciona sem expor o servidor web à Internet. A emissão depende de controlo autorizado do DNS e de um procedimento de renovação e instalação no IIS. [W21]
 
-Como alternativa, usar PKI interna se a ARN assegurar confiança na cadeia do certificado em todos os dispositivos autorizados, incluindo os que entram pela VPN. Em .205 e nos equipamentos de domínio abrangidos pela política, validar a distribuição de confiança através das GPO aplicáveis. A emissão, instalação e renovação do certificado do site exigem configuração própria, mesmo num servidor membro. Para dispositivos fora do domínio, definir um procedimento de confiança adequado. Estabelecer VPN não instala automaticamente essa confiança. [W22] [W28]
+Como alternativa, usar PKI interna se a ARN assegurar confiança na cadeia em todos os dispositivos autorizados, incluindo VPN. Em .205, instalar e validar explicitamente a confiança local, sem depender de GPO. Nos clientes de domínio, a DCSI pode usar políticas próprias de distribuição. Nos restantes clientes, definir procedimento autorizado. Estabelecer VPN não instala confiança. Emissão, instalação e renovação do certificado do site exigem procedimento próprio. [W22] [W28]
 
 Nas chamadas HTTPS originadas por WordPress/PHP, validar a cadeia no cliente HTTP utilizado. O WordPress admite um ficheiro próprio de autoridades de certificação. A homologação deve testar estes pedidos, além do browser, mantendo ativa a verificação TLS. [W29]
 
-O domínio AD e as OUs não alteram a opção Google Workspace. Autenticação AD, AD FS e sincronização de identidades são decisões futuras distintas, sem dependência automática para o MVP.
+O domínio AD e as OUs não fazem parte da autenticação nem da operação obrigatória da intranet. Qualquer proposta futura de integração AD exige decisão expressa e não altera DEC-14 automaticamente.
 
 ### 3.9 Fluxos de rede e firewall
 
-As regras serão aplicadas no Windows Firewall de .205 e nos equipamentos competentes, preservando as funções AD DS, DNS e VPN existentes. Conferir as GPO aplicáveis e o perfil de rede efetivamente ativo. O perfil Domain depende da associação ao domínio e da deteção do controlador. Validar esse funcionamento e as regras efetivas, mantendo as origens LAN e VPN autorizadas explicitamente delimitadas. [W26]
+As regras serão aplicadas localmente no Windows Firewall de .205 e nos equipamentos competentes, preservando AD DS, DNS e VPN. Confirmar o perfil de rede e as regras locais efectivas sem pressupor perfil Domain ou GPO. Delimitar explicitamente as origens LAN e VPN autorizadas. [W26]
 
 | Fluxo | Política proposta |
 | --- | --- |
@@ -269,8 +274,8 @@ As regras serão aplicadas no Windows Firewall de .205 e nos equipamentos compet
 | HTTP para o portal | TCP 80 apenas para redirecionamento interno, se necessário. ACME DNS-01 não exige abertura pública desta porta. |
 | PHP para MySQL no mesmo servidor .205 | Ligação por loopback, com MySQL sem escuta na LAN. Sem publicação da porta 3306. |
 | Administração Windows | RDP apenas a partir de origens e contas administrativas autorizadas pela DCSI. |
-| Resolução DNS | Consultar o DNS institucional .151 a partir de .205 e dos clientes autorizados, por UDP/TCP 53. Preservar a resolução dos nomes externos necessários. |
-| Comunicações do servidor membro com o domínio | Preservar o tráfego necessário entre .205 e os controladores e serviços AD autorizados para administração Windows, políticas e sincronização de hora. Inventariar destinos e portas conforme os serviços utilizados e a documentação Microsoft. Estas comunicações não ativam login AD no portal. [W30] |
+| Resolução DNS | Consultar o DNS institucional .151, se aprovado pela DCSI, a partir de .205 e dos clientes autorizados, por UDP/TCP 53. Preservar a resolução dos nomes externos necessários. |
+| Dependências AD de .205 | Não exigir GPO, Kerberos, LDAP, conta de computador nem autenticação AD. Apenas DNS institucional se aprovado. Hora e administração locais com procedimento definido pela DCSI. |
 | Saída para Google | HTTPS dos browsers e do servidor para os serviços necessários ao OIDC. Considerar proxies, validação de certificados e sincronização de hora. |
 | Certificados e atualizações | Saída estritamente necessária pelos mecanismos aprovados de emissão, renovação e distribuição. |
 | Internet para o portal | Sem publicação ou encaminhamento público para o IIS, a base de dados ou o RDP. |
@@ -373,7 +378,7 @@ A imagem do Active Directory mostra uma OU ARN com várias OUs filhas. As OUs re
 
 O catálogo documental atual segue a lista da secção 4.1. A designação anterior NIC.gw, a entrada NIC no novo anexo e as OUs com nomes próximos precisam de correspondência validada. As entradas observadas DCT-QOS e DCGT&QoS não serão fundidas automaticamente com DCT-Q&S.
 
-O mapeamento, eventual importação e sincronização com AD ficam para uma fase posterior. Quando necessário, inventariar em leitura, relacionar identificadores das OUs com as unidades do portal, resolver ambiguidades e validar o resultado. A pertença a uma OU não atribui funções WordPress nem substitui a autorização de acesso.
+Uma eventual análise documental de OUs só pode ocorrer numa fase posterior expressamente autorizada. A intranet não depende de importação ou sincronização AD. A pertença a OU não atribui funções WordPress. DEC-14 mantém o servidor fora do domínio.
 
 ### 4.6 Pontos de validação da lista
 
@@ -567,6 +572,9 @@ Desativar XML-RPC e application passwords enquanto não existir uma integração
 | Evento | Tipo de conteúdo arn_evento | Datas, local ou ligação, organizador e audiência. |
 | Tarefa | Tabelas do módulo de tarefas | Responsável, prazo, estado e histórico. |
 | Pedido | Tabelas de pedidos e decisões | Referência, tipo, formulário, etapas e intervenientes. |
+| Pedido de férias | Extensão transaccional de pedidos em F2 | Funcionário, ano de referência, início, fim, dias úteis calculados, estado, submissão, decisão, responsável e data da decisão, observação e histórico. |
+| Direito anual e movimentos de férias | Registo por funcionário e ano civil | Direito padrão 22, dias gozados, futuros aprovados, saldo disponível e movimentos auditados. Aprovação e saldo gravados atomicamente para impedir excesso concorrente. |
+| Calendário RH | Configuração versionada de feriados e dias de trabalho | Feriados oficiais validados por RH. Guardar referência à versão usada no cálculo e no histórico. |
 | Ticket | Tabelas de tickets e mensagens | Solicitante, técnico, respostas e resolução. |
 | Notificação | Tabela por destinatário | Evento de origem, leitura e entrega. |
 | Auditoria | Registo específico com acesso restrito | Ação, interveniente, objeto, resultado e data. |
@@ -675,9 +683,9 @@ F1 corresponde ao núcleo do portal. F2 corresponde aos serviços administrativo
 | Código | História | Critérios de aceitação consolidados | Fase |
 | --- | --- | --- | --- |
 | US-RH01 | Gerir registos de funcionários | Pesquisa e consulta dos dados autorizados. Criação, alteração e desativação conforme a competência atribuída. Operações importantes registadas. Coordenação com contas e vínculos. | F1 |
-| US-RH02 | Processar pedidos de férias | Consulta pedidos, datas e funcionário. Decide quando RH é responsável pela etapa. Comunica a decisão e respeita regras de férias aprovadas. | F2 |
+| US-RH02 | Processar pedidos de férias | RH decide o período com aprovação final, sem cadeia adicional presumida. Direito anual de 22 dias úteis, repartível por vários pedidos prévios. Validar saldo, feriados e sobreposição. Auditar aprovação, rejeição, alteração e cancelamento. | F2 |
 | US-RH03 | Gerir documentos administrativos | Carrega documentos permitidos, organiza categorias e define destinatários. Documentos confidenciais têm acesso restrito, incluindo os binários. | F1 |
-| US-RH04 | Consultar ausências | Mostra ausências aprovadas. Filtra por unidade e período. Protege motivos e documentos confidenciais. | F2 |
+| US-RH04 | Consultar ausências | Calendário colectivo mostra apenas ausências aprovadas, com funcionário, unidade e datas. Filtra por unidade e período. Não expõe motivos nem documentos confidenciais. | F2 |
 
 ### 9.4 Suporte informático
 
@@ -758,7 +766,7 @@ Estas 12 histórias são propostas para validação funcional. Não substituem o
 | US-ARN-04 | Como editor designado, quero aprovar versões identificadas. Bloquear alterações durante análise. Exigir motivo para rejeição. Reapreciar revisões. Manter versão publicada aprovada. Registar aprovador, data e público. Outro editor trata pendências durante ausências. | US-NOT-05 a US-NOT-11, US-NOT-14 | P0, F1 |
 | US-ARN-05 | Como utilizador autorizado, quero proteção efetiva dos ficheiros. Uma URL direta, miniatura, versão anterior ou endpoint de media não contorna a autorização. Ficheiros de rascunhos e revisões mantêm acesso restrito. Validar tipos e limites antes de disponibilizar. | US-F06, US-RH03, US-NOT-02/03/04 | P0, F1 |
 | US-ARN-06 | Como responsável de processo, quero definir etapas e substituições. Cada tipo de pedido tem formulário, circuito e aprovador. Substituição tem âmbito e prazo. Rejeição e devolução exigem motivo. Autoaprovação segue regra expressa. Decisões concorrentes não produzem resultados contraditórios. | US-F08, US-M04, US-RH02 | P1, F2 |
-| US-ARN-07 | Como funcionário, quero gerir o ciclo do pedido de férias. Submeter período, acompanhar, corrigir e pedir retirada ou alteração conforme o estado. Validar calendário, sobreposição e regras RH. Identificar a origem dos saldos. Separar disponibilidade da equipa de motivos confidenciais. | US-F08, US-RH02, US-RH04 | P1, F2 |
+| US-ARN-07 | Como funcionário, quero gerir vários pedidos prévios de férias no ano civil. Direito de 22 dias úteis, sem obrigatoriedade de continuidade. Ver os próprios pedidos, direito anual, dias gozados, dias futuros aprovados e saldo disponível. RH decide dentro da competência. Rejeição ou retirada não consome saldo. Cancelamento futuro aprovado por RH repõe apenas dias não gozados e fica auditado. Calendário colectivo apenas com ausências aprovadas. | US-F08, US-RH02, US-RH04 | P1, F2 |
 | US-ARN-08 | Como responsável, quero manter continuidade das tarefas. Definir responsável principal. Registar mudanças de prazo e atribuição. Reatribuir após transferência ou saída. Comentários e anexos seguem acesso da tarefa. Colaboração entre unidades exige grupo autorizado. | US-F04/05, US-M02/03 | P1, continuidade em F1. Grupos transversais em F3 |
 | US-ARN-09 | Como responsável documental, quero identificar versão, origem e validade. Mostrar proprietário institucional, versão atual e data de revisão. Arquivar versões sem as apresentar como atuais. Definir destinatários individuais quando necessário. Preservar acesso e referência à fonte oficial. | US-F06, US-RH03 | P1, núcleo em F1. Integrações em F3 |
 | US-ARN-10 | Como destinatário, quero receber notificações coerentes. Gerar o aviso apenas após sucesso da operação. Evitar duplicados em reenvios. Registar falhas de entrega. Marcar como lida não equivale a aprovação nem confirmação formal do conteúdo. | US-S01, US-M02, US-NOT-07 | P0, F1. Canais adicionais por decisão |
@@ -806,7 +814,7 @@ Se a ARN exigir validação formal da conclusão, definir a transição e o pape
 
 ### 11.4 Pedidos internos
 
-Proposta de estados: Rascunho, Submetido, Em análise, Devolvido para correção, Aprovado, Rejeitado e Cancelado.
+Proposta de estados genéricos: Rascunho, Submetido, Em análise, Devolvido para correção, Aprovado, Rejeitado, Retirado e Cancelado. O processo de férias conserva os comportamentos da secção 11.5 e não herda etapas adicionais de outros pedidos.
 
 Os tipos de pedido não usam automaticamente o mesmo circuito. Para cada tipo, definir campos, anexos, referência, sequência de decisão, responsável, substituto, prazo de tratamento e efeito da aprovação.
 
@@ -816,9 +824,25 @@ O conjunto inicial inclui o processo de férias previsto no anexo. Outros tipos 
 
 ### 11.5 Férias e ausências
 
-RH valida as regras de calendário, dias de trabalho, sobreposições, saldos e autoridade de aprovação. Nenhum saldo deve ser apresentado como oficial sem origem e regra aprovadas.
+Regra confirmada em 13 de outubro de 2026: cada funcionário dispõe de 22 dias úteis por ano civil. Os dias podem ser repartidos por vários pedidos e não precisam de ser consecutivos. Cada período exige solicitação prévia. A aprovação final pertence ao RH, dentro da competência atribuída, sem presumir etapa de chefia ou outra cadeia adicional.
 
-O calendário de equipa apresenta a disponibilidade necessária ao planeamento. Motivos clínicos e anexos individuais ficam restritos aos intervenientes competentes.
+Exemplo: 5 dias úteis em maio e 15 em dezembro totalizam 20 dias aprovados e deixam 2 dias disponíveis. Sábados, domingos e feriados oficiais não consomem saldo. O calendário de feriados deve ser configurável, versionado e validado pelo RH. Não usar um calendário inventado como fonte oficial. Horários especiais e eventual proporcionalidade do direito ficam pendentes de decisão RH.
+
+Cada pedido identifica funcionário, ano de referência, data inicial, data final, número calculado de dias úteis, estado, data de submissão, decisão, responsável e data da decisão, observação quando aplicável e histórico. Estados mínimos: rascunho, submetido, em análise, aprovado, rejeitado, retirado e cancelado. A modelação genérica pode acrescentar devolução para correcção sem perder estes comportamentos.
+
+Fluxo mínimo: rascunho passa a submetido após validação e depois a em análise. RH aprova ou rejeita. Um pedido pendente pode ser retirado segundo a regra a detalhar em F2-01. Retirada e rejeição não reduzem o saldo. Um pedido aprovado reserva os dias úteis correspondentes. Alterar ou cancelar um período aprovado exige decisão RH e histórico, sem substituir silenciosamente a versão aprovada.
+
+O saldo apresenta separadamente direito anual, dias gozados, dias futuros aprovados e saldo disponível. O disponível corresponde ao direito menos gozados e futuros aprovados, sem dupla contagem. Não aprovar mais dias que o saldo disponível. Validar novamente o saldo e a sobreposição na mesma transacção da aprovação, incluindo decisões concorrentes. O sistema não aceita períodos do mesmo funcionário sobrepostos a pedidos aprovados.
+
+Proposta a validar por RH antes de implementar F2: bloquear submissão de períodos sobrepostos a pedidos do mesmo funcionário em submetido ou em análise. Rascunhos, rejeitados, retirados e cancelados não bloqueiam. Pedidos pendentes não reservam saldo. A aprovação revalida sempre datas e saldo. Esta proposta evita pedidos concorrentes duplicados e ainda não é uma decisão institucional confirmada.
+
+Cancelamento de férias futuras aprovado por RH repõe apenas os dias ainda não gozados. Não devolver automaticamente dias gozados. Qualquer correcção administrativa desses dias exige competência RH, motivo e auditoria. Para períodos já iniciados, o tratamento de alteração ou cancelamento parcial e o momento de classificação como gozado precisam de detalhe RH em F2-01.
+
+O funcionário vê os próprios pedidos e saldo. RH gere apenas pessoas e pedidos abrangidos pela competência atribuída. O calendário colectivo mostra apenas ausências aprovadas e pode apresentar funcionário, unidade e datas. Não apresenta motivos clínicos, observações confidenciais ou documentos individuais. Todas as decisões ficam auditadas.
+
+Não implementar transporte para o ano seguinte, antecipação do ano seguinte, venda, compensação financeira ou acumulação plurianual. O direito é anual. O saldo remanescente em 31 de dezembro não tem perda ou transporte presumidos. Pedidos que cruzem anos exigem uma regra expressa RH antes de implementação, sem consumir automaticamente o direito de um ano pelo outro. A origem operacional dos saldos, eventual reconciliação e decisões pendentes estão em PEN-05/06/14.
+
+F2 só começa quando os pré-requisitos do backlog estiverem prontos. Estas regras ficam especificadas agora e não constituem implementação do módulo.
 
 ### 11.6 Suporte
 
@@ -880,9 +904,9 @@ O inventário de .205 deve confirmar os 32 GB reportados, medir RAM disponível,
 
 Dimensionar WordPress, processos PHP, MySQL, documentos e crescimento a partir dessa medição. Definir limites de memória e concorrência compatíveis com as outras aplicações do servidor. Homologar com volume e utilização representativos antes de fixar os parâmetros de produção.
 
-Como .205 é membro de arn.local, a DCSI verifica a conta de computador, a comunicação com o controlador e as GPO efetivamente aplicadas a contas, atualizações, proteção do sistema e firewall. Validar a configuração do serviço de hora e a sincronização pela hierarquia do domínio, ou por outra fonte expressamente definida na política institucional. A hora correta suporta TLS, expiração dos tokens e auditoria. [W26] [W27]
+Como .205 está fora de arn.local, a DCSI valida administração local, actualizações, proteção do sistema, certificados e regras locais de firewall. Definir uma fonte de hora autorizada e testá-la sem depender da hierarquia AD. Hora correcta suporta TLS, expiração dos tokens e auditoria. [W26] [W27]
 
-Configurar tarefas agendadas para executar trabalhos pendentes, manutenção e verificações de backup. Usar php.exe ou WP-CLI sob identidade restrita definida pela DCSI, local ou de domínio conforme os acessos necessários, registar o resultado e impedir execuções sobrepostas. Quando o agendador assumir integralmente os eventos WordPress, ajustar WP-Cron para evitar duplicação.
+Configurar tarefas agendadas para executar trabalhos pendentes, manutenção e verificações de backup. Usar php.exe ou WP-CLI sob identidade restrita definida pela DCSI, local e com os acessos mínimos necessários, registar o resultado e impedir execuções sobrepostas. Quando o agendador assumir integralmente os eventos WordPress, ajustar WP-Cron para evitar duplicação.
 
 Recolher logs IIS, erros PHP, eventos Windows, estado de MySQL e auditoria da aplicação. Definir rotação, retenção, alertas de espaço e monitorização da validade do certificado. Manter os registos fora da raiz publicável.
 
@@ -892,9 +916,9 @@ O processo inicial de entrega será conduzido pela DCSI através de um pacote de
 
 Antes de atualizar, preparar cópias consistentes da base de dados, ficheiros, configuração e ACL necessárias. Separar os dados persistentes do pacote de código. Repor a aplicação e a sua base de dados segundo o procedimento validado.
 
-A identidade do processo IIS tem permissões locais sobre os dados da aplicação. Num servidor membro, o pool pode usar a identidade do computador para acesso à rede. Rever as permissões remotas efetivas, incluindo as atribuídas através de grupos. [W17]
+A identidade do processo IIS tem permissões locais sobre os dados da aplicação. Não pressupor conta de computador do domínio ou acesso remoto herdado. O Application Pool não deve usar credenciais AD. [W17]
 
-Para backups remotos, definir um agente ou uma identidade técnica autorizada no destino, com credenciais protegidas e acesso limitado às cópias necessárias. Verificar as permissões no destino para a identidade escolhida, sem deduzi-las apenas da pertença do servidor ao domínio. Testar a cópia e o restauro no contexto real dessa identidade.
+Para backups remotos, definir um agente ou uma identidade técnica autorizada no destino, com credenciais protegidas e acesso limitado às cópias necessárias. Verificar as permissões no destino para a identidade escolhida, sem depender da pertença de .205 ao domínio. Testar a cópia e o restauro no contexto real dessa identidade.
 
 A recuperação do portal incide sobre a aplicação em .205 e preserva os outros serviços eventualmente alojados nesse servidor. O controlador e DNS em .151 mantêm o seu procedimento de recuperação independente. Desfazer uma atualização WordPress não inclui reverter o controlador de domínio.
 
@@ -939,7 +963,7 @@ F3 admite integração com sistemas institucionais, grupos transversais, automa�
 <a id="codigo"></a>
 ## 14. Organização futura do código
 
-A tabela seguinte descreve a organização prevista. A fundação local versiona o plugin, o tema, a configuração wp-env e as ferramentas indicadas abaixo. Já existem `src/Autoloader.php`, `src/Access/` com a política de portal privado e o modo fictício local, e `src/Organization/` com o modelo de unidade, a hierarquia sem ciclos e o catálogo documental. Os restantes módulos continuam por criar. O Cursor deve conferir a árvore atual antes de acrescentar ficheiros.
+A tabela seguinte descreve a organização prevista. A fundação local versiona o plugin, o tema, a configuração wp-env e as ferramentas indicadas abaixo. Já existem `src/Autoloader.php`, `src/Access/` com a política de portal privado e o modo fictício local, e `src/Organization/` com o modelo de unidade, a hierarquia sem ciclos e o catálogo documental. Os restantes módulos continuam por criar. ChatGPT Work/Codex deve conferir a árvore, main, branches, PRs e CI antes de acrescentar ficheiros.
 
 | Caminho previsto | Finalidade |
 | --- | --- |
@@ -969,7 +993,7 @@ A tabela seguinte descreve a organização prevista. A fundação local versiona
 | .wp-env.json e configuração de testes | Ambiente local e ambiente de testes separado, com versões documentadas. |
 | .nvmrc | Versão Node.js partilhada pelos dois computadores. |
 | .editorconfig e .gitattributes | Formatação comum e tratamento consistente de finais de linha. |
-| AGENTS.md | Instruções curtas para o Cursor e outros agentes, com referência ao README. |
+| AGENTS.md | Instruções curtas para ChatGPT Work/Codex e outros agentes. Cursor opcional, com referência ao README. |
 | composer.json e composer.lock | Dependências PHP e versões reproduzíveis. |
 | package.json e package-lock.json | Ferramentas JavaScript e versões reproduzíveis. |
 | .github/workflows/ | Verificações automáticas de código, quando implementadas. |
@@ -1012,12 +1036,12 @@ A documentação base fica registada nesta versão. As tarefas de implementaçã
 | --- | --- | --- | --- | --- | --- |
 | F0-01 | Validar organograma, nomes, tipos e responsáveis | RH + coordenação | PEN-01 | Adiada | Lista de origem transcrita na secção 4.1. Falta validar os pontos da secção 4.6 para concluir a estrutura operacional de US-A03 e US-ARN-01. |
 | F0-02 | Validar matriz de funções e delegações | Coordenação + DCSI + RH | F0-01 | Adiada | Quem atribui cada função e respetivo âmbito. |
-| F0-03 | Inventariar e validar infraestrutura Windows, rede, DNS, HTTPS e capacidade | DCSI | PEN-03/04, DEC-11/13/14 | Por iniciar | Inventário e desenho de implantação aprovados para .205 como membro de arn.local, com AD/DNS preservados em .151. |
+| F0-03 | Inventariar e validar infraestrutura Windows, rede, DNS, HTTPS e capacidade | DCSI | PEN-03/04, DEC-11/13/14 | Por iniciar | Inventário e desenho de implantação aprovados para .205 fora de arn.local, com AD/DNS preservados em .151. |
 | F0-04 | Definir cliente Google e procedimento de acessos | DCSI | PEN-02/03/10, DEC-15 | Por iniciar | Plano OIDC, vínculo das contas administrativas da secção 5.4, competências locais e saída de funcionários. |
 | F0-05 | Validar melhorias e repositórios necessários a F1 | RH + editorial + TI | PEN-05/07/08, apenas âmbito F1 | Adiada | Decisões sobre cadastro, documentos, notícias, comunicados e tarefas. Pedidos e férias são detalhados em F2-01. |
 | F0-06 | Detalhar dados, estados, migrações e contratos de F1 | Backend + QA | F0-01/02/05 | Por iniciar | Modelo de F1 e critérios de integridade revisáveis. O detalhe dos modelos administrativos pertence a F2. |
 | F0-07 | Designar executantes, prioridades e datas | Coordenação | PEN-11 | Adiada | Responsável individual e prazo por tarefa selecionada. |
-| F1-01 | Preparar desenvolvimento e homologação Windows/IIS | Albertina4264 prepara o marco local. Revisão para integração pedida por Atchutchi na PR #2. Homologação: DCSI + desenvolvimento. | Arranque local: secções 16.4 a 16.6. Homologação: F0-03/04, INF-06. | Em curso | Configuração, plugin e tema mínimos versionados e revistos. Corrigidos os comandos wp-env, o isolamento das portas, o acesso à fixture persistida e o aviso do tema. Evidência e limites na secção 16.6 e na PR #2. Faltam executar WordPress/PHP/MariaDB em Docker nos PCs, gerar composer.lock no contentor e homologar Windows/IIS/MySQL 8.4. A integração do código não conclui a tarefa. |
+| F1-01 | Preparar desenvolvimento e homologação Windows/IIS | Albertina4264 iniciou. Atchutchi validou localmente e pediu revisão via Codex. Homologação: DCSI + desenvolvimento. | Arranque local: secções 16.4 a 16.6. Homologação: F0-03/04, INF-06. | Em curso | Fundação e lockfile integrados pelas PRs #2 e #3. Atchutchi confirmou localhost:8888/8890, 54 testes Node, 63 testes PHP com 284 asserções, lint/build e PHPCS 28/28. CI da PR #3 aprovada. Falta repetição no segundo PC e homologação Windows/IIS/MySQL 8.4, com servidor fora do domínio. |
 | F1-02 | Homologar OIDC e associação de contas | Backend + DCSI | F1-01, F0-04 | Por iniciar | US-F01 e critérios de identidade aprovados. |
 | F1-03 | Implementar funções, âmbitos e estado de conta | Backend + QA | F0-02/06, F1-02, DEC-15 | Por iniciar | US-A01/02, US-S03 e US-ARN-02/03 verificados. Contas administrativas iniciais com permissões atribuídas explicitamente e auditadas. |
 | F1-04 | Implementar auditoria e eventos de notificação | Backend | F1-03 | Por iniciar | US-A04, US-S01 e US-ARN-10 com acesso protegido. |
@@ -1034,9 +1058,9 @@ A documentação base fica registada nesta versão. As tarefas de implementaçã
 | F1-15 | Completar administração e parâmetros do CMS | Backend + DCSI | F1-05/09/11/12/13 | Por iniciar | US-A05 e operações de gestão sem editar código. |
 | F1-16 | Validar segurança, acessibilidade e restauro | QA + DCSI + utilizadores piloto | F1-14/15, INF-09, PEN-08/09/10 | Por iniciar | Critérios de F1 aprovados e evidência registada. |
 | F1-17 | Formar responsáveis e disponibilizar F1 | Coordenação + DCSI + RH + editorial | F1-16, INF-10, F0-07 | Por iniciar | Operação, suporte e aceitação funcional definidos. |
-| F2-01 | Detalhar tipos de pedido, substituição e modelos administrativos | RH + responsáveis + backend | PEN-05/06, âmbito administrativo | Por iniciar | Formulários, circuitos, dados de férias, estados e migrações de F2 validados. |
+| F2-01 | Detalhar tipos de pedido, substituição e modelos administrativos | RH + responsáveis + backend | PEN-05/06/14, âmbito administrativo e pré-requisitos F1 | Por iniciar | Modelar 22 dias úteis anuais repartíveis, pedidos prévios e decisão final RH. Validar proposta de sobreposição pendente, calendário, origem de saldo, passagem de ano, cancelamento parcial e datas de gozo. Definir estados, histórico, movimentos e transacções. |
 | F2-02 | Implementar pedidos e decisões | Backend + frontend + QA | F2-01, F1-04/08 | Por iniciar | US-F08, US-M04 e US-ARN-06. |
-| F2-03 | Implementar férias e ausências | Backend + RH + QA | F2-02, PEN-05/06 | Por iniciar | US-RH02/04 e US-ARN-07 com origem de saldos definida. |
+| F2-03 | Implementar férias e ausências | Backend + RH + QA | F2-02, F1-03/04/05/08, PEN-05/06/14 | Por iniciar | US-RH02/04 e US-ARN-07, 22 dias úteis, vários pedidos, saldo separado, autorização por titular e competência RH, reserva e reposição auditadas. Testes da secção 17.2 e calendário colectivo sem motivos confidenciais. |
 | F2-04 | Implementar suporte e tickets | Backend + frontend + TI | F1-04/08, processo TI validado | Por iniciar | US-F09 e US-TI01 a US-TI04. |
 | F2-05 | Integrar painel, pesquisa e notificações de F2 | Desenvolvimento + QA | F2-03/04 | Por iniciar | Histórias transversais cobrem novos módulos. |
 | F2-06 | Validar e disponibilizar serviços | RH + TI + DCSI + QA | F2-05 | Por iniciar | Processos completos e privacidade aprovados. |
@@ -1045,27 +1069,29 @@ A documentação base fica registada nesta versão. As tarefas de implementaçã
 
 Cada tarefa deve referenciar os códigos das histórias aplicáveis e atualizar a evidência quando concluída. A tabela é o backlog inicial. Ainda não representa Issues criadas, pessoas notificadas ou trabalho atribuído automaticamente no GitHub.
 
+A [matriz de auditoria F1 de 13 de outubro](docs/auditoria-f1-2026-10-13.md) distingue código existente, testes, dependências, bloqueios e próxima acção para F1-01 a F1-17. É uma fotografia após a PR #3 e não substitui os estados posteriores deste backlog.
+
 <a id="plano-infraestrutura"></a>
 ### 15.4 Plano técnico de preparação no Windows
 
 As tarefas INF detalham a preparação e verificação da infraestrutura dentro do mesmo projeto. Não constituem instalações já executadas. As pendências institucionais adiadas não impedem documentar ou avaliar tecnicamente este plano.
 
-Executar primeiro a preparação e as verificações INF-04 a INF-08 em homologação Windows/IIS representativa de um servidor membro de domínio, incluindo as políticas aplicáveis. Usar nome DNS, cliente OAuth, segredos e dados próprios desse ambiente. A instalação de produção em .205 recebe a configuração validada através do procedimento de entrega. A homologação não deve reutilizar o endereço de produção nem interferir nos serviços do domínio.
+Executar primeiro a preparação e as verificações INF-04 a INF-08 em homologação Windows/IIS/MySQL representativa de um servidor fora de arn.local, com configuração local explícita. Usar nome DNS, cliente OAuth, segredos e dados próprios desse ambiente. A instalação de produção em .205 recebe a configuração validada através do procedimento de entrega. A homologação não deve reutilizar o endereço de produção nem interferir nos serviços do domínio.
 
 | ID | Tarefa técnica | Responsável | Dependência | Estado | Evidência esperada |
 | --- | --- | --- | --- | --- | --- |
-| INF-01 | Inventariar funções, recursos, volumes, serviços, bindings e backups de .205 | DCSI | DEC-11/13/14 | Por iniciar | IP e associação a arn.local informados pelo responsável conferidos no host. Dados do anexo, natureza física ou virtual, capacidade e serviços registados. |
-| INF-02 | Validar coexistência e administração do portal em .205 | DCSI | INF-01, DEC-14 | Por iniciar | Instalação planeada no servidor membro de arn.local, com permissões administrativas, GPO, serviços e portas compatíveis. |
+| INF-01 | Inventariar funções, recursos, volumes, serviços, bindings e backups de .205 | DCSI | DEC-11/13/14 | Por iniciar | IP, Windows 1809/build 17763/64 bits e ausência de associação a arn.local conferidos no host quando autorizado. Hyper-V instalado e WSL ausente registados. Dados do anexo, natureza física ou virtual, capacidade e serviços registados. |
+| INF-02 | Validar coexistência e administração do portal em .205 | DCSI | INF-01, DEC-14 | Por iniciar | Instalação planeada fora de arn.local, com administração local, serviços e portas compatíveis, sem GPO, Kerberos, LDAP ou conta de computador do domínio. |
 | INF-03 | Dimensionar aplicação, MySQL, ficheiros e crescimento em .205 | DCSI | INF-02, PEN-04 | Por iniciar | Recursos disponíveis, limites, capacidade de disco e cenário de carga definidos. |
 | INF-04 | Preparar nome interno, DNS e alcance pela VPN | DCSI | INF-02, PEN-03 | Por iniciar | DNS institucional resolve o ambiente em teste. Plano de produção aponta o nome do portal para .205. LAN, VPN e restantes nomes arn.gw preservados. |
 | INF-05 | Obter certificado e preparar confiança e renovação | DCSI | INF-04 | Por iniciar | Certificado e cadeia disponíveis, distribuição de confiança prevista e procedimento de renovação preparado. |
-| INF-06 | Preparar IIS, FastCGI, PHP, MySQL, pastas, ACL e binding HTTPS | DCSI + backend | INF-03/05 | Por iniciar | Serviços no servidor membro compatíveis com as políticas aplicadas, identidade local do pool, base local, armazenamento privado e HTTPS inicialmente verificado. |
+| INF-06 | Preparar IIS, FastCGI, PHP, MySQL, pastas, ACL e binding HTTPS | DCSI + backend | INF-03/05 | Por iniciar | Serviços nativos no servidor fora do domínio compatíveis com a configuração local aprovada, identidade local do pool, base local, armazenamento privado e HTTPS inicialmente verificado. |
 | INF-07 | Verificar identidade Google no percurso LAN e VPN | DCSI + backend | INF-06, F1-02 | Por iniciar | Callback real registado, login concluído nas duas redes e nenhuma publicação pública necessária. |
 | INF-08 | Preparar tarefas agendadas, logs, alertas e backups | DCSI | INF-06, PEN-09 | Por iniciar | Execução por identidades autorizadas, falhas observáveis e cópias consistentes fora do servidor. Permissões de backup remoto verificadas no destino. |
 | INF-09 | Homologar rede, IIS, anexos, carga e restauro | DCSI + QA | INF-07/08, F1-14/15 | Por iniciar | Testes da secção 17.4 com evidência, incluindo instalação do certificado renovado no binding IIS. |
 | INF-10 | Preparar pacote de entrega e recuperação da aplicação | DCSI + desenvolvimento | F1-16 | Por iniciar | Versão identificada por commit, configuração protegida e recuperação sem reversão indevida do AD. |
 
-O mapeamento de OUs, a sincronização AD e o preenchimento dos responsáveis institucionais continuam reservados para a fase apropriada. Nenhuma tarefa INF exige pressupor essas integrações já existentes.
+Nenhuma tarefa INF exige mapeamento de OUs, sincronização AD ou associação de .205 ao domínio. Integrações AD futuras exigem decisão expressa. Responsáveis institucionais continuam por validar.
 
 <a id="colaboracao"></a>
 ## 16. Forma de colaboração no repositório
@@ -1114,11 +1140,11 @@ Git não sincroniza a base de dados WordPress, utilizadores, conteúdos editoria
 <a id="instalacao-pcs"></a>
 ### 16.4 Instalações nos computadores
 
-Percurso proposto para os dois PCs Windows: Cursor no Windows, Ubuntu 24.04 LTS em WSL 2 e Docker Desktop com integração WSL. Executar Git, Node e os comandos do projeto dentro do Ubuntu. Recomenda-se Windows 11 atualizado e suportado, virtualização ativa e SSD. Docker exige pelo menos 8 GB de RAM no percurso documentado. Para trabalhar com editor, navegador e contentores, recomenda-se 16 GB ou mais como margem prática, sujeita aos recursos dos PCs. [W32] [W33]
+Percurso dos PCs Windows: ChatGPT Work/Codex com GitHub e ambiente local separado em Ubuntu 24.04 LTS/WSL 2 e Docker Desktop. Cursor é opcional. Executar Git, Node e os comandos do projeto dentro do Ubuntu. Recomenda-se Windows 11 atualizado e suportado, virtualização ativa e SSD. Docker exige pelo menos 8 GB de RAM no percurso documentado. Para trabalhar com editor, navegador e contentores, recomenda-se 16 GB ou mais como margem prática, sujeita aos recursos dos PCs. [W32] [W33]
 
 | Instalação | Onde | Necessidade | Ligação oficial |
 | --- | --- | --- | --- |
-| Cursor | Windows | Editor escolhido. Usar a versão para a arquitetura do PC. | [Download](https://cursor.com/download) |
+| Cursor | Windows | Editor opcional. Não é necessário para desenvolver o projecto. | [Download](https://cursor.com/download) |
 | WSL 2 | Windows | Executar o ambiente Linux. Manter a versão atualizada. | [Instalar WSL](https://learn.microsoft.com/en-us/windows/wsl/install) |
 | Ubuntu 24.04 LTS | WSL 2 | Mesma distribuição nos dois PCs. | [Guia Ubuntu](https://ubuntu.com/wsl/docs/stable/howto/install-ubuntu-wsl2/) |
 | Docker Desktop | Windows | Runtime do wp-env, com backend WSL 2 e integração Ubuntu. Confirmar licença institucional. | [Instalação](https://docs.docker.com/desktop/setup/install/windows-install/) e [WSL](https://docs.docker.com/desktop/features/wsl/) |
@@ -1138,7 +1164,7 @@ Docker Desktop integra Compose e disponibiliza o acesso ao Docker no WSL. Não i
 <a id="preparacao-git"></a>
 ### 16.5 Preparação inicial e comandos de colaboração
 
-Primeiro instalar Cursor e preparar WSL. Se o WSL já existir, executar wsl --update e conferir wsl --version antes de instalar outra distribuição. O formato atual do Ubuntu 24.04 requer o componente WSL na versão 2.4.10 ou posterior. No PowerShell como administrador, quando a distribuição ainda não estiver instalada: [W32]
+Preparar WSL e as ferramentas locais. ChatGPT Work/Codex trabalha sobre GitHub. Instalar Cursor apenas se o colaborador quiser usar esse editor. Se o WSL já existir, executar wsl --update e conferir wsl --version antes de instalar outra distribuição. O formato atual do Ubuntu 24.04 requer o componente WSL na versão 2.4.10 ou posterior. No PowerShell como administrador, quando a distribuição ainda não estiver instalada: [W32]
 
 ~~~powershell
 wsl --install -d Ubuntu-24.04
@@ -1197,7 +1223,7 @@ git config core.autocrlf input
 
 Substituir os dois valores de identidade pelos da pessoa que usa o PC. Pode usar-se o email noreply disponibilizado pela respetiva conta GitHub. Conservar a cópia dentro do sistema de ficheiros Ubuntu, por exemplo ~/projects/plataforma-interna-arn. [W36] [W39]
 
-No Cursor, abrir a paleta Ctrl+Shift+P, escolher WSL: Connect to WSL e abrir essa pasta no Ubuntu. As versões atuais incluem a integração WSL/Remote da Anysphere. Usar essa integração para que o terminal, Node, Git e os ficheiros estejam no mesmo ambiente. [W31]
+No ChatGPT Work/Codex, usar a URL GitHub e confirmar o clone, a branch e a tarefa antes de alterar ficheiros. O ambiente WordPress local mantém dados próprios. Se for utilizado Cursor opcionalmente, abrir a pasta Ubuntu através da integração WSL. Não adicionar dependências específicas desse editor.
 
 Para uma tarefa nova, com a árvore de trabalho limpa, atualizar main e criar uma branch própria. O exemplo seguinte é a branch de arranque de Atchutchi:
 
@@ -1254,16 +1280,16 @@ O primeiro marco de F1-01 é preparar uma base comum, numa única branch, para e
 
 Executante inicial: Albertina4264. Revisão técnica para integração pedida por Atchutchi na [PR #2](https://github.com/atchutchi/plataforma-interna-arn/pull/2). Branch: `chore/albertina4264-F1-01-fundacao`. Estado: Em curso. F1-01 não fica concluída nesta entrega.
 
-Versões fixadas, ainda sem execução do contentor neste PC:
+Versões fixadas. A execução anterior de revisão e a validação local fornecida por Atchutchi em 13 de outubro são evidências distintas:
 
 | Peça | Versão configurada | Observação |
 | --- | --- | --- |
 | Node.js | 24.21.0 | Observada no Windows deste PC. `.nvmrc` repete esta versão. No Ubuntu do outro PC, usar nvm. |
 | @wordpress/env | 11.17.0 | Dependência local, com `package-lock.json`. |
-| WordPress | 7.1.3 | Pacote oficial indicado em `.wp-env.json`. Não chegou a abrir aqui. |
+| WordPress | 7.1.3 | Pacote oficial indicado em `.wp-env.json`. Atchutchi confirmou abertura local em 13 de outubro. |
 | PHP | 8.4 | `phpVersion` do wp-env. A imagem exata confirma-se quando o contentor arrancar. |
 | MariaDB | 11.8 | LTS, imagem `mariadb:11.8`. Não substitui a verificação de MySQL 8.4 na homologação. |
-| PHPUnit | 11.5.57 | Declarado em `composer.json`. `composer.lock` ainda não existe. |
+| PHPUnit | 11.5.57 | Declarado em `composer.json`. `composer.lock` gerado no contentor e integrado pela PR #3. |
 | WPCS | 3.4.1 | Declarado em `composer.json`. O phpcs corre no contentor. |
 
 Comandos da fundação, a partir da raiz:
@@ -1306,7 +1332,7 @@ O ambiente de testes não define essa flag e usa o tipo `development`. As contas
 
 No registo inicial da colaboradora, `npm test`, `npm run lint` e `npm run build` foram executados. `npm run env:check` terminou a avisar que o Docker não estava disponível. O arranque original gerou a configuração e parou com `spawn docker ENOENT`, antes de descarregar imagens ou criar contentores. O nome da conta Windows desse PC contém um espaço e entra no `useradd` da imagem. O clone de trabalho deve ficar no Ubuntu, como a secção 16.5 pede. `npm run test:php` e `npm run lint:php` não foram executados nessa entrega. A sessão não era administrador e não instalou WSL nem Docker. A licença institucional do Docker Desktop continua por confirmar.
 
-Registo da colaboradora no segundo avanço, commit `518ad38`, no mesmo dia: autoloader PSR-4 do plugin, portal privado, modelo de unidades e workflow GitHub. `Access\PrivatePortal` redireciona páginas sem sessão para a entrada e exige autenticação na REST e no admin-ajax, exceto o heartbeat. Também desliga feeds e sitemaps, retira links de descoberta e recusa arquivos de autor a visitantes sem sessão. Os arquivos de autor continuam acessíveis a utilizadores autenticados. A regra pura está em `PrivatePortalPolicy`, com testes. O ficheiro `.github/workflows/verificacao.yml` corre Node e PHP em cada push e pull request. Para verificar o PHP no seu PC sem Docker, a colaboradora registou PHP 8.4.25 com Composer temporário, PHPUnit 11.5.57 com 38 testes e 190 asserções aprovados e PHPCS sem erros em 19 ficheiros. A [CI desse commit](https://github.com/atchutchi/plataforma-interna-arn/actions/runs/37949294902) também passou. `vendor/` não é versionado e `composer.lock` continua por gerar no contentor.
+Registo da colaboradora no segundo avanço, commit `518ad38`, no mesmo dia: autoloader PSR-4 do plugin, portal privado, modelo de unidades e workflow GitHub. `Access\PrivatePortal` redireciona páginas sem sessão para a entrada e exige autenticação na REST e no admin-ajax, exceto o heartbeat. Também desliga feeds e sitemaps, retira links de descoberta e recusa arquivos de autor a visitantes sem sessão. Os arquivos de autor continuam acessíveis a utilizadores autenticados. A regra pura está em `PrivatePortalPolicy`, com testes. O ficheiro `.github/workflows/verificacao.yml` corre Node e PHP em cada push e pull request. Para verificar o PHP no seu PC sem Docker, a colaboradora registou PHP 8.4.25 com Composer temporário, PHPUnit 11.5.57 com 38 testes e 190 asserções aprovados e PHPCS sem erros em 19 ficheiros. A [CI desse commit](https://github.com/atchutchi/plataforma-interna-arn/actions/runs/37949294902) também passou. `vendor/` não é versionado. Neste registo histórico de 9 de outubro, `composer.lock` ainda estava por gerar. A PR #3 resolve essa pendência em 13 de outubro.
 
 #### Revisão para integração na PR #2
 
@@ -1332,18 +1358,38 @@ Evidência da revisão de código, em 9 de outubro de 2026:
 
 A suite Node e as verificações PHP em WebAssembly correram em Linux com Node.js 24.19.0. O runtime 24.21.0 disponível nessa sessão não conseguiu executar JavaScript. O requisito do projeto continua a ser Node.js 24.21.0 e não foi reduzido para acomodar o ambiente de revisão. Repetir `npm ci`, os testes e o arranque na versão exigida nos PCs de desenvolvimento.
 
-Ficam pendentes o arranque real de WordPress/PHP/MariaDB, os bindings efetivos confirmados por `env:check` e `env:check:tests`, a geração de `composer.lock` no contentor, a repetição de PHPUnit e PHPCS nesse ambiente, a ativação do tema/plugin, a edição no Gutenberg e a autenticação com cookies reais. A homologação Windows/IIS/MySQL 8.4 também continua pendente. Estes resultados permitem acompanhar o avanço da fundação e não concluem F1-01 nem demonstram que o portal está pronto para utilização.
+Pendências históricas da revisão de 9 de outubro: arranque integrado, bindings reais e geração do lockfile estavam por verificar nessa sessão. A validação local de Atchutchi de 13 de outubro, abaixo, resolve esses pontos no seu PC. A repetição no segundo PC, edição Gutenberg, fluxos com cookies reais e homologação Windows/IIS/MySQL permanecem sem evidência adicional nesta sessão. Nenhuma destas verificações conclui F1-01.
 
-A fundação deve criar apenas a estrutura usada no primeiro marco, evitando ficheiros vazios para todos os módulos futuros. Deve incluir AGENTS.md curto com as regras de colaboração, comandos realmente disponíveis e referência a este README. O Cursor reconhece esse ficheiro como instrução do projeto. [W31]
+A fundação deve criar apenas a estrutura usada no primeiro marco, evitando ficheiros vazios para todos os módulos futuros. Deve incluir AGENTS.md curto com as regras de colaboração, comandos realmente disponíveis e referência a este README. ChatGPT Work/Codex e os agentes devem ler AGENTS.md antes de trabalhar. Cursor permanece opcional.
 
 Configurar scripts para iniciar, parar, verificar e construir o projeto. Definir um ambiente de testes separado. Executar verificações de instalação, ativação do plugin e tema, sintaxe e construção. Acrescentar testes de comportamento quando existirem regras, sobretudo acesso, identidade, importação e integridade. Uma verificação de segurança ou homologação não pode ser marcada como passada antes de ser executada.
 
 O primeiro marco local não depende de aceder a .151, .205 ou de criar credenciais Google reais. As dependências institucionais continuam a condicionar os marcos seguintes. Não marcar F1-01 inteira como Concluída enquanto faltar homologação Windows/IIS. Não marcar o portal pronto para utilização pela ARN apenas porque o WordPress local abre.
 
-<a id="prompt-cursor"></a>
-### 16.7 Prompt de arranque para o Cursor
+#### Validação local fornecida por Atchutchi em 13 de outubro de 2026
 
-Copiar o texto seguinte para o modo Agent do Cursor com a pasta do repositório aberta no WSL. Preencher o utilizador GitHub e a tarefa. Para o primeiro arranque de Atchutchi, usar F1-01, fundação local. O colaborador usa uma tarefa combinada ou a repetição e revisão dessa entrega, sem criar outra fundação em paralelo.
+Esta evidência foi comunicada pelo responsável. Não foi repetida sobre o seu ambiente nesta sessão Codex. WordPress abriu em http://localhost:8888 e o ambiente separado de testes em http://localhost:8890. Docker confirmou separação e bindings apenas em 127.0.0.1.
+
+| Verificação fornecida | Resultado |
+| --- | --- |
+| npm run env:check | Aprovado. |
+| npm test | 54 testes aprovados, 0 falhas. |
+| npm run lint e npm run build | Aprovados. |
+| npm run composer:install | Aprovado. composer.lock gerado no ambiente PHP do projecto. |
+| npm run test:php | PHP 8.4.26, PHPUnit 11.5.57, 63 testes, 284 asserções, 0 falhas. |
+| npm run lint:php | 28/28 ficheiros aprovados. |
+
+Revisão GitHub nesta sessão: a branch chore/atchutchi-F1-01-validacao-local tinha apenas composer.lock e um commit sobre main. A [PR #3](https://github.com/atchutchi/plataforma-interna-arn/pull/3) foi revista e integrada após CI verde nos dois jobs, no SHA a230ffd4e4eee55a9ec67fba8493d50f39f072fe. [CI da PR](https://github.com/atchutchi/plataforma-interna-arn/actions/runs/38424334638). Executante da revisão: Codex a pedido de Atchutchi. Sem deploy. F1-01 permanece Em curso.
+
+Fluxo actual: PC local, WSL 2/Ubuntu 24.04, Docker Desktop, wp-env, WordPress local, branch Git, GitHub, PR, main, release, homologação e, após autorização própria, Panthera-Onca .205. A release e homologação não são executadas por um push. GitHub é a fonte de verdade. O ambiente local fica separado do trabalho Codex. Cursor é opcional.
+
+Revisão documental 0.9: executante Codex a pedido de Atchutchi, branch `docs/atchutchi-readme-v0.9-infra-ferias-work`. Nesta sessão, `npm test` passou com 54 testes e 0 falhas, lint e build passaram e o diff foi revisto. Node efectivo 24.19.0, sem alterar o requisito 24.21.0. O daemon Docker não está disponível nesta sessão, pelo que não se repetiu wp-env ou os ensaios integrados fornecidos pelo responsável. A primeira tentativa Node ocorreu com a instalação de dependências ainda incompleta e falhou por módulo ausente. A repetição após disponibilidade dos módulos passou. A CI da PR documental deve verificar a versão fixada e as suites PHP antes da integração. PR, SHA e resultados finais ficam associados à alteração no GitHub e no registo de continuidade seguinte.
+
+<a id="prompt-cursor"></a>
+<a id="prompt-codex"></a>
+### 16.7 Prompt de continuidade para ChatGPT Work/Codex
+
+Copiar o texto seguinte para ChatGPT Work/Codex com acesso ao GitHub. Preencher o utilizador e a tarefa após conferir main, branches, PRs e CI. Não repetir a fundação existente. Cursor pode usar o mesmo contexto opcionalmente.
 
 ~~~text
 Trabalha comigo no desenvolvimento da plataforma interna da ARN.
@@ -1362,8 +1408,8 @@ de acompanhamento. Lê-o integralmente antes de alterar o projeto. Lê também
 AGENTS.md e regras existentes, e inspeciona a árvore, branches e PRs acessíveis.
 Não pressuponhas que o repositório ainda contém apenas documentação.
 
-A fase anterior preparou apenas o README. Este pedido inicia o desenvolvimento
-local da tarefa indicada. Executa o trabalho, verifica-o e publica os avanços
+A fundação da PR #2 e o composer.lock da PR #3 já existem em main. Este pedido
+continua a tarefa indicada, preservando o trabalho de Albertina4264. Executa o trabalho, verifica-o e publica os avanços
 na branch da tarefa. A instalação na infraestrutura ARN é uma etapa posterior.
 Não acedas nem alteres servidores, AD, DNS, Google Workspace ou produção nesta
 sessão. Se faltarem fontes referidas no README, regista a ausência e trabalha
@@ -1378,15 +1424,15 @@ WordPress e React apenas quando necessário aos blocos ou à interação.
 Os conteúdos e os campos autorizados devem ser geridos através do CMS.
 Não substituas a stack por outra arquitetura sem uma decisão documentada.
 
-Nos PCs, segue o percurso Cursor Windows + WSL 2 Ubuntu 24.04 LTS + Docker
+Nos PCs, usa ChatGPT Work/Codex e GitHub, com WSL 2 Ubuntu 24.04 LTS + Docker
 Desktop com integração WSL e licença institucional adequada. Git e Node 24 LTS
 correm no Ubuntu. Usa @wordpress/env como dependência local e versões fixadas.
 wp-env usa MariaDB. A homologação futura deve verificar PHP 8.4 e MySQL 8.4 no
 IIS. Não inventes uma opção mysqlVersion para o wp-env nem consideres um teste
 local como prova de compatibilidade com produção.
 
-Produção planeada: Panthera-Onca, 192.168.17.205, servidor membro de arn.local,
-Windows Server 2019, IIS/FastCGI e MySQL 8.4 LTS. O controlador AD DS/DNS está
+Produção planeada: Panthera-Onca, 192.168.17.205, fora de arn.local,
+Windows Server 2019 Standard 1809, build 17763, 64 bits, IIS/FastCGI e MySQL 8.4 LTS. O controlador AD DS/DNS está
 em 192.168.17.151. O endereço https://intranet.arn.gw é uma proposta a aprovar.
 O acesso institucional será pela rede ARN ou VPN, com autenticação Google
 Workspace de arn.gw por OIDC e permissões próprias do portal.
@@ -1433,8 +1479,9 @@ GIT EM CADA SESSÃO
    pelo fim de todo o projeto. Confirma o resultado do push e indica o SHA.
 6. Abre ou atualiza uma pull request para main. Usa rascunho se houver trabalho
    ou validações em falta. Explica objetivo, histórias, comportamento, testes
-   executados e limitações. A integração fica para revisão do outro colaborador.
-   Não faças push direto em main, merge automático ou implantação em produção.
+   executados e limitações. Integra apenas com autorização do responsável,
+   revisão e CI verde no SHA exacto. A sessão de 13 de outubro autoriza essa
+   integração. Não faças push directo em main ou implantação em produção.
 7. Se faltar autenticação ou o push falhar, conserva o trabalho e os commits.
    Explica o impedimento e os comandos necessários, sem afirmar que publicaste.
    Nunca coloques tokens, passwords ou segredos em código, logs ou mensagens.
@@ -1503,7 +1550,7 @@ a PR quando existir e o próximo passo para o outro colaborador.
 
 Verificar pedido submetido, devolução, correção, aprovação, rejeição, cancelamento autorizado e substituição de aprovador. Confirmar tratamento de autoaprovação conforme regra aprovada.
 
-Nas férias, verificar cálculo com dados e calendário validados por RH, sobreposições, alteração de pedido aprovado e proteção dos motivos de ausência.
+Nas férias, criar testes unitários de cálculo ao iniciar F2 e verificar: pedido de 5 dias úteis, dois pedidos parciais no mesmo ano, 5 + 15 = 20 e saldo 2, pedido que completa 22, tentativa de exceder 22, fim de semana, feriado RH, períodos sobrepostos, rejeição, retirada, cancelamento futuro, funcionários distintos com saldos independentes, transição entre anos e acesso indevido ao pedido alheio. Testar reserva concorrente, classificação de gozados/futuros e reposição apenas dos dias não gozados. A regra proposta para pendentes e a passagem de ano só são implementadas depois de validadas pelo RH.
 
 Nos tickets, verificar atribuição, resposta, anexos, resolução e diferença entre nota interna e resposta ao solicitante, caso notas internas sejam adotadas.
 
@@ -1513,22 +1560,22 @@ A funcionalidade deve cumprir a história, aplicar autorização no servidor, va
 
 A revisão deve incluir testes das regras críticas e validação funcional pela área responsável. O README, decisões e evidência devem refletir o comportamento entregue.
 
-Esta versão foi preparada como documentação. Os cenários desta secção são critérios de trabalho futuro, não resultados de testes de uma aplicação existente.
+Os cenários desta secção são critérios de aceitação futura. A fundação existente tem testes de código e validação local descritos na secção 16.6, que não demonstram homologação nem disponibilidade institucional.
 
 ### 17.4 Homologação específica Windows e rede
 
 | Verificação | Resultado esperado |
 | --- | --- |
-| Alvo e separação de serviços | Produção prevista em .205, com associação a arn.local e coexistência validadas. AD DS/DNS permanecem em .151. Homologação usa endereço próprio. |
+| Alvo e separação de serviços | Produção prevista em .205 fora de arn.local, com coexistência validada e sem dependências AD. AD DS/DNS permanecem em .151. Homologação usa endereço próprio. |
 | DNS na LAN e VPN | Nome do ambiente em teste resolve para o IP correspondente. O nome de produção proposto aponta para .205. Registos públicos necessários de arn.gw continuam a resolver. |
 | HTTPS | Certificado corresponde ao nome e cadeia é confiável. Procedimento de renovação e instalação no binding IIS verificado em homologação. |
 | IIS e WordPress | Permalinks, REST, CMS e callback OIDC funcionam com web.config e FastCGI. |
 | Login Google | Fluxo completo a partir da LAN e da VPN, incluindo regresso do browser ao portal. |
 | Administração inicial | As três contas da secção 5.4 recebem apenas as competências locais atribuídas. Um funcionário comum do mesmo domínio não recebe privilégios administrativos. |
-| Bloqueio de rede | Acesso fora das origens autorizadas recusado. Deteção do domínio, perfil de firewall e regras efetivas verificados no servidor membro. |
+| Bloqueio de rede | Acesso fora das origens autorizadas recusado. Perfil de rede e regras locais efectivas verificados sem depender de perfil Domain ou GPO. |
 | MySQL | Serviço acessível pela aplicação local. Porta da base de dados não acessível a clientes da LAN. |
 | Pastas e media | Pool tem apenas os acessos necessários. Ficheiros e derivados privados não existem em caminhos públicos alternativos. |
-| Gestão do servidor membro | Conta de computador e comunicação com arn.local verificadas. Permissões administrativas, GPO, identidades de serviço, certificados e sincronização de hora validados. |
+| Gestão do servidor fora do domínio | Ausência de associação a arn.local confirmada. Administração e identidades locais, certificados, fonte de hora e firewall validados. Sem GPO, Kerberos, LDAP ou conta de computador AD. Sem WSL ou Docker Desktop para alojar o portal. |
 | Tarefas agendadas | Trabalhos executam com a identidade restrita autorizada, sem sobreposição e com registo de falha. |
 | Desempenho | Comportamento dentro das metas aprovadas, sem degradar funções de infraestrutura existentes. |
 | Recuperação | Backup remoto acessível pela identidade autorizada e dados, configuração e ACL recuperados em ambiente isolado. Outros serviços de .205 e AD DS/DNS em .151 preservados. |
@@ -1547,7 +1594,7 @@ A lista recebida esclarece parcialmente PEN-01 e PEN-05, e o responsável confir
 | PEN-03 | Aprovar nome do portal, desenho DNS, estratégia de certificado, origens e rotas VPN e saída Google. Prever callback conforme o plugin escolhido. A comprovação do callback real pertence a F1-02 e INF-07. | DCSI | Preparar DNS e integração OIDC. |
 | PEN-04 | Inventariar recursos, armazenamento e serviços de .205, incluindo natureza física ou virtual e capacidade disponível. Aprovar versões candidatas de IIS, PHP 8.4 x64 NTS e MySQL 8.4 LTS, carga e metas de resposta. A compatibilidade executada pertence a INF-06/F1-01 e a homologação integrada a INF-09. | DCSI | Dimensionar e preparar homologação. |
 | PEN-05 | Departamentos-ARN.docx é a fonte nominal inicial. Falta completar identificadores, emails e validação de RH, definir manutenção do cadastro e identificar as fontes operacionais de documentos, férias e saldos. | RH + responsáveis documentais | Importação operacional e cada módulo dependente. |
-| PEN-06 | Validar tipos de pedido, regras de férias, etapas, substituições e tratamento dos pedidos do próprio aprovador. | RH + responsáveis institucionais | Desenvolver F2. |
+| PEN-06 | Validar tipos de pedido, substituições e tratamento dos pedidos do próprio aprovador. Nas férias, direito de 22 dias úteis repartíveis e decisão final RH já estão confirmados. Falta validar o detalhe de PEN-14, sem inventar cadeias adicionais. | RH + responsáveis institucionais | Desenvolver F2. |
 | PEN-07 | Nomear equipa editorial. Confirmar públicos, comunicados institucionais, rejeição com motivo e regra de aprovação da própria notícia. | Coordenação + editorial | Ativar publicação. |
 | PEN-08 | Aprovar dados partilhados no perfil, tipos e limites de anexos, classificação, conservação e arquivo. | RH + DCSI + responsáveis documentais | Carregar dados reais e documentos. |
 | PEN-09 | Definir backups, retenção, RPO, RTO e responsabilidade por recuperação e incidentes. | DCSI | Disponibilizar F1. |
@@ -1555,7 +1602,9 @@ A lista recebida esclarece parcialmente PEN-01 e PEN-05, e o responsável confir
 | PEN-11 | Confirmado trabalho de Atchutchi e Albertina4264 em PCs separados. Albertina4264 executa o marco local de F1-01 e Atchutchi é o revisor previsto. Falta confirmar o acesso de escrita ao repositório e o calendário global. | Coordenação | Identificar executante antes de cada tarefa. Validar plano global antes de assumir datas de entrega. |
 | PEN-12 | Decidir se serão usados emails de notificação, em que eventos e por que canal institucional. | DCSI + donos dos processos | Ativar canal adicional. |
 
-PEN-13 resolvida quanto à identificação e localização: .151 é o controlador de domínio e Panthera-Onca, em .205, é o servidor membro de arn.local escolhido para o portal, conforme DEC-11/13/14. O inventário e a validação operacional de .205 permanecem Por iniciar em INF-01/02 e PEN-04. A confirmação da localização não substitui a validação operacional nem significa que a instalação foi executada.
+| PEN-14 | Férias: validar calendário de feriados, fonte dos saldos, proposta de bloqueio de sobreposição pendente, horários especiais, pedidos entre anos, saldo de 31 de dezembro, classificação de dias gozados, cancelamento parcial e correcções auditadas. Sem transporte, antecipação, compensação ou acumulação automáticos. | RH | Implementar e activar F2-03. |
+
+PEN-13 resolvida quanto à identificação e localização: .151 é o controlador e DNS de arn.local. Panthera-Onca, .205, está fora do domínio por decisão de 13 de outubro de 2026, conforme DEC-11/13/14. O inventário e a validação operacional de .205 permanecem Por iniciar em INF-01/02 e PEN-04. A confirmação da localização não substitui a validação operacional nem significa que a instalação foi executada.
 
 <a id="fontes"></a>
 ## 19. Fontes e histórico de decisões
@@ -1570,7 +1619,7 @@ O Plano Estratégico associa a intranet a comunicação interna, partilha de con
 
 As referências internas servem de contexto. O repositório não incorpora os documentos de origem nem transforma propostas institucionais em atos aprovados.
 
-As três capturas iniciais apresentam o ambiente de .151. O responsável confirmou depois a função de controlador de domínio e escolheu Panthera-Onca para a aplicação. O anexo image(3).png é uma captura de um resumo desse servidor, não uma sessão de inspeção realizada neste trabalho. O responsável corrigiu posteriormente o IP para .205 e confirmou a associação do host a arn.local. Estas indicações prevalecem no planeamento atual. O inventário da secção 3.5 distingue essas fontes e mantém a verificação de recursos, serviços e configuração como trabalho futuro. As três contas administrativas da secção 5.4 também foram indicadas diretamente pelo responsável. Identificadores de produto, MAC e dados sem utilidade para o plano não são reproduzidos.
+As capturas iniciais mostram .151 e um resumo anterior de Panthera-Onca. As decisões de 8 de outubro sobre o domínio ficam como histórico substituído. Em 13 de outubro, o responsável confirmou .205 fora de arn.local, Windows Server 2019 Standard/1809/build 17763/64 bits, Hyper-V instalado e WSL ausente. Esta informação prevalece no plano actual e não constitui inspeção remota. As três contas administrativas foram indicadas pelo responsável e não recebem privilégios por email. Identificadores de produto, MAC e outros dados sem utilidade para o plano não são reproduzidos.
 
 ### 19.2 Referências técnicas
 
@@ -1619,7 +1668,9 @@ Referências de infraestrutura consultadas em 8 de outubro de 2026 e de desenvol
 - [W40] [npm, npm ci](https://docs.npmjs.com/cli/v11/commands/npm-ci/).
 - [W41] [Docker Compose, COMPOSE_ENV_FILES e precedência das variáveis](https://docs.docker.com/compose/how-tos/environment-variables/envvars/#compose_env_files).
 
-### 19.3 Registo de decisões desta versão
+### 19.3 Histórico e decisões actuais
+
+Os registos de 8 e 9 de outubro conservam a rastreabilidade. Todas as referências históricas a Panthera-Onca como membro de arn.local e a Cursor como ferramenta obrigatória estão substituídas pelas decisões de 13 de outubro de 2026, DEC-11/14/18. Não descrevem o estado actual.
 
 | Data | Registo | Estado |
 | --- | --- | --- |
@@ -1636,7 +1687,7 @@ Referências de infraestrutura consultadas em 8 de outubro de 2026 e de desenvol
 | 2026-10-08 | Resumo anterior de Panthera-Onca em WORKGROUP, com 32 GB reportados | Informação usada nas versões 0.3 e 0.4. A associação ao domínio foi corrigida pelo responsável na versão 0.5. Recursos e coexistência continuam por inventariar. |
 | 2026-10-08 | IP de referência corrigido de 192.168.17.204 para 192.168.17.205 na versão 0.4 | Indicação direta do responsável. Arquitetura, DNS, operação e tarefas passam a usar .205. A configuração do servidor não foi alterada nesta entrega documental. |
 | 2026-10-08 | Google Workspace já utilizado pela ARN e três contas administrativas indicadas | Registadas na secção 5.4. Perfis locais e ativação serão executados na implementação. |
-| 2026-10-08 | Panthera-Onca em 192.168.17.205, membro de arn.local, na versão 0.5 | Correção direta do responsável. Substitui WORKGROUP no plano atual. .151 mantém AD DS/DNS e o portal mantém autenticação Google Workspace. |
+| 2026-10-08 | Panthera-Onca em 192.168.17.205, membro de arn.local, na versão 0.5 | Correção direta do responsável. Estado histórico da versão 0.5. Substituído por DEC-14 em 13 de outubro de 2026. .151 mantém AD DS/DNS e o portal usa Google Workspace. |
 | 2026-10-08 | Definições institucionais, colaboradores e calendário | Adiadas por indicação do responsável nessa revisão. A nova lista e o arranque em dois PCs esclarecem parte dessas pendências em 0.6. |
 | 2026-10-09 | Departamentos-ARN.docx, com 37 entradas e 73 nomes | Transcrição pedida pelo responsável, conferida e incluída na secção 4.1. Validações operacionais pendentes na secção 4.6. |
 | 2026-10-09 | Desenvolvimento conjunto em computadores separados | Confirmado pelo responsável. Documentados instalações, Git, revisão, primeiro marco local e prompt para o Cursor. Nenhum ambiente instalado nesta entrega. |
@@ -1644,5 +1695,9 @@ Referências de infraestrutura consultadas em 8 de outubro de 2026 e de desenvol
 | 2026-10-09 | Marco local de F1-01 iniciado por Albertina4264 | WordPress 7.1.3, PHP 8.4, MariaDB 11.8 e @wordpress/env 11.17.0 fixados. Plugin e tema mínimos adicionados. WordPress não foi executado neste PC. F1-01 permanece Em curso. |
 | 2026-10-09 | Portal privado, autoloader, modelo de unidades e CI | Guarda inicial de páginas, REST e AJAX, catálogo documental das 37 unidades com relações Documental ou Pendente e verificações GitHub. No commit 518ad38, 38 testes PHP e PHPCS aprovados. Sem alteração à secção 4 nem a decisões institucionais. |
 | 2026-10-09 | Revisão da fundação para integração na PR #2, a pedido de Atchutchi | Preservados os três commits da colaboradora. Corrigidos os comandos wp-env, bindings, fixture persistida, guarda REST após validação do core, entrada XML-RPC, hierarquia de unidades ativas e aviso local. Evidência e limites na secção 16.6. F1-01 permanece Em curso. |
+| 2026-10-13 | Panthera-Onca retirado de arn.local | DEC-11/14 confirmadas pelo responsável. Windows 2019 Standard, 1809, build 17763, 64 bits. Hyper-V instalado, WSL ausente. Substitui referências históricas ao domínio. Sem alteração de servidor nesta sessão. |
+| 2026-10-13 | Continuidade através de ChatGPT Work/Codex e GitHub | DEC-18. Cursor opcional. Branch, testes, revisão, PR, main, release e homologação antes da produção. |
+| 2026-10-13 | composer.lock regularizado | PR #3 integrada. SHA da branch `a230ffd4e4eee55a9ec67fba8493d50f39f072fe`, merge `2e743c16013e698535e2748bb79c4aa417c5f2b3`. CI Node e PHP aprovada no SHA. |
+| 2026-10-13 | Férias anuais repartíveis | DEC-19: 22 dias úteis por ano civil, solicitação prévia e decisão final RH. F2 ainda por iniciar. Pendências funcionais explicitadas em PEN-14. |
 
-Depois da integração da PR #2, ambos os colaboradores atualizam `main` e repetem o arranque nos respetivos PCs, com WSL 2, Ubuntu 24.04, Node.js 24.21.0 e Docker Desktop licenciado, seguindo a secção 16.6. Falta gerar `composer.lock` no contentor, executar as verificações PHP, confirmar as versões efetivas e os bindings reais em localhost. O inventário de .205 e a validação de coexistência, políticas e acessos administrativos continuam previstos em INF-01/02. O portal ficará em Panthera-Onca, membro de arn.local, com AD DS/DNS em .151. A lista institucional está documentada e as validações remanescentes continuam identificadas. Esta entrega não instalou a aplicação na ARN nem alterou servidores ou contas.
+Após cada integração, ambos os colaboradores actualizam main e usam o fluxo da secção 16.6. A validação local de Atchutchi está registada e o lockfile já está em main. Falta repetição no segundo PC e homologação Windows/IIS/MySQL 8.4. O inventário e a validação de .205 continuam em INF-01/02, sem acesso nesta sessão. Panthera-Onca deve permanecer fora de arn.local. Esta sessão não instalou o portal na ARN nem alterou servidores, AD, DNS ou contas Google.
