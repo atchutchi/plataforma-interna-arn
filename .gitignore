@@ -25,6 +25,8 @@ auth.json
 .phpunit.cache/
 .phpunit.result.cache
 /coverage/
+/output/playwright/
+/.playwright-cli/
 *.log
 
 # Sistema.
