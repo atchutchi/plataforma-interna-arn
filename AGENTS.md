@@ -1,6 +1,6 @@
 # Instruções para agentes
 
-A referência do projeto é o `README.md`. Lê as secções que a tarefa tocar antes de alterar código. Este ficheiro só resume o trabalho corrente.
+A referência do projeto é o `README.md`. Lê as secções que a tarefa tocar antes de alterar código. GitHub é a fonte de verdade. Este ficheiro resume o trabalho corrente. ChatGPT Work/Codex trabalha sobre GitHub e num clone separado. Cursor é opcional e não é dependência do código.
 
 A stack é WordPress, com regras em `wp-content/plugins/arn-intranet-core` e apresentação em `wp-content/themes/arn-intranet`. Não substituas esta arquitetura. Textos de interface ficam em português de Portugal.
 
@@ -33,7 +33,7 @@ Usa os scripts npm: `scripts/wp-env.mjs` fornece bindings HTTP e MariaDB em `127
 
 `npm run env:check` e `npm run env:check:tests` confirmam o estado e os bindings reais do projeto selecionado. Qualquer publicação fora de loopback falha, incluindo IPs específicos da LAN. As duas configurações mantêm `testsEnvironment=false` e `phpmyadmin=false`, também nos overrides. O ambiente de testes próprio é `.wp-env.test.json`.
 
-PHP, Composer, MariaDB e WordPress vêm dos contentores. Não há `mysqlVersion`: a base local configurada é MariaDB 11.8 e não prova compatibilidade com MySQL 8.4. `composer.lock` só deve ser gerado com `npm run composer:install`, dentro do contentor. Sem Docker, PHPUnit e phpcs podem correr com um PHP 8.4 local e `vendor/` não versionado; isso verifica o código, não o ambiente.
+PHP, Composer, MariaDB e WordPress vêm dos contentores. Não há `mysqlVersion`: a base local configurada é MariaDB 11.8 e não prova compatibilidade com MySQL 8.4. `composer.lock` já está integrado pela PR #3. Quando for necessário actualizá-lo, só deve ser gerado com `npm run composer:install`, dentro do contentor. Sem Docker, PHPUnit e phpcs podem correr com um PHP 8.4 local e `vendor/` não versionado; isso verifica o código, não o ambiente.
 
 ## Código
 
@@ -47,4 +47,8 @@ Não acedas a Panthera-Onca, ao controlador de `arn.local`, ao DNS, ao Google Wo
 
 F1-01 continua aberta até à homologação Windows/IIS. Não marques a tarefa como concluída só porque a cópia local abre.
 
-Commits e push ficam na branch da tarefa. Não integres em `main` nem uses force push.
+Commits e push ficam na branch da tarefa. Nunca faças push directo em `main` nem uses force push. A sessão de 13 de outubro de 2026 autoriza integração de PRs após revisão do diff e CI verde no SHA exacto. Esta autorização não inclui deploy.
+
+Panthera-Onca .205 está fora de arn.local e deve permanecer assim. Windows Server 2019 Standard, 1809, build 17763, 64 bits. Hyper-V instalado e WSL ausente. Produção nativa em IIS/PHP 8.4 x64 NTS/MySQL 8.4 LTS. Não instalar WSL ou Docker Desktop no servidor. Não depender de GPO, Kerberos, LDAP, conta de computador ou autenticação AD. DNS institucional apenas se aprovado pela DCSI.
+
+Férias ficam apenas especificadas nesta fase: 22 dias úteis por ano civil, repartíveis em pedidos prévios, aprovação final RH e saldo separado entre gozados, futuros aprovados e disponível. Não implementar F2 antes dos pré-requisitos. Validar as pendências de PEN-14 antes de alterar comportamento institucional.
