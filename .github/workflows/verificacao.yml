@@ -54,5 +54,6 @@ jobs:
       - run: npm run composer:install
       - run: npm run test:identity:integration
       - run: npm run test:oidc:integration
+      - run: npm run test:authorization:integration
       - if: always()
         run: npm run env:stop:tests

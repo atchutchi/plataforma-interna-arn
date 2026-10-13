@@ -20,7 +20,8 @@
     "DISALLOW_FILE_EDIT": true,
     "ARN_OIDC_VENDOR_AUTOLOAD": "/var/www/html/arn-repo/vendor/autoload.php",
     "ARN_ALLOW_FICTIONAL_LOCAL_ACCESS": true,
-    "ARN_ALLOW_LOCAL_AUTHORIZATION_PROBE": true
+    "ARN_ALLOW_LOCAL_AUTHORIZATION_PROBE": true,
+    "ARN_ALLOW_LOCAL_AUTHORIZATION_STORAGE": true
   },
   "mappings": {
     "arn-repo": "."
