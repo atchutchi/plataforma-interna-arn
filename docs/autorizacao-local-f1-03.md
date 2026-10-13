@@ -26,9 +26,9 @@ O laboratório portátil usa a mesma flag na configuração WordPress local. Nã
 
 ## Alcance
 
-O motor avalia snapshots fictícios. Não lê uma matriz persistente, não suspende sessões WordPress reais e não filtra conteúdos dos módulos ainda ausentes. O login e as guardas Google de F1-02 conservam o comportamento existente. O administrador técnico nativo mantém acesso privilegiado ao CMS, código e base conforme o seu papel actual.
+O ensaio deste primeiro marco avalia snapshots fictícios construídos em memória. A continuação em docs/persistencia-autorizacao-f1-03.md acrescenta um repositório local auditado, cuja leitura fornece os mesmos valores ao motor. Não suspende sessões WordPress reais nem filtra conteúdos dos módulos ainda ausentes. O login e as guardas Google de F1-02 conservam o comportamento existente. O administrador técnico nativo mantém acesso privilegiado ao CMS, código e base conforme o seu papel actual.
 
-Uma futura integração exige persistência, decisões auditadas atomicamente, leitura actual do estado e das concessões e obtenção dos dados do objecto no servidor. Nenhum cliente poderá declarar que uma sessão é válida, que um módulo está pronto ou que uma audiência foi aprovada. Esta entrega não é uma licença para ligar os inputs de teste a pedidos externos.
+A persistência e as decisões auditadas atomicamente são preparadas na continuação local. Uma futura integração institucional exige ainda leitura actual do estado e das concessões, obtenção dos dados do objecto no servidor e os pré-requisitos documentados. Nenhum cliente poderá declarar que uma sessão é válida, que um módulo está pronto ou que uma audiência foi aprovada. Esta entrega não é uma licença para ligar os inputs de teste a pedidos externos.
 
 F1-03 passa a Em curso com este marco local, sem concluir US-A01/02, US-S03 ou autorização institucional por objecto. F0-02/F0-06, F1-01/F1-02 institucional e as decisões de administração continuam relevantes. F2 mantém os pré-requisitos.
 
