@@ -19,6 +19,7 @@
     "test": "node --test tests/node/*.test.mjs",
     "test:php": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo vendor/bin/phpunit -c phpunit.xml.dist",
     "lint:php": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo vendor/bin/phpcs",
+    "test:identity:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/identity-persistence.php --user=admin",
     "composer:install": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo composer install --no-interaction --no-progress --prefer-dist"
   },
   "devDependencies": {

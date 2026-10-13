@@ -43,7 +43,9 @@ O catálogo `Organization\DocumentaryCatalog` transcreve as unidades da secção
 
 ## Limites
 
-Não acedas a Panthera-Onca, ao controlador de `arn.local`, ao DNS, ao Google Workspace nem a produção. Não cries contas a partir da lista da secção 4. As três contas da secção 5.4 não recebem privilégios por email. O acesso fictício `ana.teste` / `fixture-local-ana` só é permitido com `WP_ENVIRONMENT_TYPE=local` e a flag explicitamente verdadeira. Uma fixture já guardada também tem de ficar bloqueada quando a condição deixa de se cumprir, preservando contas legítimas e autoria.
+Não acedas a Panthera-Onca, ao controlador de `arn.local`, ao DNS ou a produção. O responsável autorizou nesta continuação de 13 de outubro a consulta e preparação de configuração Google para autenticação. Não guardar credenciais, dados de funcionários ou URLs de sessão no Git. Não alterar MFA ou promover acessos institucionais. Não cries contas a partir da lista da secção 4. As três contas da secção 5.4 não recebem privilégios por email. O acesso fictício `ana.teste` / `fixture-local-ana` só é permitido com `WP_ENVIRONMENT_TYPE=local` e a flag explicitamente verdadeira. Uma fixture já guardada também tem de ficar bloqueada quando a condição deixa de se cumprir, preservando contas legítimas e autoria.
+
+O serviço de associação persistente F1-02 não está ligado aos hooks. Não o transformar em login sem cliente OIDC homologado. Usa uma ligação IdentityWpdb dedicada, auditoria na mesma transacção e autorização local explícita. O ensaio `npm run test:identity:integration` cria apenas fixtures e tabelas exclusivas no ambiente de testes. Não o executar com dados institucionais reais.
 
 F1-01 continua aberta até à homologação Windows/IIS. Não marques a tarefa como concluída só porque a cópia local abre.
 

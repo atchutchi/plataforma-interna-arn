@@ -37,3 +37,20 @@ jobs:
       - run: composer install --no-interaction --no-progress --prefer-dist
       - run: vendor/bin/phpunit -c phpunit.xml.dist
       - run: vendor/bin/phpcs
+
+  identity-integration:
+    name: WordPress e persistência MariaDB
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run env:start:tests
+      - run: npm run env:check:tests
+      - run: npm run test:identity:integration
+      - if: always()
+        run: npm run env:stop:tests
