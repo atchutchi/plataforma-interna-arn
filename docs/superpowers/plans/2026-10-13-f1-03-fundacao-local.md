@@ -24,6 +24,7 @@ Especificação: docs/superpowers/specs/2026-10-13-f1-03-fundacao-local-design.m
 - Duas concessões parciais não cobrem um objecto com vários alvos. Testar na tarefa 1.
 - Institutional não contorna propriedade própria ou aprovação da própria notícia. Testar na tarefa 1.
 - Delegação próprio é relativa ao destinatário e não permite promoção do actor. Testar na tarefa 1.
+- Listas recebidas com referências PHP externas não podem alterar inputs imutáveis depois da construção. Testar na tarefa 1.
 - Página local sob flag tem de desaparecer em development/production e recusar subscriber ou anónimo. Testar na tarefa 2 e Playwright na tarefa 3.
 
 ### Task 1: Motor puro de autorização e delegação
