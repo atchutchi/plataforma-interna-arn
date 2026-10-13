@@ -44,4 +44,11 @@ interface IdentityLinkRepository {
 	 * @param string $subject Identificador opaco.
 	 */
 	public function find( string $issuer, string $subject ): ?LocalIdentityLink;
+
+	/**
+	 * Consulta por conta exacta, conservando vínculos revogados e sem cache.
+	 *
+	 * @param int $user_id Identificador local.
+	 */
+	public function findForUser( int $user_id ): ?LocalIdentityLink;
 }

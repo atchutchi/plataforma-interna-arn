@@ -24,6 +24,8 @@ use Arn\Intranet\Access\LocalFixtureAccess;
 use Arn\Intranet\Access\LocalFixtureUser;
 use Arn\Intranet\Access\PrivatePortal;
 use Arn\Intranet\Autoloader;
+use Arn\Intranet\Identity\GoogleLoginController;
+use Arn\Intranet\Identity\WordPressFederatedAccess;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -32,6 +34,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once __DIR__ . '/src/Autoloader.php';
 
 Autoloader::register( __DIR__ . '/src' );
+
+$arn_vendor = defined( 'ARN_OIDC_VENDOR_AUTOLOAD' ) ? ARN_OIDC_VENDOR_AUTOLOAD : dirname( __DIR__, 3 ) . '/vendor/autoload.php';
+if ( is_string( $arn_vendor ) && is_readable( $arn_vendor ) ) {
+	require_once $arn_vendor;
+}
+unset( $arn_vendor );
+
+if ( class_exists( \GuzzleHttp\Client::class ) ) {
+	( new GoogleLoginController() )->registerHooks();
+}
+
+( new WordPressFederatedAccess(
+	static fn( int $id ) => GoogleLoginController::linkedUser( $id ),
+	static fn(): bool => class_exists( \GuzzleHttp\Client::class ) && null !== GoogleLoginController::configuration()
+) )->register();
 
 /**
  * Traduções do plugin. As strings de origem já estão em português de Portugal.

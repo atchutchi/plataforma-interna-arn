@@ -177,6 +177,60 @@ final class IdentityLinkServiceTest extends TestCase {
 	}
 
 	/**
+	 * A consulta pelo ID exige conta local existente e conserva revogação.
+	 */
+	public function testUserLookupPreservesRevokedState(): void {
+		$repository = $this->createMock( IdentityLinkRepository::class );
+		$link       = new LocalIdentityLink( 12, 'accounts.google.com', 'opaque-sub', false, false );
+		$repository->method( 'findForUser' )->with( 12 )->willReturn( $link );
+		$authority = $this->createMock( IdentityLinkAuthority::class );
+		$authority->expects( self::once() )->method( 'accountExists' )->with( 12 )->willReturn( true );
+		$service = new IdentityLinkService( $repository, $authority );
+		self::assertSame( $link, $service->findForUser( 12 ) );
+	}
+
+	/**
+	 * A remoção da conta nega também a resolução pelo ID.
+	 */
+	public function testUserLookupRejectsRemovedAccount(): void {
+		$repository = $this->createMock( IdentityLinkRepository::class );
+		$repository->method( 'findForUser' )->willReturn( new LocalIdentityLink( 12, 'accounts.google.com', 'opaque-sub', true, true ) );
+		$service = new IdentityLinkService( $repository, $this->authority( true, false ) );
+		self::assertNull( $service->findForUser( 12 ) );
+	}
+
+	/**
+	 * Um adaptador não pode trocar a conta solicitada.
+	 */
+	public function testUserLookupRejectsMismatchedAccount(): void {
+		$repository = $this->createMock( IdentityLinkRepository::class );
+		$repository->method( 'findForUser' )->willReturn( new LocalIdentityLink( 13, 'accounts.google.com', 'opaque-sub', true, true ) );
+		$service = new IdentityLinkService( $repository, $this->authority() );
+		self::assertNull( $service->findForUser( 12 ) );
+	}
+
+	/**
+	 * Identificadores inválidos nunca chegam ao armazenamento.
+	 */
+	public function testInvalidUserLookupDoesNotAccessRepository(): void {
+		$repository = $this->createMock( IdentityLinkRepository::class );
+		$repository->expects( self::never() )->method( 'findForUser' );
+		$service = new IdentityLinkService( $repository, $this->authority() );
+		foreach ( array( 0, -1 ) as $user_id ) {
+			self::assertNull( $service->findForUser( $user_id ) );
+		}
+	}
+
+	/**
+	 * Uma conta cadastrada sem vínculo permanece sem associação.
+	 */
+	public function testUserLookupReturnsNullForMissingLink(): void {
+		$repository = $this->createMock( IdentityLinkRepository::class );
+		$service    = new IdentityLinkService( $repository, $this->authority() );
+		self::assertNull( $service->findForUser( 12 ) );
+	}
+
+	/**
 	 * Confirma os dois requisitos de administração sem WordPress.
 	 *
 	 * @param bool $allowed Actor pode gerir vínculos.

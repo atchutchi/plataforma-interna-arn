@@ -1,6 +1,6 @@
 # F1-02: fundação de associação persistente
 
-13 de outubro de 2026. Esta entrega acrescenta persistência controlada. Não activa login Google. Não instala cliente OIDC, callback, formulário administrativo ou emissão de sessão.
+13 de outubro de 2026. Este documento regista o marco histórico da fundação persistente, entregue sem login. A continuação actual acrescenta cliente homologado localmente, callback, formulário administrativo e sessão. Consultar [login Google local](google-login-local-f1-02.md) para o estado e os ensaios actuais. Os limites abaixo descrevem a entrega anterior.
 
 ## Contrato
 

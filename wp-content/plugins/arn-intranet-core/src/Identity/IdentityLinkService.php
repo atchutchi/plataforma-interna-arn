@@ -102,6 +102,22 @@ final class IdentityLinkService {
 	}
 
 	/**
+	 * Consulta corrente pelo ID local, sem conceder acesso nem filtrar revogação.
+	 *
+	 * @param int $user_id Conta previamente cadastrada.
+	 */
+	public function findForUser( int $user_id ): ?LocalIdentityLink {
+		if ( $user_id < 1 ) {
+			return null;
+		}
+		$link = $this->repository->findForUser( $user_id );
+		if ( null === $link || $link->user_id !== $user_id || ! $this->authority->accountExists( $user_id ) ) {
+			return null;
+		}
+		return $link;
+	}
+
+	/**
 	 * Não aceita autorização por email ou identidade externa.
 	 *
 	 * @param int $actor_id Actor local actual.

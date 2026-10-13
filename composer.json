@@ -1,28 +1,30 @@
 {
-  "name": "arn/intranet",
-  "description": "Dependências PHP de desenvolvimento da plataforma interna da ARN.",
-  "type": "project",
-  "license": "GPL-2.0-or-later",
-  "require": {
-    "php": ">=8.4"
-  },
-  "require-dev": {
-    "phpunit/phpunit": "11.5.57",
-    "wp-coding-standards/wpcs": "3.4.1"
-  },
-  "autoload": {
-    "psr-4": {
-      "Arn\\Intranet\\": "wp-content/plugins/arn-intranet-core/src/"
+    "name": "arn/intranet",
+    "description": "Depend\u00eancias PHP da plataforma interna da ARN.",
+    "type": "project",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "facile-it/php-openid-client": "1.0.0",
+        "guzzlehttp/guzzle": "7.15.5",
+        "php": ">=8.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "11.5.57",
+        "wp-coding-standards/wpcs": "3.4.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Arn\\Intranet\\": "wp-content/plugins/arn-intranet-core/src/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        },
+        "platform": {
+            "php": "8.4.0"
+        },
+        "preferred-install": "dist",
+        "sort-packages": true
     }
-  },
-  "config": {
-    "allow-plugins": {
-      "dealerdirect/phpcodesniffer-composer-installer": true
-    },
-    "platform": {
-      "php": "8.4.0"
-    },
-    "preferred-install": "dist",
-    "sort-packages": true
-  }
 }

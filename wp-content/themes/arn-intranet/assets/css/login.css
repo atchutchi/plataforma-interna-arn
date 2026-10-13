@@ -14,6 +14,8 @@ body.login { background: #f4f7f8; color: #1b242c; font-family: 'Source Sans 3', 
 .login form .input { font-size: 1.25rem; border-color: #526373; border-radius: 0.25rem; }
 .login .button-primary { background: #0b3a5b; border-color: #0b3a5b; min-height: 2.75rem; padding-inline: 1.25rem; font-size: 1rem; }
 .login .button-primary:hover { background: #1f6b4a; border-color: #1f6b4a; }
+.login .arn-google-login { clear: both; margin-block: 1rem; }
+.login .arn-google-login .button { display: block; float: none; width: 100%; text-align: center; line-height: 2.625rem; }
 .login #nav, .login #backtoblog { font-size: 0.875rem; }
 .login :where(a, button, input, select):focus-visible { outline: 3px solid #0b3a5b; outline-offset: 3px; }
 .login #nav a, .login #backtoblog a { color: #0b3a5b; }

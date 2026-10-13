@@ -1,5 +1,7 @@
 # F1-02: preparação técnica e barreiras à activação
 
+Marco histórico de preparação isolada. O estado actual e a homologação local estão em [login Google local](google-login-local-f1-02.md).
+
 Data: 13 de outubro de 2026. Executante: Codex a pedido de Atchutchi. Branch: feature/atchutchi-F1-02-oidc. F1-02 está Em curso apenas no marco de preparação. F1-01/F0-04 continuam a condicionar homologação e activação institucional.
 
 ## Código entregue

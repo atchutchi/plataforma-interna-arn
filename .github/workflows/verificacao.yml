@@ -51,6 +51,8 @@ jobs:
       - run: npm ci
       - run: npm run env:start:tests
       - run: npm run env:check:tests
+      - run: npm run composer:install
       - run: npm run test:identity:integration
+      - run: npm run test:oidc:integration
       - if: always()
         run: npm run env:stop:tests
