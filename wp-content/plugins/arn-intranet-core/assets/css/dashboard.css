@@ -13,7 +13,7 @@
 .arn-admin-logo { width: 8.5rem; height: auto; max-width: 100%; flex: 0 0 auto; }
 .arn-admin-header > div { flex: 1 1 15rem; min-width: 0; }
 .arn-admin .arn-admin-label { color: var(--arn-admin-muted); font-size: 0.875rem; font-weight: 600; margin: 0 0 0.25rem; }
-.arn-admin h3 { color: var(--arn-admin-primary); font-family: "ARN Admin Heading", "Segoe UI", sans-serif; font-size: 1.25rem; font-weight: 700; line-height: 1.3; margin: 0 0 0.5rem; text-wrap: balance; }
+#arn-dashboard .arn-admin h3 { color: var(--arn-admin-primary); font-family: "ARN Admin Heading", "Segoe UI", sans-serif; font-size: 1.25rem; font-weight: 700; line-height: 1.3; margin: 0 0 0.5rem; text-wrap: balance; }
 .arn-admin .arn-admin-intro { margin: 0; font-size: 1rem; line-height: 1.5; max-width: 65ch; }
 .arn-admin-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); column-gap: 1.5rem; margin: 0; padding: 0; list-style: none; }
 .arn-admin-links li { margin: 0; border-top: 1px solid var(--arn-admin-border); }

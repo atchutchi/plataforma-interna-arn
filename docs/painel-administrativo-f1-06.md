@@ -26,4 +26,6 @@ Playwright CLI, em sessão isolada: anónimo encaminhado para login. A fixture s
 
 As capturas ficam ignoradas em output/playwright/painel-arn-administrador.png e output/playwright/painel-arn-subscriber-mobile.png. Os logs, scripts de ensaio e preferências locais ficam fora do Git. Impeccable orientou o registo de produto, a hierarquia, as fontes e o reflow. Foram aplicadas as orientações de acessibilidade do UI UX Pro Max. O seu helper de pesquisa não correu: scripts e data estão guardados como ficheiros de ligação textual nesta instalação e o destino não existe. Essa limitação não impede o uso das orientações disponíveis no SKILL.md.
 
+A revisão independente identificou uma sobreposição do selector nativo #dashboard-widgets h3. Foi corrigida apenas no widget ARN. O título efectivo passou de peso 400 a 700 e ficou a 20 px, com Manrope. Medições de contraste no browser: menu seleccionado 6,44:1, botão primário 11,86:1 e texto secundário 6,19:1. Os ensaios responsivos e de texto ampliado foram repetidos depois desta correcção.
+
 F1-06 continua Em curso. Esta entrega melhora a administração CMS já existente. Não implementa o painel funcional F1-14, o circuito editorial F1-13, o diretório, a persistência de permissões ou F2. A integração da PR exige revisão independente e CI verde no SHA exacto.
