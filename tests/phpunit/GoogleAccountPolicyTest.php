@@ -42,6 +42,27 @@ final class GoogleAccountPolicyTest extends TestCase {
 	}
 
 	/**
+	 * Outros funcionários não tornam ambíguo o vínculo desta identidade.
+	 */
+	public function testUnrelatedIdentityDoesNotBlockTheAuthorizedLink(): void {
+		$valid = new LocalIdentityLink( 12, 'https://accounts.google.com', 'subject-ficticio', true, true );
+		$other = new LocalIdentityLink( 13, 'https://accounts.google.com', 'outro-subject', false, false );
+		foreach ( array( array( $valid, $other ), array( $other, $valid ) ) as $links ) {
+			self::assertSame( 12, GoogleAccountPolicy::localUserId( $this->claims(), 'example.test', $links ) );
+		}
+	}
+
+	/**
+	 * Um repositório que devolva elementos mal tipados não concede acesso.
+	 */
+	public function testMalformedLinkCollectionFailsClosed(): void {
+		$valid = new LocalIdentityLink( 12, 'https://accounts.google.com', 'subject-ficticio', true, true );
+		foreach ( array( array( $valid, null ), array( null, $valid ) ) as $links ) {
+			self::assertNull( GoogleAccountPolicy::localUserId( $this->claims(), 'example.test', $links ) );
+		}
+	}
+
+	/**
 	 * Identidade institucional não contorna estado ou autorização local.
 	 */
 	public function testInactiveUnauthorizedAndAmbiguousLinksAreDenied(): void {

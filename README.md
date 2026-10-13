@@ -1536,7 +1536,7 @@ O candidato OpenID Connect Generic Client 3.11.3 foi examinado, sem instalação
 | --- | --- |
 | Suite original em PHP 8.4.26 portátil | 63 testes, 284 asserções e PHPCS 28/28, antes de acrescentar as classes. |
 | RED antes de implementar | 42 novos cenários falharam por ausência das classes. |
-| PHPUnit após implementar | 105 testes, 353 asserções, 0 falhas. Testes puros, sem Google real ou WordPress integrado. |
+| PHPUnit após implementar e completar a cobertura | 107 testes, 357 asserções, 0 falhas. Testes puros, sem Google real ou WordPress integrado. |
 | PHPCS após corrigir apontamentos | 34/34 ficheiros aprovados com o ruleset existente. |
 | npm test | 54 testes aprovados, 0 falhas. Node local 24.19.0. O requisito 24.21.0 continua fixado e é verificado pela CI. |
 | npm run lint e npm run build | Aprovados. O build verifica a estrutura e não compila a interface final. |
@@ -1544,7 +1544,7 @@ O candidato OpenID Connect Generic Client 3.11.3 foi examinado, sem instalação
 
 F1-02 continua Em curso. Faltam cliente mantido aprovado, validação criptográfica e de state/nonce, adaptador WordPress, vínculo persistente com operação autorizada e auditada, bloqueio de credenciais alternativas, dados Google institucionais, callback aprovado e ensaios LAN/VPN/Windows/IIS. F1-01 continua Em curso. A preparação local não conclui F1-03/04/05 nem autoriza começar F2.
 
-O SHA e a CI finais da preparação ficam associados à PR no GitHub. Próximo passo recomendado: homologar o cliente OIDC e definir o contrato persistente de vínculo, sem inventar credenciais ou competências. Os trabalhos seguintes actualizam este registo com a PR e commit integrados.
+A preparação está na [PR #5](https://github.com/atchutchi/plataforma-interna-arn/pull/5), commit de implementação `70a6bf283b7fc3422e1f98e7c49553552a819842`. Revisão independente aprovada sobre esse commit, com PHPUnit repetido pelo revisor. A [CI inicial](https://github.com/atchutchi/plataforma-interna-arn/actions/runs/38426638454) passou Node e PHP. Foram depois acrescentados dois testes de cobertura sugeridos pelo revisor, sem alteração das classes, resultando em 107 testes e 357 asserções. O SHA final, a CI posterior e a integração ficam no registo GitHub da PR. Integrar apenas depois de confirmar os checks no SHA final. Próximo passo: homologar o cliente OIDC e definir o contrato persistente de vínculo, sem inventar credenciais ou competências.
 
 <a id="verificacao"></a>
 ## 17. Verificação e critérios de conclusão
