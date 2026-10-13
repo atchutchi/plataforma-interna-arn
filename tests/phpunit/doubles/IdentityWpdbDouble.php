@@ -42,6 +42,13 @@ class wpdb {
 	 * @var string
 	 */
 	public string $engine = 'InnoDB';
+
+	/**
+	 * Número de tabelas próprias presentes no cenário.
+	 *
+	 * @var int
+	 */
+	public int $tables_present = 2;
 	/**
 	 * Constraints únicas presentes.
 	 *
@@ -170,15 +177,19 @@ class wpdb {
 			return null;
 		}
 		if ( str_contains( $query, 'information_schema.TABLES' ) ) {
-			return array(
-				(object) array(
-					'TABLE_NAME' => 'wp_arn_identity_links',
-					'ENGINE'     => $this->engine,
+			return array_slice(
+				array(
+					(object) array(
+						'TABLE_NAME' => 'wp_arn_identity_links',
+						'ENGINE'     => $this->engine,
+					),
+					(object) array(
+						'TABLE_NAME' => 'wp_arn_identity_audit',
+						'ENGINE'     => $this->engine,
+					),
 				),
-				(object) array(
-					'TABLE_NAME' => 'wp_arn_identity_audit',
-					'ENGINE'     => $this->engine,
-				),
+				0,
+				$this->tables_present
 			);
 		}
 		if ( str_starts_with( $query, 'SHOW INDEX' ) ) {

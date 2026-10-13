@@ -16,13 +16,15 @@ Decisão: no laboratório, a sessão federada dura no máximo uma hora e tem lim
 
 ## Tarefas
 
-- [ ] Homologar Facile 1.0.0 com RSA/JWKS reais, claims inválidas, state/nonce obrigatórios e PKCE. Fixar dependências e auditar. Gerar composer.lock dentro do contentor de referência, usando CI sem segredos quando o Docker local não funcionar.
-- [ ] Configuração local gated e PhpOidcAttemptStore consumível, com TTL e sessão PHP dedicada, antes da troca de código. TDD.
-- [ ] Acrescentar consulta por conta local ao repositório existente. Implementar carregamento protegido da configuração, sessão federada, guarda de revogação e bloqueios das vias alternativas. TDD e ensaio real WordPress.
-- [ ] Implementar hooks de entrada/callback e associação administrativa auditada. Sem redireccionamento fornecido pelo utilizador ou tokens em mensagens/logs.
-- [ ] Rever o conjunto e testar com fornecedor assinado simulado. Concluir todo o código local antes da confirmação de criação de credenciais Google.
-- [ ] Preparar cliente OAuth Web dedicado no Google Cloud. A política do browser exige confirmação no momento de criar credenciais persistentes. Guardar o ficheiro descarregado fora do Git e do webroot, com permissões locais restritas.
-- [ ] Playwright do login Google real, callback, sessão, logout, recusa não autorizada e revogação. Segredos, códigos, state e cookies não são artefactos versionados.
+- [x] Homologar Facile 1.0.0 com RSA/JWKS reais, claims inválidas, state/nonce obrigatórios e PKCE. Fixar dependências e auditar. Gerar composer.lock dentro do contentor de referência, usando CI sem segredos quando o Docker local não funcionar.
+- [x] Configuração local gated e PhpOidcAttemptStore consumível, com TTL e sessão PHP dedicada, antes da troca de código. TDD.
+- [x] Acrescentar consulta por conta local ao repositório existente. Implementar carregamento protegido da configuração, sessão federada, guarda de revogação e bloqueios das vias alternativas. TDD e ensaio real WordPress.
+- [x] Implementar hooks de entrada/callback e associação administrativa auditada. Sem redireccionamento fornecido pelo utilizador ou tokens em mensagens/logs.
+- [x] Rever o conjunto e testar com fornecedor assinado simulado. Concluir todo o código local antes da confirmação de criação de credenciais Google.
+- [x] Preparar cliente OAuth Web dedicado no Google Cloud. A política do browser exige confirmação no momento de criar credenciais persistentes. Guardar o ficheiro descarregado fora do Git e do webroot, com permissões locais restritas.
+- [x] Playwright do login Google real, callback, sessão, logout, recusa não autorizada e revogação. Segredos, códigos, state e cookies não são artefactos versionados.
 - [ ] Documentar alcance da homologação local, rever e integrar PR com CI verde. F1-01/IIS/MySQL, F1-03 e F2 mantêm dependências institucionais.
 
 Foco de revisão: callback recebido de outro browser, sessão WordPress do actor trocada durante associação, falha de auditoria, replay e configuração removida com sessões existentes. A falha deve impedir acesso.
+
+Evidência local: docs/google-login-local-f1-02.md. O fornecedor simulado foi ensaiado no transporte PSR-18 com tokens RSA, complementado pelo fluxo Google real no browser. A criação OAuth e a associação da identidade à conta de laboratório existente receberam confirmação no momento da acção. A integração da PR permanece pendente da CI final.

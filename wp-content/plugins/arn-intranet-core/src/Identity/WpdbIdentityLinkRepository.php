@@ -214,6 +214,62 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 	}
 
 	/**
+	 * Resolve um único vínculo pelo ID exacto, sem cache nem criação de schema.
+	 *
+	 * @param int $user_id Conta local.
+	 * @throws RuntimeException Quando existem dados incoerentes ou ambíguos.
+	 */
+	public function findForUser( int $user_id ): ?LocalIdentityLink {
+		if ( $user_id < 1 ) {
+			return null;
+		}
+		return $this->silently(
+			function () use ( $user_id ): ?LocalIdentityLink {
+				$this->assertSchema();
+				$rows = $this->rows(
+					$this->database->prepare(
+						'SELECT user_id, issuer, subject, authorized, active FROM %i WHERE user_id = %d LIMIT 2',
+						$this->links_table,
+						$user_id,
+					)
+				);
+				if ( array() === $rows ) {
+					return null;
+				}
+				$link = 1 === count( $rows ) ? $this->hydrate( $rows[0] ) : null;
+				if ( null === $link || $link->user_id !== $user_id ) {
+					throw new RuntimeException( 'Vínculo local inválido ou ambíguo.' );
+				}
+				return $link;
+			}
+		);
+	}
+
+	/**
+	 * Distingue laboratório novo de schema existente ou danificado.
+	 *
+	 * @throws RuntimeException Quando a leitura falha ou o schema é parcial.
+	 */
+	public function hasSchema(): bool {
+		return $this->silently(
+			function (): bool {
+				$tables = $this->rows(
+					$this->database->prepare(
+						'SELECT TABLE_NAME, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (%s, %s)',
+						$this->links_table,
+						$this->audit_table,
+					)
+				);
+				if ( array() === $tables ) {
+					return false;
+				}
+				$this->assertSchema();
+				return true;
+			}
+		);
+	}
+
+	/**
 	 * Verifica motor, índices completos e comparação binária sem criar tabelas.
 	 *
 	 * @throws RuntimeException Quando o schema não garante integridade.

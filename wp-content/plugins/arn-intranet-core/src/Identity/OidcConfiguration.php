@@ -17,7 +17,7 @@ use LogicException;
  */
 final readonly class OidcConfiguration {
 
-	public const SCOPES = array( 'openid', 'email', 'profile' );
+	public const SCOPES = array( 'openid', 'email' );
 
 	/**
 	 * Usa a fábrica para exigir a configuração completa e validar o callback.
@@ -38,11 +38,12 @@ final readonly class OidcConfiguration {
 	 * O leitor pode consultar getenv ou configuração protegida do ambiente.
 	 * A flag 1 é deliberada. Ausência e outros valores não lêem os segredos.
 	 *
-	 * @param callable(string): (string|false) $read Leitor de variáveis externas.
+	 * @param callable(string): (string|false) $read             Leitor de variáveis externas.
+	 * @param string                           $environment_type Tipo explícito de ambiente WordPress.
 	 *
 	 * @throws InvalidArgumentException Em configuração activa incompleta ou inválida.
 	 */
-	public static function fromEnvironment( callable $read ): ?self {
+	public static function fromEnvironment( callable $read, string $environment_type = 'production' ): ?self {
 		if ( '1' !== $read( 'ARN_OIDC_ENABLED' ) ) {
 			return null;
 		}
@@ -56,7 +57,8 @@ final readonly class OidcConfiguration {
 			$values[ $field ] = $value;
 		}
 
-		if ( ! self::validDomain( $values['WORKSPACE_DOMAIN'] ) || ! self::validRedirect( $values['REDIRECT_URI'] ) ) {
+		$allow_local_http = 'local' === $environment_type && '1' === $read( 'ARN_OIDC_ALLOW_LOCAL_HTTP' );
+		if ( ! self::validDomain( $values['WORKSPACE_DOMAIN'] ) || ! self::validRedirect( $values['REDIRECT_URI'], $allow_local_http ) ) {
 			throw new InvalidArgumentException( 'Domínio ou callback OIDC inválido.' );
 		}
 
@@ -109,16 +111,40 @@ final readonly class OidcConfiguration {
 	/**
 	 * Callback HTTPS exacto. Query estática é admitida para clientes WordPress.
 	 *
-	 * @param string $uri URL do callback.
+	 * @param string $uri              URL do callback.
+	 * @param bool   $allow_local_http Opt-in reservado ao ambiente local.
 	 */
-	private static function validRedirect( string $uri ): bool {
-		if ( false === filter_var( $uri, FILTER_VALIDATE_URL ) ) {
+	private static function validRedirect( string $uri, bool $allow_local_http ): bool {
+		if ( false === filter_var( $uri, FILTER_VALIDATE_URL ) || 1 === preg_match( '/[\x00-\x20\x7f\\\\]/', $uri ) ||
+			1 === preg_match( '/%(?![a-f0-9]{2})/i', $uri ) ) {
 			return false;
 		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Regra pura executável sem WordPress.
 		$parts = parse_url( $uri );
-		return is_array( $parts ) && 'https' === ( $parts['scheme'] ?? '' ) &&
-			self::validDomain( $parts['host'] ?? '' ) &&
-			! isset( $parts['user'] ) && ! isset( $parts['pass'] ) && ! isset( $parts['fragment'] );
+		if ( ! is_array( $parts ) || isset( $parts['user'] ) || isset( $parts['pass'] ) || isset( $parts['fragment'] ) ||
+			( isset( $parts['port'] ) && ( $parts['port'] < 1 || $parts['port'] > 65535 ) ) ) {
+			return false;
+		}
+		$decoded = $uri;
+		$path    = $parts['path'] ?? '';
+		for ( $depth = 0; $depth < 8; ++$depth ) {
+			if ( 1 === preg_match( '/[\x00-\x1f\x7f\\\\]/', $decoded ) || 1 === preg_match( '~(?:^|/)\.{1,2}(?:/|$)~', $path ) ) {
+				return false;
+			}
+			$next = rawurldecode( $decoded );
+			if ( $next === $decoded ) {
+				break;
+			}
+			$decoded = $next;
+			$path    = rawurldecode( $path );
+		}
+		if ( 8 === $depth ) {
+			return false;
+		}
+		if ( 'https' === ( $parts['scheme'] ?? '' ) ) {
+			return self::validDomain( $parts['host'] ?? '' );
+		}
+		return $allow_local_http && 'http' === ( $parts['scheme'] ?? '' ) && 'localhost' === ( $parts['host'] ?? '' ) &&
+			'/wp-login.php' === ( $parts['path'] ?? '' ) && 'action=arn_google_callback' === ( $parts['query'] ?? '' );
 	}
 }

@@ -37,6 +37,24 @@ final class WpdbIdentityLinkRepositoryTest extends TestCase {
 		$this->database = new IdentityWpdb( '', '', '', '' );
 	}
 
+	/** Detecta o schema existente sem depender de uma opção WordPress. */
+	public function testDiscoverExistingSchema(): void {
+		self::assertTrue( ( new WpdbIdentityLinkRepository( $this->database ) )->hasSchema() );
+	}
+
+	/** Ausência completa é diferente de corrupção parcial. */
+	public function testDiscoverAbsentSchema(): void {
+		$this->database->tables_present = 0;
+		self::assertFalse( ( new WpdbIdentityLinkRepository( $this->database ) )->hasSchema() );
+	}
+
+	/** Um schema incompleto não pode desactivar os controlos federados. */
+	public function testDiscoverPartialSchemaFailsClosed(): void {
+		$this->database->tables_present = 1;
+		$this->expectException( RuntimeException::class );
+		( new WpdbIdentityLinkRepository( $this->database ) )->hasSchema();
+	}
+
 	/**
 	 * Construção e leitura não criam schema.
 	 */
@@ -353,6 +371,110 @@ final class WpdbIdentityLinkRepositoryTest extends TestCase {
 		$repository           = new WpdbIdentityLinkRepository( $this->database );
 		self::assertSame( 12, $repository->find( 'accounts.google.com', 'opaque-sub' )->user_id );
 		self::assertNull( $repository->find( 'accounts.google.com', 'OPAQUE-SUB' ) );
+	}
+
+	/**
+	 * A pesquisa pelo ID não usa email, cache ou criação de tabelas.
+	 */
+	public function testUserLookupBindsExactIdWithoutInstallingTables(): void {
+		$this->database->rows = array( $this->row() );
+		$repository           = new WpdbIdentityLinkRepository( $this->database );
+		self::assertSame( 12, $repository->findForUser( 12 )->user_id );
+		$sql = implode( '\n', $this->database->queries );
+		self::assertStringContainsString( 'WHERE user_id = 12 LIMIT 2', $sql );
+		self::assertStringNotContainsString( 'CREATE TABLE', $sql );
+		self::assertContains( array( 'wp_arn_identity_links', 12 ), $this->database->bindings );
+	}
+
+	/**
+	 * Só a ausência efectiva de linhas identifica uma conta sem vínculo.
+	 */
+	public function testUserLookupReturnsNullForNoRows(): void {
+		$repository = new WpdbIdentityLinkRepository( $this->database );
+		self::assertNull( $repository->findForUser( 12 ) );
+	}
+
+	/**
+	 * A troca de ID na resposta não é apresentada como vínculo ausente.
+	 */
+	public function testUserLookupRejectsUnexpectedRows(): void {
+		$this->database->rows = array( $this->row() );
+		$repository           = new WpdbIdentityLinkRepository( $this->database );
+		$this->expectException( RuntimeException::class );
+		$repository->findForUser( 13 );
+	}
+
+	/**
+	 * Vários vínculos não podem contornar a exigência de autenticação federada.
+	 */
+	public function testUserLookupRejectsAmbiguousRows(): void {
+		$this->database->rows = array( $this->row(), $this->row() );
+		$repository           = new WpdbIdentityLinkRepository( $this->database );
+		$this->expectException( RuntimeException::class );
+		$repository->findForUser( 12 );
+	}
+
+	/**
+	 * Cada pedido reconsulta o vínculo e observa revogação corrente.
+	 */
+	public function testUserLookupDoesNotCacheActiveState(): void {
+		$this->database->rows = array( $this->row() );
+		$repository           = new WpdbIdentityLinkRepository( $this->database );
+		self::assertTrue( $repository->findForUser( 12 )->active );
+		$this->database->rows = array( $this->row( '0', '0' ) );
+		self::assertFalse( $repository->findForUser( 12 )->active );
+		self::assertFalse( $repository->findForUser( 12 )->authorized );
+	}
+
+	/**
+	 * Contas inválidas não consultam SQL.
+	 */
+	public function testInvalidUserIdDoesNotQueryStorage(): void {
+		$repository = new WpdbIdentityLinkRepository( $this->database );
+		self::assertNull( $repository->findForUser( 0 ) );
+		self::assertNull( $repository->findForUser( -1 ) );
+		self::assertSame( array(), $this->database->queries );
+	}
+
+	/**
+	 * Metadata corrompida não passa pela pesquisa por conta.
+	 */
+	public function testUserLookupRejectsMalformedFlags(): void {
+		$this->database->rows = array( $this->row( '2', '1' ) );
+		$repository           = new WpdbIdentityLinkRepository( $this->database );
+		try {
+			$repository->findForUser( 12 );
+		} catch ( RuntimeException $error ) {
+			self::assertSame( 'Persistência de identidade indisponível.', $error->getMessage() );
+			self::assertNull( $error->getPrevious() );
+			self::assertFalse( $this->database->suppressed );
+			return;
+		}
+		self::fail( 'Dados corrompidos foram apresentados como vínculo ausente.' );
+	}
+
+	/**
+	 * Schema inválido nega a leitura também pelo ID local.
+	 */
+	public function testUserLookupChecksSchemaBeforeReadingLink(): void {
+		$this->database->engine = 'MyISAM';
+		$repository             = new WpdbIdentityLinkRepository( $this->database );
+		try {
+			$repository->findForUser( 12 );
+			self::fail( 'O vínculo foi lido sem schema transaccional.' );
+		} catch ( RuntimeException ) {
+			self::assertStringNotContainsString( 'SELECT user_id', implode( '\n', $this->database->queries ) );
+		}
+	}
+
+	/**
+	 * Erro de transporte não se confunde com conta sem vínculo.
+	 */
+	public function testUserLookupReadFailureIsControlled(): void {
+		$this->database->fail_prefix = 'SELECT user_id';
+		$repository                  = new WpdbIdentityLinkRepository( $this->database );
+		$this->expectException( RuntimeException::class );
+		$repository->findForUser( 12 );
 	}
 
 	/**
