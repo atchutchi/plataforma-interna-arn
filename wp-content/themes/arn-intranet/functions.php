@@ -16,6 +16,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function arn_intranet_setup(): void {
 	add_editor_style( 'assets/css/theme.css' );
+	// O tema fornece um salto próprio com destino e foco explícitos.
+	remove_action( 'wp_enqueue_scripts', 'wp_enqueue_block_template_skip_link' );
+	remove_action( 'wp_footer', 'the_block_template_skip_link' );
 }
 
 add_action( 'after_setup_theme', 'arn_intranet_setup' );
@@ -73,3 +76,68 @@ function arn_intranet_render_local_notice( string $block_content, array $block )
 }
 
 add_filter( 'render_block_core/group', 'arn_intranet_render_local_notice', 10, 2 );
+
+/**
+ * Usa a marca fornecida enquanto o CMS não tiver um ícone próprio.
+ *
+ * @param string $url URL de ícone já resolvido pelo WordPress.
+ * @param int    $size Dimensão solicitada.
+ * @return string URL do recurso de apresentação.
+ */
+function arn_intranet_default_site_icon( string $url, int $size ): string {
+	if ( '' !== $url ) {
+		return $url;
+	}
+
+	return get_theme_file_uri( $size <= 32 ? 'assets/images/favicon.svg' : 'assets/images/arn-logo.png' );
+}
+
+add_filter( 'get_site_icon_url', 'arn_intranet_default_site_icon', 10, 2 );
+
+/**
+ * Aplica a identidade visual à entrada nativa, sem alterar autenticação.
+ */
+function arn_intranet_login_assets(): void {
+	wp_enqueue_style(
+		'arn-intranet-login',
+		get_theme_file_uri( 'assets/css/login.css' ),
+		array(),
+		(string) filemtime( get_theme_file_path( 'assets/css/login.css' ) )
+	);
+}
+
+add_action( 'login_enqueue_scripts', 'arn_intranet_login_assets' );
+
+/**
+ * A marca da entrada aponta para a plataforma.
+ *
+ * @return string Endereço do portal.
+ */
+function arn_intranet_login_logo_url(): string {
+	return home_url( '/' );
+}
+
+add_filter( 'login_headerurl', 'arn_intranet_login_logo_url' );
+
+/**
+ * Nome acessível da marca no ecrã de entrada.
+ *
+ * @return string Nome institucional.
+ */
+function arn_intranet_login_logo_text(): string {
+	return __( 'ARN, Autoridade Reguladora Nacional', 'arn-intranet' );
+}
+
+add_filter( 'login_headertext', 'arn_intranet_login_logo_text' );
+
+/**
+ * Reserva a barra editorial a quem pode editar conteúdos.
+ *
+ * @param bool $show Preferência nativa do WordPress.
+ * @return bool Estado visual, sem alterar competências.
+ */
+function arn_intranet_editor_toolbar( bool $show ): bool {
+	return current_user_can( 'edit_posts' ) ? $show : false;
+}
+
+add_filter( 'show_admin_bar', 'arn_intranet_editor_toolbar' );
