@@ -39,6 +39,8 @@ PHP, Composer, MariaDB e WordPress vêm dos contentores. Não há `mysqlVersion`
 
 O plugin usa o autoloader PSR-4 em `src/Autoloader.php`, namespace `Arn\Intranet`. Não acrescentes `require_once` por classe. Regras puras ficam em classes sem WordPress e com testes em `tests/phpunit`; a ligação aos hooks fica em classes separadas, como `Access\PrivatePortal`.
 
+O painel CMS usa `Administration\AdminDashboard` e atalhos filtrados por capacidades nativas. Seguir docs/painel-administrativo-f1-06.md. O CSS do widget só carrega no index.php normal. O esquema ARN é uma preferência nativa opcional, aplicada apenas à conta de laboratório na validação. Não confundir estes atalhos com atribuições institucionais de F1-03. Os menus e destinos conservam as suas próprias guardas.
+
 O catálogo `Organization\DocumentaryCatalog` transcreve as unidades da secção 4.1. Não contém pessoas. Mantém DSU, DSGI e DSIC sem designação, as duas DGE com identificadores `DRE-DGE` e `DREC-DGE`, e as relações como `Documental` ou `Pendente` até RH confirmar.
 
 ## Limites
