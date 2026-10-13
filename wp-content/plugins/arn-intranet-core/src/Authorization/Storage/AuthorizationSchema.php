@@ -232,8 +232,9 @@ final class AuthorizationSchema {
 		if ( 1 !== count( $foreign ) || '1' !== (string) $foreign[0]->target_local || 'user_id' !== $foreign[0]->COLUMN_NAME || $this->table( 'accounts' ) !== $foreign[0]->REFERENCED_TABLE_NAME || 'user_id' !== $foreign[0]->REFERENCED_COLUMN_NAME || 'RESTRICT' !== $foreign[0]->UPDATE_RULE || 'RESTRICT' !== $foreign[0]->DELETE_RULE ) {
 			throw new RuntimeException( 'Referência de autorização inválida.' );
 		}
-		$checks = $this->rows( $this->database->prepare( "SELECT c.CHECK_CLAUSE FROM information_schema.CHECK_CONSTRAINTS c JOIN information_schema.TABLE_CONSTRAINTS t ON t.CONSTRAINT_SCHEMA = c.CONSTRAINT_SCHEMA AND t.CONSTRAINT_NAME = c.CONSTRAINT_NAME WHERE t.TABLE_SCHEMA = DATABASE() AND t.TABLE_NAME = %s AND t.CONSTRAINT_TYPE = 'CHECK'", $table ) );
-		if ( 1 !== count( $checks ) || 'json_validtargets_json' !== preg_replace( '/[\s`()]/', '', strtolower( $checks[0]->CHECK_CLAUSE ) ) ) {
+		// t.* inclui ENFORCED onde existe (MySQL), sem consultar uma coluna ausente em MariaDB.
+		$checks = $this->rows( $this->database->prepare( "SELECT c.CHECK_CLAUSE, t.* FROM information_schema.CHECK_CONSTRAINTS c JOIN information_schema.TABLE_CONSTRAINTS t ON t.CONSTRAINT_SCHEMA = c.CONSTRAINT_SCHEMA AND t.CONSTRAINT_NAME = c.CONSTRAINT_NAME WHERE t.TABLE_SCHEMA = DATABASE() AND t.TABLE_NAME = %s AND t.CONSTRAINT_TYPE = 'CHECK'", $table ) );
+		if ( 1 !== count( $checks ) || 'json_validtargets_json' !== preg_replace( '/[\s`()]/', '', strtolower( $checks[0]->CHECK_CLAUSE ) ) || ( property_exists( $checks[0], 'ENFORCED' ) && 'YES' !== $checks[0]->ENFORCED ) ) {
 			throw new RuntimeException( 'Validação JSON de autorização inválida.' );
 		}
 	}

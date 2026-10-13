@@ -233,6 +233,31 @@ try {
 	$database->query( $database->prepare( 'ALTER TABLE %i ADD CONSTRAINT %i FOREIGN KEY (user_id) REFERENCES %i (user_id) ON DELETE RESTRICT ON UPDATE RESTRICT', $grants_table, $foreign_name, $accounts_table ) );
 	$repository->installSchema();
 
+	// Metadata MySQL simulada: a expressão mantém-se mas a CHECK não é aplicada.
+	$query_filter = static function ( string $query ) use ( $grants_table ): string {
+		if ( str_contains( $query, 'FROM information_schema.CHECK_CONSTRAINTS c' ) && str_contains( $query, "'" . $grants_table . "'" ) ) {
+			return "SELECT 'json_valid(targets_json)' AS CHECK_CLAUSE, 'NO' AS ENFORCED";
+		}
+		return $query;
+	};
+	add_filter( 'query', $query_filter );
+	$refused( static fn() => $repository->installSchema() );
+	$refused( static fn() => $repository->find( $user_id ) );
+	$refused( static fn() => $repository->revokeGrant( $user_id, $valid_id, 10, $context ) );
+	remove_filter( 'query', $query_filter );
+	$query_filter = null;
+	$assert( 10 === $repository->find( $user_id )->revision && 10 === count( $repository->history( $user_id ) ) );
+	$query_filter = static function ( string $query ) use ( $grants_table ): string {
+		if ( str_contains( $query, 'FROM information_schema.CHECK_CONSTRAINTS c' ) && str_contains( $query, "'" . $grants_table . "'" ) ) {
+			return "SELECT 'json_valid(targets_json)' AS CHECK_CLAUSE, 'YES' AS ENFORCED";
+		}
+		return $query;
+	};
+	add_filter( 'query', $query_filter );
+	$assert( 10 === $repository->find( $user_id )->revision );
+	remove_filter( 'query', $query_filter );
+	$query_filter = null;
+
 	// Falha de query dentro da mudança e perda da ligação recusam sem reconnect.
 	$query_filter = static function ( string $query ) use ( $audit_table ): string {
 		return str_starts_with( $query, 'INSERT INTO `' . $audit_table . '`' ) ? 'INVALID FIXTURE QUERY' : $query;
