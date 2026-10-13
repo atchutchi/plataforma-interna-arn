@@ -38,7 +38,20 @@ final class AuthorizationStorageProbe {
 	public function register(): void {
 		if ( $this->allowed() ) {
 			add_action( 'admin_menu', array( $this, 'registerPage' ) );
+			add_action( 'admin_enqueue_scripts', array( $this, 'enqueueAssets' ) );
 		}
+	}
+	/**
+	 * Restringe os estilos ao inspector autorizado.
+	 *
+	 * @param string $hook_suffix Ecrã administrativo efectivo.
+	 */
+	public function enqueueAssets( string $hook_suffix ): void {
+		if ( 'tools_page_arn-authorization-storage' !== $hook_suffix || ! $this->allowed() ) {
+			return;
+		}
+		$plugin_file = dirname( __DIR__, 3 ) . '/arn-intranet-core.php';
+		wp_enqueue_style( 'arn-authorization-storage', plugins_url( 'assets/css/authorization-storage.css', $plugin_file ), array(), '0.3.0' );
 	}
 	/** Revalida antes de acrescentar o menu. */
 	public function registerPage(): void {
@@ -52,7 +65,7 @@ final class AuthorizationStorageProbe {
 		if ( ! $this->allowed() ) {
 			return;
 		}
-		echo '<div class="wrap"><h1>Persistência de acessos local</h1><p>Dados fictícios do laboratório. Active indica estado funcional e não comprova uma sessão real. Não aprova atribuições institucionais.</p>';
+		echo '<div class="wrap arn-authorization-storage"><h1>Persistência de acessos local</h1><p>Dados fictícios do laboratório. Active indica estado funcional e não comprova uma sessão real. Não aprova atribuições institucionais.</p>';
 		$authority = new LocalAuthorizationStorageAuthority();
 		$fixture   = get_user_by( 'login', LocalFixtureUser::LOGIN );
 		if ( ! $fixture instanceof WP_User || ! $authority->canUseAccount( $fixture->ID ) ) {
@@ -103,6 +116,7 @@ final class AuthorizationStorageProbe {
 	 * @param array  $rows Linhas.
 	 */
 	private function table( string $caption, array $headers, array $rows ): void {
+		echo '<div class="arn-authorization-storage-table" role="region" aria-label="' . esc_attr( $caption ) . '" tabindex="0">';
 		echo '<table class="widefat striped"><caption>' . esc_html( $caption ) . '</caption><thead><tr>';
 		foreach ( $headers as $header ) {
 			echo '<th scope="col">' . esc_html( $header ) . '</th>';
@@ -119,6 +133,6 @@ final class AuthorizationStorageProbe {
 			}
 			echo '</tr>';
 		}
-		echo '</tbody></table>';
+		echo '</tbody></table></div>';
 	}
 }

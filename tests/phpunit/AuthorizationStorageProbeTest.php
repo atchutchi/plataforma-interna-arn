@@ -71,10 +71,44 @@ function add_management_page( string $title, string $menu, string $capability, s
 function esc_html( string $text ): string {
 	return htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
 }
+/**
+ * Escapa os atributos da região acessível.
+ *
+ * @param string $text Texto do atributo.
+ */
+function esc_attr( string $text ): string {
+	return htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
+}
+/**
+ * Simula a localização de um recurso do plugin.
+ *
+ * @param string $path Caminho do recurso.
+ * @param string $plugin Ficheiro principal.
+ */
+function plugins_url( string $path, string $plugin ): string {
+	return basename( $plugin ) . '/' . $path;
+}
+/**
+ * Guarda os recursos enfileirados.
+ *
+ * @param string $handle Identificador.
+ * @param string $url Localização.
+ * @param array  $dependencies Dependências.
+ * @param string $version Versão.
+ */
+function wp_enqueue_style( string $handle, string $url, array $dependencies, string $version ): void {
+	AuthorizationStorageProbeTest::$styles[] = array( $handle, $url, $dependencies, $version );
+}
 /** Verifica gates e leitura sem iniciar o WordPress. */
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState( false )]
 final class AuthorizationStorageProbeTest extends TestCase {
+	/**
+	 * Recursos enfileirados em memória.
+	 *
+	 * @var array
+	 */
+	public static array $styles = array();
 	/**
 	 * Estado simulado de environment.
 	 *
@@ -134,6 +168,8 @@ final class AuthorizationStorageProbeTest extends TestCase {
 		);
 		$probe->register();
 		$probe->registerPage();
+		$probe->enqueueAssets( 'tools_page_arn-authorization-storage' );
+		self::assertSame( array(), self::$styles );
 		ob_start();
 		$probe->render();
 		self::assertSame( '', ob_get_clean() );
@@ -223,6 +259,10 @@ final class AuthorizationStorageProbeTest extends TestCase {
 		self::assertStringNotContainsString( 'secret-payload', $html );
 		self::assertStringContainsString( 'scope="row"', $html );
 		self::assertSame( 2, substr_count( $html, '<caption>' ) );
+		self::assertSame( 2, substr_count( $html, 'role="region"' ) );
+		self::assertSame( 2, substr_count( $html, 'tabindex="0"' ) );
+		self::assertStringContainsString( 'aria-label="Concessões persistidas, incluindo histórico"', $html );
+		self::assertStringContainsString( 'aria-label="Histórico de alterações da conta fictícia"', $html );
 		self::assertStringContainsString( '>Sim<', $html );
 		self::assertStringNotContainsString( '<input', $html );
 		self::assertStringNotContainsString( '<form', $html );
@@ -272,6 +312,25 @@ final class AuthorizationStorageProbeTest extends TestCase {
 			if ( 'admin_menu' === $hook ) {
 				self::assertArrayHasKey( 'arn-authorization-storage', self::$pages );
 			}
+		}
+	}
+	/** O CSS só é enfileirado no inspector com gates efectivos satisfeitos. */
+	public function testStylesAreScopedToScreenAndEffectiveGates(): void {
+		define( 'ARN_ALLOW_LOCAL_AUTHORIZATION_STORAGE', true );
+		$probe = new AuthorizationStorageProbe();
+		$probe->register();
+		self::assertArrayHasKey( 'admin_enqueue_scripts', self::$hooks );
+		$probe->enqueueAssets( 'index.php' );
+		self::assertSame( array(), self::$styles );
+		$probe->enqueueAssets( 'tools_page_arn-authorization-storage' );
+		self::assertSame( 'arn-authorization-storage', self::$styles[0][0] );
+		self::assertSame( 'arn-intranet-core.php/assets/css/authorization-storage.css', self::$styles[0][1] );
+		self::$styles = array();
+		foreach ( array( array( 'production', true ), array( 'local', false ) ) as [$environment, $capability] ) {
+			self::$environment = $environment;
+			self::$capability  = $capability;
+			$probe->enqueueAssets( 'tools_page_arn-authorization-storage' );
+			self::assertSame( array(), self::$styles );
 		}
 	}
 }

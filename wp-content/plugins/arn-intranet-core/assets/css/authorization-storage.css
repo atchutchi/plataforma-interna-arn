@@ -1,0 +1,14 @@
+.arn-authorization-storage .arn-authorization-storage-table {
+	max-width: 100%;
+	overflow-x: auto;
+	margin-block: 1.5rem;
+}
+
+.arn-authorization-storage .arn-authorization-storage-table:focus-visible {
+	outline: 2px solid #2271b1;
+	outline-offset: 2px;
+}
+
+.arn-authorization-storage .arn-authorization-storage-table table {
+	min-width: 36rem;
+}
