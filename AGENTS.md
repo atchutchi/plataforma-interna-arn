@@ -49,6 +49,8 @@ F1-02 tem cliente Facile 1.0.0 homologado localmente, callback e sessão Google 
 
 F1-01 continua aberta até à homologação Windows/IIS. Não marques a tarefa como concluída só porque a cópia local abre.
 
+F1-03 tem uma fundação local em `Authorization`: snapshots imutáveis, catálogo fechado e delegação limitada. Seguir docs/autorizacao-local-f1-03.md. A página Ensaios de acesso local exige ambiente efectivo `local`, `ARN_ALLOW_LOCAL_AUTHORIZATION_PROBE` booleano true e `manage_options`, também antes de renderizar. Usa apenas fixtures. Não liga inputs de browser ao motor, não concede papéis WordPress e não persiste funções nem suspende sessões reais. F0-02/06 e a validação institucional da matriz continuam pendentes.
+
 Commits e push ficam na branch da tarefa. Nunca faças push directo em `main` nem uses force push. A sessão de 13 de outubro de 2026 autoriza integração de PRs após revisão do diff e CI verde no SHA exacto. Esta autorização não inclui deploy.
 
 Panthera-Onca .205 está fora de arn.local e deve permanecer assim. Windows Server 2019 Standard, 1809, build 17763, 64 bits. Hyper-V instalado e WSL ausente. Produção nativa em IIS/PHP 8.4 x64 NTS/MySQL 8.4 LTS. Não instalar WSL ou Docker Desktop no servidor. Não depender de GPO, Kerberos, LDAP, conta de computador ou autenticação AD. DNS institucional apenas se aprovado pela DCSI.
