@@ -252,4 +252,26 @@ final class AuthorizationStorageProbeTest extends TestCase {
 		$probe->render();
 		self::assertStringContainsString( 'não está preparada', ob_get_clean() );
 	}
+	/** O bootstrap liga o inspector antes da construção do menu administrativo. */
+	public function testBootstrapRegistersAtWpLoadedBeforeAdministrativeMenu(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Lê exclusivamente o bootstrap local para verificar a ligação ao hook.
+		$bootstrap = file_get_contents( dirname( __DIR__, 2 ) . '/wp-content/plugins/arn-intranet-core/arn-intranet-core.php' );
+		self::assertSame( 1, preg_match( "/add_action\( '([^']+)', array\( new AuthorizationStorageProbe\(\), 'register' \) \);/", $bootstrap, $matches ) );
+		self::assertSame( 'wp_loaded', $matches[1] );
+		define( 'ARN_ALLOW_LOCAL_AUTHORIZATION_STORAGE', true );
+		$probe           = new AuthorizationStorageProbe();
+		$bootstrap_hooks = array( $matches[1] => array( $probe, 'register' ) );
+		// A ordem real é wp_loaded, admin_menu e só depois admin_init.
+		foreach ( array( 'wp_loaded', 'admin_menu', 'admin_init' ) as $hook ) {
+			if ( isset( $bootstrap_hooks[ $hook ] ) ) {
+				( $bootstrap_hooks[ $hook ] )();
+			}
+			if ( isset( self::$hooks[ $hook ] ) ) {
+				( self::$hooks[ $hook ] )();
+			}
+			if ( 'admin_menu' === $hook ) {
+				self::assertArrayHasKey( 'arn-authorization-storage', self::$pages );
+			}
+		}
+	}
 }

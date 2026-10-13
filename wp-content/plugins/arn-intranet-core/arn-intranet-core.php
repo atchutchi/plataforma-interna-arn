@@ -153,6 +153,6 @@ PrivatePortal::register();
 
 add_action( 'plugins_loaded', array( new AuthorizationProbe(), 'register' ) );
 
-add_action( 'admin_init', array( new AuthorizationStorageProbe(), 'register' ) );
+add_action( 'wp_loaded', array( new AuthorizationStorageProbe(), 'register' ) );
 
 ( new AdminDashboard( __FILE__ ) )->register();
