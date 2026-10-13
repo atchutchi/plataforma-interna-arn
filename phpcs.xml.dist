@@ -4,6 +4,7 @@
 	<file>wp-content/plugins/arn-intranet-core</file>
 	<file>wp-content/themes/arn-intranet</file>
 	<file>tests/phpunit</file>
+	<file>tests/integration</file>
 	<exclude-pattern>*/vendor/*</exclude-pattern>
 	<arg name="extensions" value="php"/>
 	<arg value="ps"/>
