@@ -24,6 +24,7 @@ use Arn\Intranet\Access\LocalFixtureAccess;
 use Arn\Intranet\Access\LocalFixtureUser;
 use Arn\Intranet\Access\PrivatePortal;
 use Arn\Intranet\Autoloader;
+use Arn\Intranet\Authorization\AuthorizationProbe;
 use Arn\Intranet\Identity\GoogleLoginController;
 use Arn\Intranet\Identity\WordPressFederatedAccess;
 
@@ -147,3 +148,5 @@ PrivatePortal::register();
 	arn_intranet_core_environment_type(),
 	arn_intranet_core_fictional_flag()
 ) )->register();
+
+add_action( 'plugins_loaded', array( new AuthorizationProbe(), 'register' ) );
