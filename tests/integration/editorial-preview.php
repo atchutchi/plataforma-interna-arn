@@ -25,6 +25,9 @@ $check  = static function ( bool $condition, string $label ) use ( &$checks ): v
 	}
 	++$checks;
 };
+$block  = WP_Block_Type_Registry::get_instance()->get_registered( 'arn/portal-view' );
+$check( null !== $block && in_array( 'arn-editorial-preview', $block->editor_script_handles, true ), 'bloco suportado pelo editor' );
+$check( is_file( dirname( __DIR__, 2 ) . '/wp-content/plugins/arn-intranet-core/assets/js/editorial-preview.js' ), 'recurso do editor existe' );
 try {
 	$file = $base . '/files/fixture.pdf';
 	file_put_contents( $file, '%PDF-1.7 synthetic fixture' );

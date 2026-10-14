@@ -64,15 +64,27 @@ final class Portal {
 
 	/** Regista o bloco mesmo quando a flag está desligada. */
 	public static function registerBlock(): void {
+		$script_path = dirname( __DIR__, 2 ) . '/assets/js/editorial-preview.js';
+		wp_register_script(
+			'arn-editorial-preview',
+			plugins_url( 'assets/js/editorial-preview.js', dirname( __DIR__, 2 ) . '/arn-intranet-core.php' ),
+			array( 'wp-blocks', 'wp-element', 'wp-components', 'wp-block-editor', 'wp-i18n' ),
+			(string) filemtime( $script_path ),
+			true
+		);
 		register_block_type(
 			'arn/portal-view',
 			array(
+				'api_version'     => 3,
+				'title'           => __( 'Vista do portal ARN', 'arn-intranet-core' ),
 				'attributes'      => array(
 					'view' => array(
 						'type'    => 'string',
 						'default' => 'home',
+						'enum'    => array( 'home', 'news', 'documents', 'regulations', 'services' ),
 					),
 				),
+				'editor_script'   => 'arn-editorial-preview',
 				'render_callback' => array( self::class, 'render' ),
 			)
 		);
