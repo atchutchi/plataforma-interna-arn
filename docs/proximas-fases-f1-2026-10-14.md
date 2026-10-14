@@ -11,6 +11,7 @@
 | F1-06 | Continuar componentes e navegação para funcionalidades locais já disponíveis, preservando tema e marca. | Navegação por competências e conteúdo dos módulos institucionais. |
 | F1-07 | Preparar contratos de directório e perfil depois do cadastro. | F1-05/06 e campos públicos autorizados. |
 | F1-08 | Núcleo de armazenamento imutável, registo auditado e entrega por sessão/objecto implementados e ensaiados com fixtures. Prosseguir contratos documentais e integração com media. Seguir ficheiros-privados-locais-f1-08.md. | F0-03/06, política de admissão, media nativa e homologação do armazenamento/IIS/MySQL. |
+| F1-09 | Catálogo local fictício com versões, gestão CMS, colecções publicadas e download autorizado. Seguir catalogo-documental-local-f1-09.md. Estado Em curso. | Classificação e destinatários institucionais, origem oficial, antimalware, media nativa e homologação IIS/MySQL. |
 | F1-09 a F1-15 | Implementar por módulo após resolver os respectivos contratos e dependências. | Documentos dependem de armazenamento. Notícias de auditoria, tema e anexos. Tarefas de unidades e autorização. Painel agregado só após fontes funcionais. |
 | F1-16/17 | Conservar evidência de testes e preparar critérios de aceitação ao longo do desenvolvimento. | Segurança completa, restauro, ambiente representativo, utilizadores piloto, responsáveis e formação. |
 | F2/F3 | Mantêm-se fora desta entrega. | Pré-requisitos funcionais e decisões indicadas no README, incluindo regras RH pendentes. |

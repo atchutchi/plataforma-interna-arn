@@ -45,14 +45,35 @@ final class WpdbFileRegistry {
 		$this->assertNoTransaction();
 		$this->execute( 'START TRANSACTION' );
 		try {
-			$b = $record->blob;
-			$this->execute( $this->database->prepare( 'INSERT INTO %i (blob_id,sha256,size_bytes,mime,object_type,object_id,version,variant,actor_id,created_at) VALUES (%s,%s,%d,%s,%s,%d,%d,%s,%d,%d)', $this->schema->table( 'files' ), $b->id, $b->sha256, $b->size, $b->mime, $record->object_type, $record->object_id, $record->version, $record->variant, $record->actor_id, $record->created_at ) );
-			$this->execute( $this->database->prepare( 'INSERT INTO %i (blob_id,event,actor_id,occurred_at) VALUES (%s,%s,%d,%d)', $this->schema->table( 'audit' ), $b->id, 'file_registered', $record->actor_id, $record->created_at ) );
+			$this->writeRecord( $record );
 			$this->execute( 'COMMIT' );
 		} catch ( Throwable ) {
 			$this->database->query( 'ROLLBACK' );
 			throw new RuntimeException( self::ERROR );
 		}
+	}
+
+	/** Register in an already active transaction on the same dedicated connection.
+	 *
+	 * @param FileRecord $record Private reference.
+	 * @throws RuntimeException When no transaction exists or a write fails.
+	 */
+	public function registerInTransaction( FileRecord $record ): void {
+		$row = $this->database->get_row( 'SELECT @@session.in_transaction AS active' );
+		if ( ! is_object( $row ) || '' !== $this->database->last_error || '1' !== (string) $row->active ) {
+			throw new RuntimeException( self::ERROR );
+		}
+		$this->writeRecord( $record );
+	}
+
+	/** Insert reference and audit without transaction control.
+	 *
+	 * @param FileRecord $record Private reference.
+	 */
+	private function writeRecord( FileRecord $record ): void {
+		$b = $record->blob;
+		$this->execute( $this->database->prepare( 'INSERT INTO %i (blob_id,sha256,size_bytes,mime,object_type,object_id,version,variant,actor_id,created_at) VALUES (%s,%s,%d,%s,%s,%d,%d,%s,%d,%d)', $this->schema->table( 'files' ), $b->id, $b->sha256, $b->size, $b->mime, $record->object_type, $record->object_id, $record->version, $record->variant, $record->actor_id, $record->created_at ) );
+		$this->execute( $this->database->prepare( 'INSERT INTO %i (blob_id,event,actor_id,occurred_at) VALUES (%s,%s,%d,%d)', $this->schema->table( 'audit' ), $b->id, 'file_registered', $record->actor_id, $record->created_at ) );
 	}
 
 	/**

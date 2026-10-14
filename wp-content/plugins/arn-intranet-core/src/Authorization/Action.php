@@ -28,4 +28,5 @@ enum Action {
 	case PublishNews;
 	case ManageAccount;
 	case ManageGrants;
+	case ManageDocuments;
 }

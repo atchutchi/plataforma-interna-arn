@@ -37,6 +37,8 @@ use Arn\Intranet\Identity\WordPressFederatedAccess;
 use Arn\Intranet\EditorialPreview\Portal;
 use Arn\Intranet\Documents\PrivateFiles\LocalPrivateFiles;
 use Arn\Intranet\Documents\PrivateFiles\LocalPrivateFilesPage;
+use Arn\Intranet\Documents\Catalog\DocumentCatalogPage;
+use Arn\Intranet\Documents\Catalog\DocumentFileController;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -155,6 +157,8 @@ add_action( 'admin_notices', 'arn_intranet_core_admin_notices' );
 ( new LocalPrivateFiles() )->register();
 PrivatePortal::register();
 Portal::register();
+DocumentCatalogPage::register();
+DocumentFileController::register();
 
 ( new LocalFixtureAccess(
 	arn_intranet_core_environment_type(),

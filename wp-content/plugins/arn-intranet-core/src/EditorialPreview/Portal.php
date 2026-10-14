@@ -11,6 +11,8 @@ namespace Arn\Intranet\EditorialPreview;
 
 use InvalidArgumentException;
 use RuntimeException;
+use Arn\Intranet\Documents\Catalog\DocumentPortal;
+use Arn\Intranet\Documents\Catalog\LocalDocumentCatalog;
 
 // phpcs:disable WordPress.WP.AlternativeFunctions -- A descarga privada usa stream local verificado.
 
@@ -57,7 +59,7 @@ final class Portal {
 
 	/** Impede cache de páginas que contenham o bloco privado. */
 	public static function privateCache(): void {
-		if ( self::allowed() && is_singular() && has_block( 'arn/portal-view', get_post() ) ) {
+		if ( is_singular() && has_block( 'arn/portal-view', get_post() ) && ( self::allowed() || LocalDocumentCatalog::configured() ) ) {
 			nocache_headers();
 		}
 	}
@@ -124,6 +126,9 @@ final class Portal {
 	 * @return array<string,mixed> Modelo para o tema.
 	 */
 	public static function model( string $view, array $input ): array {
+		if ( in_array( $view, array( 'documents', 'regulations' ), true ) && ! self::allowed() ) {
+			return DocumentPortal::model( $view, $input );
+		}
 		$base = array(
 			'view'        => $view,
 			'available'   => false,
