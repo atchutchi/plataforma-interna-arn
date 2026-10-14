@@ -119,17 +119,29 @@ try {
 	$assert( 2 === $document->published_version && 3 === $document->revision, 'publicação' );
 	$document = $repository->archive( $document->id, 3, 'Arquivo fictício' );
 	$assert( $document->archived && 4 === count( $repository->history( $document->id ) ), 'arquivo terminal auditado' );
-	$filter        = static fn ( string $sql ): string => str_contains( $sql, 'arn_document_audit' ) && str_starts_with( $sql, 'INSERT INTO' ) ? 'INVALID AUDIT INSERT' : $sql;
+	$count_rows     = static function () use ( $db, $prefix, $files, $catalog_schema ): array {
+		$tables = array(
+			$catalog_schema->table( 'documents' ),
+			$catalog_schema->table( 'versions' ),
+			$catalog_schema->table( 'audit' ),
+			$prefix . 'posts',
+			$files->table( 'files' ),
+			$files->table( 'audit' ),
+		);
+		return array_map( static fn( string $table ): int => (int) $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM %i', $table ) ), $tables );
+	};
+	$before_failure = $count_rows();
+	$filter         = static fn ( string $sql ): string => str_contains( $sql, 'arn_document_audit' ) && str_starts_with( $sql, 'INSERT INTO' ) ? 'INVALID AUDIT INSERT' : $sql;
 	add_filter( 'query', $filter );
-	$rollback_blob = new BlobDescriptor( bin2hex( random_bytes( 16 ) ), str_repeat( 'e', 64 ), 12, 'application/pdf' );
-	$rolled        = false;
+	$rollback_blob  = new BlobDescriptor( bin2hex( random_bytes( 16 ) ), str_repeat( 'e', 64 ), 12, 'application/pdf' );
+	$rolled         = false;
 	try {
 		$repository->create( Scope::units( array( 'LAB-A' ) ), new Revision( 1, $metadata, $rollback_blob, 1, time() ), 'Falha de auditoria' );
 	} catch ( RuntimeException ) {
 		$rolled = true;
 	}
 	remove_filter( 'query', $filter );
-	$assert( $rolled && null === $registry->find( $rollback_blob->id ) && 1 === count( $repository->all() ), 'auditoria falhada reverte documento, post e ficheiro' );
+	$assert( $rolled && $before_failure === $count_rows() && null === $registry->find( $rollback_blob->id ), 'auditoria falhada reverte post, documento, versão, ficheiro e ambas auditorias' );
 	$actor_id     = 800000 + random_int( 1, 100000 );
 	$recipient_id = $actor_id + 1;
 	$context      = static fn ( string $reason ): ChangeContext => new ChangeContext( $actor_id, $reason, 'LAB-DOC', time() );
@@ -141,6 +153,15 @@ try {
 	$reader_db = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
 	$reader_db->set_prefix( $prefix );
 	$reader_db->suppress_errors( true );
+	$db->query( 'START TRANSACTION' );
+	$db->get_results( $db->prepare( 'SELECT user_id FROM %i WHERE user_id IN (%d,%d) ORDER BY user_id FOR UPDATE', $prefix . 'arn_authz_accounts', $actor_id, $recipient_id ) );
+	$reader_db->query( 'SET SESSION innodb_lock_wait_timeout=1' );
+	$reader_db->query( 'START TRANSACTION' );
+	$wait_result = $reader_db->get_results( $reader_db->prepare( 'SELECT user_id FROM %i WHERE user_id=%d FOR UPDATE', $prefix . 'arn_authz_accounts', $recipient_id ) );
+	$wait_error  = $reader_db->last_error;
+	$reader_db->query( 'ROLLBACK' );
+	$db->query( 'ROLLBACK' );
+	$assert( array() === $wait_result && str_contains( $wait_error, 'Lock wait timeout exceeded' ), 'duas ligações: bloqueio de conta causa timeout local e rollback' );
 	$session        = array(
 		'arn_authz_local'    => true,
 		'arn_authz_user_id'  => $actor_id,

@@ -16,6 +16,7 @@ use Arn\Intranet\Authorization\Storage\AuthorizationSnapshot;
 use Arn\Intranet\Authorization\Storage\StoredGrant;
 use Arn\Intranet\Documents\Catalog\Document;
 use Arn\Intranet\Documents\Catalog\DocumentPolicy;
+use Arn\Intranet\Documents\Catalog\DocumentPortal;
 use Arn\Intranet\Documents\Catalog\Metadata;
 use Arn\Intranet\Documents\Catalog\Revision;
 use Arn\Intranet\Documents\PrivateFiles\BlobDescriptor;
@@ -79,6 +80,25 @@ final class DocumentCatalogTest extends TestCase {
 			'arn_authz_user_id'  => $user,
 			'arn_authz_revision' => $revision,
 		);
+	}
+
+	/** Front-end projection keeps the current publication and no audience or draft details. */
+	public function testPublishedProjectionExcludesDraftAndHistory(): void {
+		$scope = Scope::units( array( 'LAB-A' ) );
+		$first = Document::create( 1, $scope, $this->version( 1, array( 2 ) ) );
+		self::assertNull( DocumentPortal::published( $first ) );
+		$published = $first->publish( 1, 1 );
+		$draft     = new Metadata( 'Rascunho reservado', 'Conteúdo não publicado', 'regulamento', 'ORIG-2', 'RH', '2026-11-01', null, null, array( 4 ) );
+		$next      = new Revision( 2, $draft, new BlobDescriptor( str_repeat( '2', 32 ), str_repeat( 'a', 64 ), 1, 'application/pdf' ), 3, 11 );
+		$revised   = $published->revise( $next, 2 );
+		$item      = DocumentPortal::published( $revised );
+		self::assertSame( 'Título', $item['title'] );
+		self::assertSame( 'circular', $item['category'] );
+		self::assertSame( 1, $item['version'] );
+		self::assertArrayNotHasKey( 'recipient_ids', $item );
+		self::assertArrayNotHasKey( 'versions', $item );
+		self::assertNotContains( 'Rascunho reservado', array_values( $item ) );
+		self::assertNull( DocumentPortal::published( $revised->archive( 3 ) ) );
 	}
 
 	/** Categories, dates and audience are strictly validated. */
