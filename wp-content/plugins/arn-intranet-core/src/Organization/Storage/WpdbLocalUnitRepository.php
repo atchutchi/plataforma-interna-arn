@@ -33,13 +33,21 @@ final class WpdbLocalUnitRepository {
 	 * @throws \RuntimeException Quando a operação é recusada.
 	 */
 	public function installSchema(): void {
-		$this->schema->install(); }
+		$this->silently( fn() => $this->schema->install() ); }
 	/**
 	 * Lê um snapshot consistente da árvore.
 	 *
 	 * @throws \RuntimeException Quando a operação é recusada.
 	 */
 	public function snapshot(): LocalUnitSnapshot {
+		return $this->silently( fn(): LocalUnitSnapshot => $this->readSnapshot() );
+	}
+	/**
+	 * Executa a leitura consistente na ligação dedicada.
+	 *
+	 * @throws RuntimeException Quando a leitura falha.
+	 */
+	private function readSnapshot(): LocalUnitSnapshot {
 		$this->schema->validate();
 		$this->execute( 'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ' );
 		$this->execute( 'START TRANSACTION WITH CONSISTENT SNAPSHOT' );
@@ -91,6 +99,17 @@ final class WpdbLocalUnitRepository {
 	 * @throws \RuntimeException Quando a operação é recusada.
 	 */
 	public function apply( string $scenario, int $expected_revision, LocalUnitContext $context ): void {
+		$this->silently( fn() => $this->applyInternal( $scenario, $expected_revision, $context ) );
+	}
+	/**
+	 * Aplica a mutação e o evento numa única transacção.
+	 *
+	 * @param string           $scenario Cenário fechado.
+	 * @param int              $expected_revision Revisão esperada.
+	 * @param LocalUnitContext $context Contexto auditado.
+	 * @throws RuntimeException Quando a alteração é recusada.
+	 */
+	private function applyInternal( string $scenario, int $expected_revision, LocalUnitContext $context ): void {
 		if ( 0 > $expected_revision || PHP_INT_MAX === $expected_revision || ! isset( LocalUnitScenarios::labels()[ $scenario ] ) ) {
 			throw new RuntimeException( 'Pedido local inválido.' ); }
 		$this->schema->validate();
@@ -121,6 +140,14 @@ final class WpdbLocalUnitRepository {
 	 * @throws \RuntimeException Quando a operação é recusada.
 	 */
 	public function history(): array {
+		return $this->silently( fn(): array => $this->readHistory() );
+	}
+	/**
+	 * Lê e valida eventos da ligação dedicada.
+	 *
+	 * @throws RuntimeException Quando a leitura é recusada.
+	 */
+	private function readHistory(): array {
 		$this->schema->validate();
 		$rows = $this->rows( $this->database->prepare( 'SELECT actor_id, event, revision, previous_json, new_json, reason, occurred_at FROM %i ORDER BY revision DESC LIMIT 20', $this->schema->table( 'audit' ) ) );
 		foreach ( $rows as $row ) {
@@ -132,6 +159,23 @@ final class WpdbLocalUnitRepository {
 			new LocalUnitContext( self::revision( $row->actor_id ), $row->reason, self::revision( $row->occurred_at ) );
 		}
 		return $rows;
+	}
+	/**
+	 * Suprime saída SQL apenas durante esta operação e repõe o estado anterior.
+	 *
+	 * @param callable $operation Operação interna sobre a ligação dedicada.
+	 * @return mixed
+	 * @throws RuntimeException Quando a persistência recusa a operação.
+	 */
+	private function silently( callable $operation ): mixed {
+		$previous = $this->database->suppress_errors( true );
+		try {
+			return $operation();
+		} catch ( Throwable ) {
+			throw new RuntimeException( 'Persistência local indisponível.' );
+		} finally {
+			$this->database->suppress_errors( $previous );
+		}
 	}
 	/**
 	 * Executa SQL interno e recusa falhas.

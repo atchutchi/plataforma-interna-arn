@@ -28,7 +28,6 @@ $deny   = static function ( callable $run ) use ( $assert ): void {
 $prefix = 'arn_units_' . bin2hex( random_bytes( 6 ) ) . '_';
 $db     = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
 $db->set_prefix( $prefix );
-$db->suppress_errors( true );
 $repo    = new WpdbLocalUnitRepository( $db );
 $other   = null;
 $failure = null;
@@ -49,11 +48,23 @@ try {
 	$repo->apply( 'move-b-to-a', 2, $context );
 	$units = array_column( $repo->snapshot()->units, null, 'id' );
 	$assert( 'Unidade fictícia A revista' === $units['LAB-A']->name && 'LAB-A' === $units['LAB-B']->parent_id, 'identidade estável e superior' );
-	$failure = static fn( string $sql ): string => str_starts_with( $sql, 'INSERT INTO' ) && str_contains( $sql, $prefix . 'arn_org_audit' ) ? 'INVALID LOCAL AUDIT SQL' : $sql;
+	$failure                  = static fn( string $sql ): string => str_starts_with( $sql, 'INSERT INTO' ) && str_contains( $sql, $prefix . 'arn_org_audit' ) ? 'INVALID LOCAL AUDIT SQL' : $sql;
 	add_filter( 'query', $failure );
-	$deny( static fn() => $repo->apply( 'move-b-to-root', 3, $context ) );
+	$previous_show_errors     = $db->show_errors( true );
+	$previous_suppress_errors = $db->suppress_errors( false );
+	ob_start();
+	try {
+		$deny( static fn() => $repo->apply( 'move-b-to-root', 3, $context ) );
+		$state_restored = true === $db->show_errors && false === $db->suppress_errors;
+	} finally {
+		$sql_output = ob_get_clean();
+		$db->show_errors( $previous_show_errors );
+		$db->suppress_errors( $previous_suppress_errors );
+	}
 	remove_filter( 'query', $failure );
 	$failure = null;
+	$assert( '' === $sql_output, 'falha SQL não produz saída' );
+	$assert( $state_restored, 'estado de erros da ligação restaurado' );
 	$assert( 3 === $repo->snapshot()->revision && 3 === count( $repo->history() ), 'rollback revisão e auditoria' );
 	$units = array_column( $repo->snapshot()->units, null, 'id' );
 	$assert( 'LAB-A' === $units['LAB-B']->parent_id, 'rollback árvore integral' );
