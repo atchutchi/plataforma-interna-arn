@@ -37,6 +37,30 @@ final class NewsRuntimeTest extends TestCase {
 		new DraftInput( 'Título', '', 'nota-interna', null, array( 'invalid' ), array() );
 	}
 
+	public function testDraftDetachesExternalElementReferences(): void {
+		$gallery_item    = new MediaInput( null, 'gallery-a', 'A' );
+		$attachment_item = new MediaInput( null, 'attachment-a', 'A' );
+		$gallery         = array( &$gallery_item );
+		$attachments     = array( &$attachment_item );
+		$draft           = new DraftInput( 'Título', '', 'nota-interna', null, $gallery, $attachments );
+		$gallery_item    = new MediaInput( null, 'gallery-b', 'B' );
+		$attachment_item = new MediaInput( null, 'attachment-b', 'B' );
+		self::assertSame( 'gallery-a', $draft->gallery[0]->source );
+		self::assertSame( 'attachment-a', $draft->attachments[0]->source );
+		$gallery_item    = 'invalid';
+		$attachment_item = 'invalid';
+		self::assertInstanceOf( MediaInput::class, $draft->gallery[0] );
+		self::assertInstanceOf( MediaInput::class, $draft->attachments[0] );
+	}
+
+	public function testInstallerLocationRejectsWorkingTreeAndPreservesMetadataRoot(): void {
+		$project = 'C:/workspace/arn';
+		self::assertFalse( LocalNewsInstaller::allowedLocation( $project . '/tests/private', $project ) );
+		self::assertFalse( LocalNewsInstaller::allowedLocation( $project, $project ) );
+		self::assertTrue( LocalNewsInstaller::allowedLocation( $project . '/.git/tools/local-private-files', $project ) );
+		self::assertTrue( LocalNewsInstaller::allowedLocation( 'C:/workspace/arn-sibling/private', $project ) );
+	}
+
 	public function testInstallerRequiresExactGatesAndRejectsRevokedGrant(): void {
 		self::assertTrue( LocalNewsInstaller::eligible( 'local', true, true, true, true, true, true ) );
 		self::assertFalse( LocalNewsInstaller::eligible( 'local', 1, true, true, true, true, true ) );

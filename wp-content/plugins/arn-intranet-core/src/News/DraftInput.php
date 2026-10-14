@@ -20,8 +20,16 @@ final readonly class DraftInput {
 		if ( ! self::strict( $gallery ) || ! self::strict( $attachments ) || count( $gallery ) > 8 || count( $attachments ) > 5 ) {
 			throw new InvalidArgumentException( 'Entrada editorial inválida.' );
 		}
-		$this->gallery     = array_values( $gallery );
-		$this->attachments = array_values( $attachments );
+		$gallery_copy = array();
+		foreach ( $gallery as $item ) {
+			$gallery_copy[] = $item;
+		}
+		$attachment_copy = array();
+		foreach ( $attachments as $item ) {
+			$attachment_copy[] = $item;
+		}
+		$this->gallery     = $gallery_copy;
+		$this->attachments = $attachment_copy;
 	}
 
 	private static function strict( array $items ): bool {

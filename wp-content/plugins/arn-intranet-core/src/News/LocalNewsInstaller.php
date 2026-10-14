@@ -53,8 +53,9 @@ final class LocalNewsInstaller {
 		) ) {
 			throw new RuntimeException( self::ERROR );
 		}
-		$root = null !== $this->private_root ? realpath( $this->private_root ) : ( defined( 'ARN_LOCAL_PRIVATE_FILES_DIR' ) ? realpath( ARN_LOCAL_PRIVATE_FILES_DIR ) : false );
-		if ( false === $root ) {
+		$root    = null !== $this->private_root ? realpath( $this->private_root ) : ( defined( 'ARN_LOCAL_PRIVATE_FILES_DIR' ) ? realpath( ARN_LOCAL_PRIVATE_FILES_DIR ) : false );
+		$project = realpath( dirname( __DIR__, 5 ) );
+		if ( false === $root || false === $project || ! self::allowedLocation( $root, $project ) ) {
 			throw new RuntimeException( self::ERROR );
 		}
 		try {
@@ -102,14 +103,19 @@ final class LocalNewsInstaller {
 						fclose( $handle );
 					}
 				}
-				$id = wp_insert_user(
-					array(
-						'user_login' => $login,
-						'user_pass'  => $password,
-						'user_email' => $email,
-						'role'       => 'subscriber',
-					)
-				);
+				try {
+					$id = wp_insert_user(
+						array(
+							'user_login' => $login,
+							'user_pass'  => $password,
+							'user_email' => $email,
+							'role'       => 'subscriber',
+						)
+					);
+				} catch ( Throwable ) {
+					@unlink( $file );
+					throw new RuntimeException( self::ERROR );
+				}
 				if ( is_wp_error( $id ) || ! is_int( $id ) || $id < 1 ) {
 					@unlink( $file );
 					throw new RuntimeException( self::ERROR );
@@ -144,6 +150,24 @@ final class LocalNewsInstaller {
 			);
 		}
 		return $results;
+	}
+
+	/** Both arguments are canonical absolute paths from realpath in install(). */
+	public static function allowedLocation( string $root, string $project ): bool {
+		$normalize = static function ( string $path ): string {
+			$path = rtrim( str_replace( '\\', '/', $path ), '/' );
+			return '\\' === DIRECTORY_SEPARATOR ? strtolower( $path ) : $path;
+		};
+		$root      = $normalize( $root );
+		$project   = $normalize( $project );
+		if ( '' === $root || '' === $project || str_contains( $root, "\0" ) || str_contains( $project, "\0" )
+			|| 1 === preg_match( '~(^|/)\.\.?(/|$)~', $root ) || 1 === preg_match( '~(^|/)\.\.?(/|$)~', $project ) ) {
+			return false;
+		}
+		if ( $root === $project . '/.git/tools/local-private-files' ) {
+			return true;
+		}
+		return $root !== $project && ! str_starts_with( $root, $project . '/' );
 	}
 
 	/** Any extra, expired, duplicate or revoked grant blocks setup. */
