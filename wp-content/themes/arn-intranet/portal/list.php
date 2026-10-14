@@ -65,7 +65,7 @@ $result_label = sprintf( _n( '%s resultado', '%s resultados', $total, 'arn-intra
 				$current
 			);
 			?>
-			<a href="<?php echo esc_url( $url ); ?>" aria-label="<?php echo esc_attr( sprintf( 'Página %d', $number ) ); ?>" 
+			<a href="<?php echo esc_url( $url ); ?>" aria-label="<?php echo esc_attr( sprintf( 'Página %d', $number ) ); ?>"
 			<?php
 			if ( (int) $portal['page'] === $number ) :
 				?>
