@@ -83,3 +83,21 @@ jobs:
       - run: npm run test:document-catalog:integration
       - if: always()
         run: npm run env:stop:tests
+
+  news-integration:
+    name: Notícias locais, WordPress e MariaDB
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run env:start:tests
+      - run: npm run env:check:tests
+      - run: npm run composer:install
+      - run: npm run test:news:integration
+      - if: always()
+        run: npm run env:stop:tests
