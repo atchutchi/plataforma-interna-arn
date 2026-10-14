@@ -34,6 +34,7 @@ use Arn\Intranet\Authorization\Session\LocalGrantManagementPage;
 use Arn\Intranet\Authorization\Storage\AuthorizationStorageProbe;
 use Arn\Intranet\Identity\GoogleLoginController;
 use Arn\Intranet\Identity\WordPressFederatedAccess;
+use Arn\Intranet\EditorialPreview\Portal;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -150,6 +151,7 @@ add_action( 'init', 'arn_intranet_core_maybe_prepare_local_fixture' );
 add_action( 'admin_notices', 'arn_intranet_core_admin_notices' );
 
 PrivatePortal::register();
+Portal::register();
 
 ( new LocalFixtureAccess(
 	arn_intranet_core_environment_type(),

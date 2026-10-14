@@ -141,3 +141,51 @@ function arn_intranet_editor_toolbar( bool $show ): bool {
 }
 
 add_filter( 'show_admin_bar', 'arn_intranet_editor_toolbar' );
+
+/**
+ * Evita títulos repetidos nas páginas com apresentação editorial própria.
+ *
+ * @param string $content HTML do bloco.
+ * @param array  $block Bloco corrente.
+ * @return string HTML de apresentação.
+ */
+function arn_intranet_portal_heading( string $content, array $block ): string {
+	if ( ! is_singular() || ! has_block( 'arn/portal-view', get_post() ) ) {
+		return $content;
+	}
+	$class = $block['attrs']['className'] ?? '';
+	if ( 'core/post-title' === $block['blockName'] || ( is_string( $class ) && preg_match( '/(?:^|\s)arn-(?:page-intro|local-notice)(?:\s|$)/', $class ) ) ) {
+		return '';
+	}
+	return $content;
+}
+
+add_filter( 'render_block_core/post-title', 'arn_intranet_portal_heading', 10, 2 );
+add_filter( 'render_block_core/group', 'arn_intranet_portal_heading', 10, 2 );
+
+/**
+ * Resolve páginas editoriais geridas no CMS.
+ *
+ * @param string $slug Slug de página.
+ * @return string URL da página.
+ */
+function arn_intranet_portal_url( string $slug ): string {
+	$page = get_page_by_path( $slug );
+	return $page instanceof WP_Post ? get_permalink( $page ) : home_url( '/' . $slug . '/' );
+}
+
+/**
+ * Conserva a página de destino também com ligações permanentes simples.
+ *
+ * @param string $url Destino do formulário GET.
+ */
+function arn_intranet_portal_form_route( string $url ): void {
+	$query = wp_parse_url( $url, PHP_URL_QUERY );
+	if ( ! is_string( $query ) ) {
+		return;
+	}
+	parse_str( $query, $route );
+	if ( isset( $route['page_id'] ) && is_scalar( $route['page_id'] ) ) {
+		echo '<input type="hidden" name="page_id" value="' . esc_attr( (string) absint( $route['page_id'] ) ) . '">';
+	}
+}

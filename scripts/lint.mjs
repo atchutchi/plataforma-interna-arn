@@ -25,6 +25,7 @@ function walkScripts(directory, files) {
 const scripts = [];
 walkScripts(join(root, 'scripts'), scripts);
 scripts.push(join(root, 'wp-content/themes/arn-intranet/assets/js/navigation.js'));
+scripts.push(join(root, 'wp-content/plugins/arn-intranet-core/assets/js/editorial-preview.js'));
 
 let failed = false;
 
