@@ -39,11 +39,30 @@ $schema   = new FileSchema( $database );
 $registry = new WpdbFileRegistry( $database );
 $source   = null;
 try {
-	$schema->install();
-	$store    = LocalPrivateFiles::store( $root );
-	$content  = ( new ReflectionClass( LocalFileInstaller::class ) )->getMethod( 'content' );
-	$ids      = array();
-	$expected = array();
+	$store         = LocalPrivateFiles::store( $root );
+	$content       = ( new ReflectionClass( LocalFileInstaller::class ) )->getMethod( 'content' );
+	$ids           = array();
+	$expected      = array();
+	$local_install = LocalFileInstaller::eligible(
+		wp_get_environment_type(),
+		defined( 'ARN_ALLOW_LOCAL_PRIVATE_FILES' ) ? ARN_ALLOW_LOCAL_PRIVATE_FILES : null,
+		defined( 'ARN_ALLOW_FICTIONAL_LOCAL_ACCESS' ) ? ARN_ALLOW_FICTIONAL_LOCAL_ACCESS : null,
+		defined( 'ARN_ALLOW_LOCAL_AUTHORIZATION_STORAGE' ) ? ARN_ALLOW_LOCAL_AUTHORIZATION_STORAGE : null,
+		true,
+		true
+	);
+	if ( $local_install ) {
+		$owner = get_user_by( 'login', LocalFixtureUser::LOGIN );
+		$assert( $owner instanceof WP_User && '1' === get_user_meta( $owner->ID, LocalFixtureUser::META_KEY, true ), 'Ana marcada existente' );
+		$initial_entries = glob( $root . '/*' );
+		$assert( array() === ( false === $initial_entries ? array() : $initial_entries ), 'pasta privada exclusiva inicialmente vazia' );
+		$assert( '0' === (string) $database->get_var( $database->prepare( 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN (%s,%s,%s)', $schema->table( 'files' ), $schema->table( 'audit' ), $schema->table( 'schema' ) ) ), 'tabelas exclusivas inicialmente ausentes' );
+		$installer = new LocalFileInstaller( $prefix, $root );
+		$ids       = $installer->install( $owner->ID );
+		$assert( array( 'own', 'unit-a', 'unit-b' ) === array_keys( $ids ), 'instalador criou três objectos' );
+	} else {
+		$schema->install();
+	}
 	foreach ( array(
 		'own'    => 1,
 		'unit-a' => 2,
@@ -57,21 +76,26 @@ try {
 		) as $name => $version ) {
 			$variant = 'old' === $name ? 'original' : $name;
 			$bytes   = $content->invoke( null, $object_id, $version, $variant );
-			$source  = tempnam( sys_get_temp_dir(), 'arn-lpf-src-' );
-			file_put_contents( $source, $bytes );
-			$blob = $store->importFile( $source );
-			unlink( $source );
-			$source = null;
-			$registry->register( new FileRecord( $blob, 'local_document', $object_id, $version, $variant, get_current_user_id(), time() ) );
-			$ids[ $key ][ $name ]  = $blob->id;
-			$expected[ $blob->id ] = $bytes;
+			if ( $local_install ) {
+				$record = $registry->findForObject( 'local_document', $object_id, $version, $variant );
+				$assert( $record instanceof FileRecord && $record->blob->id === $ids[ $key ][ $name ], 'tuple inicial do instalador ' . $key . ' ' . $name );
+				$expected[ $record->blob->id ] = $bytes;
+			} else {
+				$source = tempnam( sys_get_temp_dir(), 'arn-lpf-src-' );
+				file_put_contents( $source, $bytes );
+				$blob = $store->importFile( $source );
+				unlink( $source );
+				$source = null;
+				$registry->register( new FileRecord( $blob, 'local_document', $object_id, $version, $variant, get_current_user_id(), time() ) );
+				$ids[ $key ][ $name ]  = $blob->id;
+				$expected[ $blob->id ] = $bytes;
+			}
 		}
 	}
 	$assert( 12 === count( $expected ), 'doze blobs reais registados' );
-	if ( 'local' === wp_get_environment_type() && defined( 'ARN_ALLOW_LOCAL_PRIVATE_FILES' ) && true === ARN_ALLOW_LOCAL_PRIVATE_FILES ) {
-		$owner = get_user_by( 'login', LocalFixtureUser::LOGIN );
-		$assert( $owner instanceof WP_User && '1' === get_user_meta( $owner->ID, LocalFixtureUser::META_KEY, true ), 'Ana marcada existente' );
-		$installer = new LocalFileInstaller( $prefix, $root );
+	if ( $local_install ) {
+		$assert( '12' === (string) $database->get_var( $database->prepare( 'SELECT COUNT(*) FROM %i', $schema->table( 'files' ) ) ), 'instalação inicial criou doze refs' );
+		$assert( '12' === (string) $database->get_var( $database->prepare( 'SELECT COUNT(*) FROM %i', $schema->table( 'audit' ) ) ), 'instalação inicial criou doze eventos' );
 		$assert( $ids === $installer->install( $owner->ID ), 'instalação repetida é idempotente' );
 		$assert( $ids === $installer->install( $owner->ID ), 'segunda instalação não cria refs' );
 		$assert( '12' === (string) $database->get_var( $database->prepare( 'SELECT COUNT(*) FROM %i', $schema->table( 'audit' ) ) ), 'instalação idempotente não cria eventos' );

@@ -134,9 +134,39 @@ final class LocalFileInstaller {
 	 */
 	private static function content( int $object_id, int $version, string $variant ): string {
 		return match ( $variant ) {
-			'original' => "%PDF-1.4\n1 0 obj <</Type/Catalog>> endobj\n% ARN ficticio {$object_id} {$version}\n%%EOF\n",
+			'original' => self::pdf( $object_id, $version ),
 			'thumbnail' => base64_decode( self::PNG, true ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Imagem PNG sintética constante.
 			'preview' => base64_decode( self::JPEG, true ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Imagem JPEG sintética constante.
 		};
+	}
+
+	/**
+	 * Cria uma página PDF sintética com referências e xref consistentes.
+	 *
+	 * @param int $object_id Objecto fechado.
+	 * @param int $version Versão fechada.
+	 */
+	private static function pdf( int $object_id, int $version ): string {
+		$line    = 'ARN - Documento ficticio ' . $object_id . ' versao ' . $version;
+		$stream  = "BT /F1 18 Tf 72 760 Td ({$line}) Tj ET\n";
+		$objects = array(
+			'<< /Type /Catalog /Pages 2 0 R >>',
+			'<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+			'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+			'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+			'<< /Length ' . strlen( $stream ) . " >>\nstream\n" . $stream . 'endstream',
+		);
+		$pdf     = "%PDF-1.4\n";
+		$offsets = array( 0 );
+		foreach ( $objects as $index => $body ) {
+			$offsets[] = strlen( $pdf );
+			$pdf      .= ( $index + 1 ) . " 0 obj\n" . $body . "\nendobj\n";
+		}
+		$xref = strlen( $pdf );
+		$pdf .= "xref\n0 6\n0000000000 65535 f \n";
+		foreach ( array_slice( $offsets, 1 ) as $offset ) {
+			$pdf .= sprintf( "%010d 00000 n \n", $offset );
+		}
+		return $pdf . "trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n{$xref}\n%%EOF\n";
 	}
 }

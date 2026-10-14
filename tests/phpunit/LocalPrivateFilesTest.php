@@ -184,4 +184,14 @@ final class LocalPrivateFilesTest extends TestCase {
 			LocalPrivateFilesPage::labels()
 		);
 	}
+
+	/** O original sintético contém uma página e xref com offsets correctos. */
+	public function testSyntheticPdfContainsACompletePageAndCrossReference(): void {
+		$pdf = ( new \ReflectionClass( LocalFileInstaller::class ) )->getMethod( 'content' )->invoke( null, 1, 2, 'original' );
+		self::assertStringContainsString( '/Type /Page ', $pdf );
+		self::assertStringContainsString( '/Count 1', $pdf );
+		self::assertMatchesRegularExpression( '/startxref\n([0-9]+)\n%%EOF\n\z/', $pdf );
+		preg_match( '/startxref\n([0-9]+)\n%%EOF\n\z/', $pdf, $matches );
+		self::assertStringStartsWith( 'xref', substr( $pdf, (int) $matches[1] ) );
+	}
 }
