@@ -140,8 +140,8 @@ final class Portal {
 		foreach ( $items as $item ) {
 			++$base['counts'][ $item['category'] ];
 		}
-		$decorate = static function ( array $item ): array {
-			$item['detail_url']   = add_query_arg( 'item', $item['id'], get_permalink() );
+		$decorate = static function ( array $item ) use ( $query ): array {
+			$item['detail_url']   = add_query_arg( Selection::detailQuery( $query, $item['id'] ), get_permalink() );
 			$item['download_url'] = add_query_arg( 'arn_document', $item['id'], home_url( '/' ) );
 			return $item;
 		};

@@ -146,4 +146,29 @@ final class EditorialPreviewTest extends TestCase {
 			}
 		}
 	}
+
+	/** O detalhe conserva apenas o contexto de lista validado. */
+	public function test_detail_query_preserves_validated_list_context(): void {
+		$query = Selection::query(
+			array(
+				'q'        => 'pesquisa',
+				'category' => 'circular',
+				'year'     => '2026',
+				'paged'    => '3',
+				'item'     => 'anterior',
+				'unsafe'   => 'ignorar',
+			)
+		);
+		$this->assertSame(
+			array(
+				'q'        => 'pesquisa',
+				'category' => 'circular',
+				'year'     => '2026',
+				'paged'    => 3,
+				'item'     => 'novo',
+			),
+			Selection::detailQuery( $query, 'novo' )
+		);
+		$this->assertSame( array( 'item' => 'novo' ), Selection::detailQuery( Selection::query( array() ), 'novo' ) );
+	}
 }

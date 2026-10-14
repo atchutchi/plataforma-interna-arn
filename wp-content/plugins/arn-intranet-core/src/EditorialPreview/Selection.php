@@ -44,6 +44,27 @@ final class Selection {
 	}
 
 	/**
+	 * Prepara o endereço de detalhe com o contexto de lista validado.
+	 *
+	 * @param array{q:string,category:string,year:string,paged:int,item:string} $query Filtros validados.
+	 * @param string                                                            $id Identificador do item.
+	 * @return array<string,string|int> Parâmetros fechados.
+	 */
+	public static function detailQuery( array $query, string $id ): array {
+		$args = array();
+		foreach ( array( 'q', 'category', 'year' ) as $key ) {
+			if ( '' !== $query[ $key ] ) {
+				$args[ $key ] = $query[ $key ];
+			}
+		}
+		if ( $query['paged'] > 1 ) {
+			$args['paged'] = $query['paged'];
+		}
+		$args['item'] = $id;
+		return $args;
+	}
+
+	/**
 	 * Filtra e ordena os itens disponíveis.
 	 *
 	 * @param array<int,array<string,mixed>> $items Itens.

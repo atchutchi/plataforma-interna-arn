@@ -55,6 +55,28 @@ try {
 	$check( 1 === count( $manifest->items() ), 'fonte sintética' );
 	$check( 'application/pdf' === $manifest->verifiedFile( $item )['mime'], 'MIME e hash' );
 	$check( 1 === count( Selection::filter( $manifest->items(), 'news', array() ) ), 'seleção' );
+	$context_url = add_query_arg(
+		Selection::detailQuery(
+			Selection::query(
+				array(
+					'q'     => 'texto',
+					'paged' => '2',
+				)
+			),
+			'fixture'
+		),
+		'https://example.test/?page_id=17'
+	);
+	parse_str( (string) wp_parse_url( $context_url, PHP_URL_QUERY ), $context_args );
+	$check(
+		array(
+			'page_id' => '17',
+			'q'       => 'texto',
+			'paged'   => '2',
+			'item'    => 'fixture',
+		) === $context_args,
+		'contexto de detalhe e page_id'
+	);
 	$services = Portal::model( 'services', array( 'item' => 'fixture' ) );
 	$check( null === $services['selected'] && 0 === array_sum( $services['counts'] ), 'serviços sem metadados' );
 	$old_user = get_current_user_id();
