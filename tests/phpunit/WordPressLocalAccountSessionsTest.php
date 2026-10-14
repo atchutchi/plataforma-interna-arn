@@ -222,6 +222,31 @@ final class WordPressLocalAccountSessionsTest extends TestCase {
 		self::assertInstanceOf( WP_Error::class, $guard->filterAuthentication( ArnWordPressDoubles::$users[10] ) );
 		self::assertSame( ArnWordPressDoubles::$users[20], $guard->filterAuthentication( ArnWordPressDoubles::$users[20] ) );
 	}
+	/** Contas normais sem marca também ficam fora do repositório. */
+	public function testOrdinaryUnmarkedAccountIsPreservedWithoutLookup(): void {
+		$user                                     = new WP_User( 30, 'colaborador.normal', 'colaborador@example.test' );
+		ArnWordPressDoubles::$users[30]           = $user;
+		$session                                  = array( 'expiration' => 123 );
+		ArnWordPressDoubles::$sessions[30]['old'] = $session;
+		$this->enabled                            = false;
+		$this->snapshot                           = new \RuntimeException( 'DAO indisponível' );
+		self::assertSame( $user, $this->guard->filterAuthentication( $user ) );
+		self::assertSame( 30, $this->guard->filterCurrentUser( 30 ) );
+		self::assertSame( $session, $this->guard->attachSessionInformation( $session, 30 ) );
+		self::assertTrue( $this->guard->filterSendAuthCookies( true, 0, 0, 30, '', 'old' ) );
+		self::assertFalse( $this->guard->filterSendAuthCookies( false, 0, 0, 30, '', 'old' ) );
+		self::assertTrue( $this->guard->filterPasswordReset( true, 30 ) );
+		self::assertFalse( $this->guard->filterPasswordReset( false, 30 ) );
+		$errors = new WP_Error( 'earlier' );
+		self::assertSame( $errors, $this->guard->filterPasswordReset( $errors, 30 ) );
+		$this->guard->validatePasswordReset( $errors, $user );
+		self::assertSame( 'earlier', $errors->get_error_code() );
+		self::assertTrue( $this->guard->filterApplicationPasswords( true, $user ) );
+		self::assertFalse( $this->guard->filterApplicationPasswords( false, $user ) );
+		self::assertSame( $session, ArnWordPressDoubles::$sessions[30]['old'] );
+		self::assertSame( 0, ArnWordPressDoubles::$cookies_cleared );
+		self::assertSame( 0, $this->reads );
+	}
 	/** Hooks após core e guardas anteriores. */
 	public function testHookSignatures(): void {
 		$this->guard->register();
