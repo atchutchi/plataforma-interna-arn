@@ -29,7 +29,7 @@ $result_label = sprintf( _n( '%s resultado', '%s resultados', $total, 'arn-intra
 			<?php endforeach; ?>
 		</select></div>
 	<?php endif; ?>
-	<div class="arn-portal-filter-year"><label for="arn-year">Ano</label><input id="arn-year" name="year" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="Todos" value="<?php echo esc_attr( $portal['year'] ?? '' ); ?>"></div>
+	<div class="arn-portal-filter-year"><label for="arn-year">Ano</label><input id="arn-year" name="arn_year" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="Todos" value="<?php echo esc_attr( $portal['year'] ?? '' ); ?>"></div>
 	<button type="submit">Aplicar filtros</button>
 	<a class="arn-portal-reset" href="<?php echo esc_url( $current ); ?>">Limpar filtros</a>
 </form>
@@ -59,8 +59,8 @@ $result_label = sprintf( _n( '%s resultado', '%s resultados', $total, 'arn-intra
 				array(
 					'q'        => $portal['query'],
 					'category' => $portal['category'],
-					'year'     => $portal['year'] ?? '',
-					'paged'    => $number,
+					'arn_year' => $portal['year'] ?? '',
+					'arn_page' => $number,
 				),
 				$current
 			);

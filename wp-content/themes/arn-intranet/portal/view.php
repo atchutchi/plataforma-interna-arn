@@ -30,8 +30,8 @@ $collection   = add_query_arg(
 	array(
 		'q'        => $portal['query'],
 		'category' => $portal['category'],
-		'year'     => $portal['year'],
-		'paged'    => $portal['page'],
+		'arn_year' => $portal['year'],
+		'arn_page' => $portal['page'],
 	),
 	$current
 );
