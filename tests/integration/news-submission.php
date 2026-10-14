@@ -11,6 +11,7 @@ use Arn\Intranet\Authorization\Scope;
 use Arn\Intranet\Authorization\Storage\ChangeContext;
 use Arn\Intranet\Authorization\Storage\WpdbAuthorizationRepository;
 use Arn\Intranet\Documents\PrivateFiles\BlobDescriptor;
+use Arn\Intranet\Documents\PrivateFiles\FileRecord;
 use Arn\Intranet\Documents\PrivateFiles\FileSchema;
 use Arn\Intranet\Documents\PrivateFiles\WpdbFileRegistry;
 use Arn\Intranet\Identity\IdentityWpdb;
@@ -25,6 +26,7 @@ use Arn\Intranet\News\WpdbNewsRepository;
 
 // phpcs:disable Squiz.Commenting.FunctionComment, Squiz.Commenting.VariableComment, WordPress.Security.EscapeOutput.ExceptionNotEscaped
 // phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared
+// phpcs:disable WordPress.WP.AlternativeFunctions, WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Exclusive integration uses temporary process markers and a child CLI.
 
 if ( ! defined( 'WP_CLI' ) || true !== WP_CLI || ! in_array( wp_get_environment_type(), array( 'local', 'development' ), true ) || ! current_user_can( 'manage_options' ) ) {
 	throw new RuntimeException( 'Ensaio exclusivo do laboratório.' );
@@ -128,6 +130,30 @@ try {
 	$assert( 2 === $hydrated->revision && 2 === count( $hydrated->version( 2 )->content->gallery ) && 1 === count( $hydrated->version( 2 )->content->attachments ), 'hidratação completa' );
 	$asset_row = $repo->asset( $featured->blob->id );
 	$assert( $asset_row['article_id'] === $article->id && 2 === $asset_row['version'] && $registry->find( $featured->blob->id )->object_id === $asset_row['asset_id'] && 'news_asset' === $registry->find( $featured->blob->id )->object_type, 'vínculo ao ID próprio do asset' );
+	$duplicate_featured = $asset( 'featured', 'Destaque contraditório' );
+	$db->query( 'START TRANSACTION' );
+	$db->query( $db->prepare( 'INSERT INTO %i (article_id,version,kind,position,blob_id,sha256,size_bytes,mime,description) VALUES (%d,2,%s,1,%s,%s,%d,%s,%s)', $schema->table( 'assets' ), $article->id, 'featured', $duplicate_featured->blob->id, $duplicate_featured->blob->sha256, $duplicate_featured->blob->size, $duplicate_featured->blob->mime, $duplicate_featured->description ) );
+	$duplicate_asset_id = (int) $db->insert_id;
+	$registry->registerInTransaction( new FileRecord( $duplicate_featured->blob, 'news_asset', $duplicate_asset_id, 1, 'original', $author_id, time() ) );
+	$db->query( 'COMMIT' );
+	$rejected = false;
+	try {
+		$repo->find( $article->id );
+	} catch ( RuntimeException ) {
+		$rejected = true;
+	}
+	$asset_rejected = false;
+	try {
+		$repo->asset( $featured->blob->id );
+	} catch ( RuntimeException ) {
+		$asset_rejected = true;
+	}
+	$db->query( 'START TRANSACTION' );
+	$db->query( $db->prepare( 'DELETE FROM %i WHERE blob_id=%s', $files->table( 'audit' ), $duplicate_featured->blob->id ) );
+	$db->query( $db->prepare( 'DELETE FROM %i WHERE blob_id=%s', $files->table( 'files' ), $duplicate_featured->blob->id ) );
+	$db->query( $db->prepare( 'DELETE FROM %i WHERE id=%d', $schema->table( 'assets' ), $duplicate_asset_id ) );
+	$db->query( 'COMMIT' );
+	$assert( $rejected && $asset_rejected && 2 === $repo->find( $article->id )->revision, 'dois destaques com registos válidos recusados' );
 	$rejected = false;
 	try {
 		$repo->revise( $article->id, new Version( 3, $next->content, $author_id, time() ), 1, 'CAS antigo' );
@@ -204,15 +230,142 @@ try {
 		$rejected = true;
 	}
 	$assert( $rejected, 'autor não marca aviso do editor' );
-	$reader_db->query( 'SET SESSION innodb_lock_wait_timeout=1' );
-	$db->query( 'START TRANSACTION' );
-	$db->get_results( $db->prepare( 'SELECT user_id FROM %i WHERE user_id=%d FOR UPDATE', $prefix . 'arn_authz_accounts', $author_id ) );
-	$reader_db->query( 'START TRANSACTION' );
-	$wait       = $reader_db->get_results( $reader_db->prepare( 'SELECT user_id FROM %i WHERE user_id=%d FOR UPDATE', $prefix . 'arn_authz_accounts', $author_id ) );
-	$wait_error = $reader_db->last_error;
-	$reader_db->query( 'ROLLBACK' );
-	$db->query( 'ROLLBACK' );
-	$assert( array() === $wait && str_contains( $wait_error, 'Lock wait timeout exceeded' ), 'duas ligações confirmam contenção de conta' );
+	$prior_article  = $repo->find( $article->id );
+	$prior_notices  = $repo->notificationRows( $reviewer_id );
+	$before         = $count_rows();
+	$create_asset   = $asset( 'featured', 'Destaque para criação falhada' );
+	$create_content = new Content( 'Criação que reverte', 'Texto', 'nota-interna', $create_asset, array(), array() );
+	$staged_counts  = null;
+	$filter         = static function ( string $sql ) use ( &$staged_counts, $count_rows ): string {
+		if ( str_contains( $sql, 'arn_news_audit' ) && str_starts_with( $sql, 'INSERT INTO' ) ) {
+			$staged_counts = $count_rows();
+			return 'INVALID NEWS AUDIT INSERT';
+		}
+		return $sql;
+	};
+	add_filter( 'query', $filter );
+	$failed = false;
+	try {
+		$repo->create( $author_id, $scope, new Version( 1, $create_content, $author_id, time() ), 'Criar com falha tardia' );
+	} catch ( RuntimeException ) {
+		$failed = true;
+	} finally {
+		remove_filter( 'query', $filter );
+	}
+	$create_staged = is_array( $staged_counts ) && $staged_counts[0] === $before[0] + 1 && $staged_counts[1] === $before[1] + 1 && $staged_counts[2] === $before[2] + 1 && $staged_counts[3] === $before[3] + 1 && $staged_counts[6] === $before[6] + 1 && $staged_counts[7] === $before[7] + 1;
+	$assert( $failed && $create_staged && $before === $count_rows() && null === $registry->find( $create_asset->blob->id ) && $fingerprint( $prior_article ) === $fingerprint( $repo->find( $article->id ) ) && $fingerprint( $prior_notices ) === $fingerprint( $repo->notificationRows( $reviewer_id ) ), 'falha de auditoria em create reverte oito tabelas e estado anterior' );
+	$draft_content    = new Content( 'Outro rascunho', 'Texto', 'nota-interna', $asset( 'featured', 'Novo destaque' ), array(), array() );
+	$draft            = $repo->create( $author_id, $scope, new Version( 1, $draft_content, $author_id, time() ), 'Outro rascunho' );
+	$prior_draft      = $repo->find( $draft->id );
+	$before           = $count_rows();
+	$revision_assets  = array( $asset( 'featured', 'Destaque novo' ), $asset( 'gallery', 'Galeria nova' ), $asset( 'attachment', 'Anexo novo' ) );
+	$revision_content = new Content( 'Revisão que reverte', 'Texto revisto', 'nota-interna', $revision_assets[0], array( $revision_assets[1] ), array( $revision_assets[2] ) );
+	$staged_counts    = null;
+	add_filter( 'query', $filter );
+	$failed = false;
+	try {
+		$repo->revise( $draft->id, new Version( 2, $revision_content, $author_id, time() ), 1, 'Rever com falha tardia' );
+	} catch ( RuntimeException ) {
+		$failed = true;
+	} finally {
+		remove_filter( 'query', $filter );
+	}
+	$missing_files = true;
+	foreach ( $revision_assets as $revision_asset ) {
+		$missing_files = $missing_files && null === $registry->find( $revision_asset->blob->id );
+	}
+	$revise_staged = is_array( $staged_counts ) && $staged_counts[2] === $before[2] + 1 && $staged_counts[3] === $before[3] + 3 && $staged_counts[6] === $before[6] + 3 && $staged_counts[7] === $before[7] + 3;
+	$assert( $failed && $revise_staged && $before === $count_rows() && $missing_files && $fingerprint( $prior_draft ) === $fingerprint( $repo->find( $draft->id ) ) && $fingerprint( $prior_article ) === $fingerprint( $repo->find( $article->id ) ) && $fingerprint( $prior_notices ) === $fingerprint( $repo->notificationRows( $reviewer_id ) ), 'falha de auditoria em revise reverte oito tabelas e agregados anteriores' );
+	$contention_article = $repo->create( $author_id, $scope, new Version( 1, new Content( 'Ensaio de locks', '', 'nota-interna', null, array(), array() ), $author_id, time() ), 'Preparar concorrência' );
+	$marker_base        = tempnam( sys_get_temp_dir(), 'arn-news-lock-' );
+	if ( false === $marker_base ) {
+		throw new RuntimeException( 'Marcadores de ensaio indisponíveis.' );
+	}
+	unlink( $marker_base );
+	$ready_marker   = $marker_base . '.ready';
+	$go_marker      = $marker_base . '.go';
+	$entered_marker = $marker_base . '.entered';
+	$worker_context = array(
+		'prefix'     => $prefix,
+		'author_id'  => $author_id,
+		'article_id' => $contention_article->id,
+		'ready'      => $ready_marker,
+		'go'         => $go_marker,
+		'entered'    => $entered_marker,
+	);
+	$worker_path    = realpath( 'tests/integration/news-contention-worker.php' );
+	if ( false === $worker_path ) {
+		throw new RuntimeException( 'Worker de ensaio indisponível.' );
+	}
+	$worker_command     = array( PHP_BINARY, $_SERVER['argv'][0], '--path=' . ABSPATH, '--user=' . wp_get_current_user()->user_login, 'eval-file', $worker_path );
+	$worker_environment = array_merge( getenv(), array( 'ARN_NEWS_CONTENTION' => wp_json_encode( $worker_context ) ) );
+	$worker             = proc_open(
+		$worker_command,
+		array(
+			0 => array( 'pipe', 'r' ),
+			1 => array( 'pipe', 'w' ),
+			2 => array( 'pipe', 'w' ),
+		),
+		$worker_pipes,
+		getcwd(),
+		$worker_environment
+	);
+	if ( ! is_resource( $worker ) ) {
+		throw new RuntimeException( 'Worker de ensaio indisponível.' );
+	}
+	fclose( $worker_pipes[0] );
+	try {
+		$deadline = microtime( true ) + 15;
+		while ( ! is_file( $ready_marker ) && microtime( true ) < $deadline && proc_get_status( $worker )['running'] ) {
+			usleep( 50000 );
+		}
+		$assert( is_file( $ready_marker ), 'worker real preparou revisão' );
+		$db->query( 'START TRANSACTION' );
+		$db->get_results( $db->prepare( 'SELECT user_id FROM %i WHERE user_id=%d FOR UPDATE', $prefix . 'arn_authz_accounts', $author_id ) );
+		file_put_contents( $go_marker, 'go', LOCK_EX );
+		$deadline = microtime( true ) + 15;
+		while ( ! is_file( $entered_marker ) && microtime( true ) < $deadline && proc_get_status( $worker )['running'] ) {
+			usleep( 50000 );
+		}
+		$assert( is_file( $entered_marker ), 'revisão entrou na autoridade real' );
+		$worker_connection = (int) file_get_contents( $entered_marker );
+		$waiting           = false;
+		$deadline          = microtime( true ) + 15;
+		while ( ! $waiting && microtime( true ) < $deadline && proc_get_status( $worker )['running'] ) {
+			$waiting = 0 < (int) $reader_db->get_var( $reader_db->prepare( 'SELECT COUNT(*) FROM information_schema.INNODB_LOCK_WAITS w JOIN information_schema.INNODB_TRX t ON t.trx_id=w.requesting_trx_id WHERE t.trx_mysql_thread_id=%d', $worker_connection ) );
+			usleep( 50000 );
+		}
+		$assert( $waiting, 'authority real aguarda account lock noutra ligação' );
+		$reader_db->query( 'START TRANSACTION' );
+		$article_probe = $reader_db->get_results( $reader_db->prepare( 'SELECT id FROM %i WHERE id=%d FOR UPDATE NOWAIT', $schema->table( 'news' ), $contention_article->id ) );
+		$reader_db->query( 'ROLLBACK' );
+		$assert( is_array( $article_probe ) && 1 === count( $article_probe ), 'notícia livre enquanto a autoridade espera pela conta' );
+		$db->query( 'ROLLBACK' );
+		$worker_out   = stream_get_contents( $worker_pipes[1] );
+		$worker_error = stream_get_contents( $worker_pipes[2] );
+		fclose( $worker_pipes[1] );
+		fclose( $worker_pipes[2] );
+		$worker_exit = proc_close( $worker );
+		$worker      = null;
+		$assert( 0 === $worker_exit && str_contains( $worker_out, 'NEWS_WORKER_OK' ) && '' === $worker_error && 2 === $repo->find( $contention_article->id )->revision, 'revisão real conclui após libertar conta' );
+	} finally {
+		$db->query( 'ROLLBACK' );
+		$reader_db->query( 'ROLLBACK' );
+		if ( is_resource( $worker ) ) {
+			proc_terminate( $worker );
+			foreach ( $worker_pipes as $pipe ) {
+				if ( is_resource( $pipe ) ) {
+					fclose( $pipe );
+				}
+			}
+			proc_close( $worker );
+		}
+		foreach ( array( $ready_marker, $go_marker, $entered_marker ) as $marker ) {
+			if ( is_file( $marker ) ) {
+				unlink( $marker );
+			}
+		}
+	}
 	$authorization->revokeGrant( $reviewer_id, $reviewer_grant, 3, $context( 'Revogação exclusiva' ) );
 	$session_revision[ $reviewer_id ] = 4;
 	$active_id                        = $reviewer_id;
@@ -223,10 +376,8 @@ try {
 		$rejected = true;
 	}
 	$assert( $rejected, 'recibo recusa concessão revogada' );
-	$active_id     = $author_id;
-	$draft_content = new Content( 'Outro rascunho', 'Texto', 'nota-interna', $asset( 'featured', 'Novo destaque' ), array(), array() );
-	$draft         = $repo->create( $author_id, $scope, new Version( 1, $draft_content, $author_id, time() ), 'Outro rascunho' );
-	$rejected      = false;
+	$active_id = $author_id;
+	$rejected  = false;
 	try {
 		$repo->submit( $draft->id, 1, 'Sem editor elegível' );
 	} catch ( RuntimeException ) {

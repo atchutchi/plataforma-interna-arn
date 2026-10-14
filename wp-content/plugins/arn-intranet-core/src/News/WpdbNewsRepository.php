@@ -232,6 +232,9 @@ final class WpdbNewsRepository {
 				$this->assertFile( $asset_row );
 				$asset = $this->assetValue( $asset_row );
 				if ( 'featured' === $kind ) {
+					if ( 0 !== (int) $asset_row->position || null !== $assets['featured'] ) {
+						throw new RuntimeException( self::ERROR );
+					}
 					$assets['featured'] = $asset;
 				} else {
 					$assets[ $kind ][] = $asset;
