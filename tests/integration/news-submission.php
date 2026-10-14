@@ -326,20 +326,45 @@ try {
 		$assert( is_file( $ready_marker ), 'worker real preparou revisão' );
 		$db->query( 'START TRANSACTION' );
 		$db->get_results( $db->prepare( 'SELECT user_id FROM %i WHERE user_id=%d FOR UPDATE', $prefix . 'arn_authz_accounts', $author_id ) );
-		file_put_contents( $go_marker, 'go', LOCK_EX );
-		$deadline = microtime( true ) + 15;
-		while ( ! is_file( $entered_marker ) && microtime( true ) < $deadline && proc_get_status( $worker )['running'] ) {
-			usleep( 50000 );
+		// Reproduce the interval after marker creation and before its connection ID is written.
+		if ( false === file_put_contents( $entered_marker, '' ) ) {
+			throw new RuntimeException( 'Marcador de ensaio indisponível.' );
 		}
-		$assert( is_file( $entered_marker ), 'revisão entrou na autoridade real' );
-		$worker_connection = (int) file_get_contents( $entered_marker );
-		$waiting           = false;
+		file_put_contents( $go_marker, 'go', LOCK_EX );
+		$worker_connection = 0;
+		$marker_state      = 'absent';
 		$deadline          = microtime( true ) + 15;
+		while ( 0 === $worker_connection && microtime( true ) < $deadline && proc_get_status( $worker )['running'] ) {
+			if ( is_file( $entered_marker ) ) {
+				$marker_state = 'unreadable';
+				$marker       = fopen( $entered_marker, 'rb' );
+				if ( false !== $marker ) {
+					if ( flock( $marker, LOCK_SH ) ) {
+						$contents = stream_get_contents( $marker );
+						flock( $marker, LOCK_UN );
+						$marker_state = '' === $contents ? 'empty' : 'invalid';
+						if ( is_string( $contents ) && ctype_digit( $contents ) && 0 < (int) $contents ) {
+							$worker_connection = (int) $contents;
+							$marker_state      = 'valid';
+						}
+					}
+					fclose( $marker );
+				}
+			}
+			if ( 0 === $worker_connection ) {
+				usleep( 50000 );
+			}
+		}
+		$worker_status = proc_get_status( $worker );
+		$assert( 0 < $worker_connection, sprintf( 'revisão publicou ID de ligação válido (marker=%s, worker=%s, exit=%d)', $marker_state, $worker_status['running'] ? 'running' : 'stopped', $worker_status['exitcode'] ) );
+		$waiting  = false;
+		$deadline = microtime( true ) + 15;
 		while ( ! $waiting && microtime( true ) < $deadline && proc_get_status( $worker )['running'] ) {
 			$waiting = 0 < (int) $reader_db->get_var( $reader_db->prepare( 'SELECT COUNT(*) FROM information_schema.INNODB_LOCK_WAITS w JOIN information_schema.INNODB_TRX t ON t.trx_id=w.requesting_trx_id WHERE t.trx_mysql_thread_id=%d', $worker_connection ) );
 			usleep( 50000 );
 		}
-		$assert( $waiting, 'authority real aguarda account lock noutra ligação' );
+		$worker_status = proc_get_status( $worker );
+		$assert( $waiting, sprintf( 'authority real aguarda account lock noutra ligação (connection=%d, worker=%s, exit=%d, observer=%s)', $worker_connection, $worker_status['running'] ? 'running' : 'stopped', $worker_status['exitcode'], '' === $reader_db->last_error ? 'ok' : 'sql_error' ) );
 		$reader_db->query( 'START TRANSACTION' );
 		$article_probe = $reader_db->get_results( $reader_db->prepare( 'SELECT id FROM %i WHERE id=%d FOR UPDATE NOWAIT', $schema->table( 'news' ), $contention_article->id ) );
 		$reader_db->query( 'ROLLBACK' );
@@ -351,7 +376,7 @@ try {
 		fclose( $worker_pipes[2] );
 		$worker_exit = proc_close( $worker );
 		$worker      = null;
-		$assert( 0 === $worker_exit && str_contains( $worker_out, 'NEWS_WORKER_OK' ) && '' === $worker_error && 2 === $repo->find( $contention_article->id )->revision, 'revisão real conclui após libertar conta' );
+		$assert( 0 === $worker_exit && str_contains( $worker_out, 'NEWS_WORKER_OK' ) && '' === $worker_error && 2 === $repo->find( $contention_article->id )->revision, sprintf( 'revisão real conclui após libertar conta (exit=%d, success_marker=%s, worker_stderr=%s)', $worker_exit, str_contains( $worker_out, 'NEWS_WORKER_OK' ) ? 'yes' : 'no', '' === $worker_error ? 'absent' : 'present' ) );
 	} finally {
 		$db->query( 'ROLLBACK' );
 		$reader_db->query( 'ROLLBACK' );
