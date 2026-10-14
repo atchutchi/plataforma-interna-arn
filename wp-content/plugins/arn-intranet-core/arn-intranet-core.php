@@ -35,6 +35,8 @@ use Arn\Intranet\Authorization\Storage\AuthorizationStorageProbe;
 use Arn\Intranet\Identity\GoogleLoginController;
 use Arn\Intranet\Identity\WordPressFederatedAccess;
 use Arn\Intranet\EditorialPreview\Portal;
+use Arn\Intranet\Documents\PrivateFiles\LocalPrivateFiles;
+use Arn\Intranet\Documents\PrivateFiles\LocalPrivateFilesPage;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -150,6 +152,7 @@ add_action( 'init', 'arn_intranet_core_load_textdomain' );
 add_action( 'init', 'arn_intranet_core_maybe_prepare_local_fixture' );
 add_action( 'admin_notices', 'arn_intranet_core_admin_notices' );
 
+( new LocalPrivateFiles() )->register();
 PrivatePortal::register();
 Portal::register();
 
@@ -176,3 +179,4 @@ add_action( 'wp_loaded', array( new LocalNotificationsPage(), 'register' ) );
 
 add_action( 'wp_loaded', array( new \Arn\Intranet\Organization\LocalUnitsPage(), 'register' ) );
 add_action( 'wp_loaded', array( new \Arn\Intranet\Organization\ImportPreview\LocalImportPreviewPage(), 'register' ) );
+add_action( 'wp_loaded', array( new LocalPrivateFilesPage(), 'register' ) );
