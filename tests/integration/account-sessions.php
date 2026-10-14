@@ -9,6 +9,9 @@ use Arn\Intranet\Access\LocalFixtureUser;
 use Arn\Intranet\Authorization\AccountState;
 use Arn\Intranet\Authorization\Grant;
 use Arn\Intranet\Authorization\LocalGrantPresets;
+use Arn\Intranet\Authorization\Records\LocalRecordAccess;
+use Arn\Intranet\Authorization\Records\LocalRecordSelection;
+use Arn\Intranet\Authorization\Records\LocalRecordsPage;
 use Arn\Intranet\Authorization\Session\LocalGrantManagementPage;
 use Arn\Intranet\Authorization\Role;
 use Arn\Intranet\Authorization\Scope;
@@ -47,17 +50,21 @@ $query_failure  = null;
 $hook_names     = array( 'authenticate', 'determine_current_user', 'attach_session_information', 'send_auth_cookies', 'allow_password_reset', 'validate_password_reset', 'wp_is_application_passwords_available_for_user' );
 try {
 	// O bootstrap real tem de ligar a ferramenta, incluindo no CI com gates fechados.
-	$page_registered   = false;
-	$grants_registered = false;
+	$page_registered    = false;
+	$grants_registered  = false;
+	$records_registered = false;
 	foreach ( $GLOBALS['wp_filter']['wp_loaded']->callbacks ?? array() as $callbacks ) {
 		foreach ( $callbacks as $entry ) {
-			$callback          = $entry['function'];
-			$grants_registered = $grants_registered || ( is_array( $callback ) && $callback[0] instanceof LocalGrantManagementPage && 'register' === $callback[1] );
-			$page_registered   = $page_registered || ( is_array( $callback ) && $callback[0] instanceof LocalAccountStatePage && 'register' === $callback[1] );
+			$callback           = $entry['function'];
+			$records_registered = $records_registered || ( is_array( $callback ) && $callback[0] instanceof LocalRecordsPage && 'register' === $callback[1] );
+			$grants_registered  = $grants_registered || ( is_array( $callback ) && $callback[0] instanceof LocalGrantManagementPage && 'register' === $callback[1] );
+			$page_registered    = $page_registered || ( is_array( $callback ) && $callback[0] instanceof LocalAccountStatePage && 'register' === $callback[1] );
 		}
 	}
 	$assert( $page_registered, 'bootstrap wp_loaded da ferramenta' );
 	$assert( $grants_registered, 'bootstrap wp_loaded das concessões' );
+	$assert( $records_registered, 'bootstrap wp_loaded dos registos' );
+	$assert( ! ( new LocalRecordAccess() )->allowed(), 'administrador sem fixture não recebe excepção para registos' );
 	$password = wp_generate_password( 32 );
 	foreach ( array( 'fixture', 'ordinary' ) as $kind ) {
 		$fixture_id = wp_insert_user(
@@ -242,11 +249,44 @@ try {
 	$assert( wp_authenticate( $prefix . 'fixture', $password ) instanceof WP_User, 'novo login funciona após mudanças de concessão' );
 	$assert( array( 'subscriber' ) === get_userdata( $fixture )->roles && array( 'subscriber' ) === get_userdata( $ordinary )->roles && null === $repository->find( $ordinary ), 'concessões não alteram papéis nem persistência da conta legítima' );
 
+	// A composição interna só resolve esta fixture exclusiva, sem ligar flags no CI.
+	$records = new LocalRecordAccess(
+		static fn() => $repository,
+		static fn(): int => get_current_user_id() === $fixture && '1' === get_user_meta( $fixture, LocalFixtureUser::META_KEY, true ) ? $fixture : 0
+	);
+	wp_set_current_user( $fixture );
+	[$records_cookie] = $issue( $fixture );
+	$resolve( $records_cookie );
+	$history_before = count( $repository->history( $fixture ) );
+	$own_rows       = $records->read();
+	$assert( array( 'proprio' ) === array_keys( $own_rows ), 'snapshot real filtra lista própria antes da contagem' );
+	$assert( null === LocalRecordSelection::detail( $own_rows, 'unidade-a' ) && null === LocalRecordSelection::detail( $own_rows, 'unidade-b' ) && null === LocalRecordSelection::detail( $own_rows, array( 'proprio' ) ), 'detalhes recusados e malformados não devolvem dados' );
+	$records_unit = $service->createGrant( LocalGrantPresets::grant( 'unit-manager-a', $fixture, time() ), 14, $grant_context );
+	$assert( null === $records->read(), 'leitura de registos recusa geração anterior à concessão' );
+	[$records_cookie] = $issue( $fixture );
+	$resolve( $records_cookie );
+	$unit_rows = $records->read();
+	$assert( array( 'proprio', 'unidade-a' ) === array_keys( $unit_rows ) && 2 === count( $unit_rows ), 'nova sessão lê próprio e A pelo motor real' );
+	$assert( null !== LocalRecordSelection::detail( $unit_rows, 'unidade-a' ) && null === LocalRecordSelection::detail( $unit_rows, 'unidade-b' ), 'detalhe A permitido e B recusado' );
+	$assert( 'grant_created' === $repository->history( $fixture )[0]['event'], 'concessão de leitura auditada' );
+	$service->revokeGrant( $fixture, $records_unit, 15, $grant_context );
+	$assert( null === $records->read(), 'revogação recusa a sessão corrente antiga' );
+	[$records_cookie] = $issue( $fixture );
+	$resolve( $records_cookie );
+	$assert( array( 'proprio' ) === array_keys( $records->read() ) && null === LocalRecordSelection::detail( $records->read(), 'unidade-a' ), 'nova sessão após revogação conserva apenas próprio' );
+	$assert( count( $repository->history( $fixture ) ) === $history_before + 2 && 'grant_revoked' === $repository->history( $fixture )[0]['event'], 'leituras sem eventos de mutação e histórico preservado' );
+	$assert( AccountState::Active === $repository->find( $fixture )->state && array( 'subscriber' ) === get_userdata( $fixture )->roles, 'ensaio mantém conta activa e papel nativo' );
+	wp_set_current_user( $actor );
+	$assert( null === $records->read(), 'composição exclusiva também exclui administrador corrente' );
+
 	[$failure_cookie, $failure_token] = $issue( $fixture );
 	$query_failure                    = static function ( string $query ) use ( $prefix ): string {
 		return str_contains( $query, $prefix . 'arn_authz_accounts' ) ? 'INVALID SESSION FIXTURE QUERY' : $query;
 	};
 	add_filter( 'query', $query_failure );
+	wp_set_current_user( $fixture );
+	$assert( null === $records->read(), 'falha SQL real não revela registos' );
+	wp_set_current_user( $actor );
 	$assert( false === $resolve( $failure_cookie ) && ! $manager->verify( $failure_token ), 'falha de leitura fecha e revoga' );
 	$assert( wp_authenticate( $prefix . 'fixture', $password ) instanceof WP_Error, 'falha de leitura recusa login' );
 	$assert( $ordinary === $resolve( $ordinary_cookie ), 'conta legítima não consulta armazenamento em falha' );
