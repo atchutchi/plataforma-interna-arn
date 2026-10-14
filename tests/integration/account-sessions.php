@@ -8,6 +8,8 @@ use Arn\Intranet\Access\LocalFixtureAccess;
 use Arn\Intranet\Access\LocalFixtureUser;
 use Arn\Intranet\Authorization\AccountState;
 use Arn\Intranet\Authorization\Grant;
+use Arn\Intranet\Authorization\LocalGrantPresets;
+use Arn\Intranet\Authorization\Session\LocalGrantManagementPage;
 use Arn\Intranet\Authorization\Role;
 use Arn\Intranet\Authorization\Scope;
 use Arn\Intranet\Authorization\Session\LocalAccountStatePage;
@@ -45,14 +47,17 @@ $query_failure  = null;
 $hook_names     = array( 'authenticate', 'determine_current_user', 'attach_session_information', 'send_auth_cookies', 'allow_password_reset', 'validate_password_reset', 'wp_is_application_passwords_available_for_user' );
 try {
 	// O bootstrap real tem de ligar a ferramenta, incluindo no CI com gates fechados.
-	$page_registered = false;
+	$page_registered   = false;
+	$grants_registered = false;
 	foreach ( $GLOBALS['wp_filter']['wp_loaded']->callbacks ?? array() as $callbacks ) {
 		foreach ( $callbacks as $entry ) {
-			$callback        = $entry['function'];
-			$page_registered = $page_registered || ( is_array( $callback ) && $callback[0] instanceof LocalAccountStatePage && 'register' === $callback[1] );
+			$callback          = $entry['function'];
+			$grants_registered = $grants_registered || ( is_array( $callback ) && $callback[0] instanceof LocalGrantManagementPage && 'register' === $callback[1] );
+			$page_registered   = $page_registered || ( is_array( $callback ) && $callback[0] instanceof LocalAccountStatePage && 'register' === $callback[1] );
 		}
 	}
 	$assert( $page_registered, 'bootstrap wp_loaded da ferramenta' );
+	$assert( $grants_registered, 'bootstrap wp_loaded das concessões' );
 	$password = wp_generate_password( 32 );
 	foreach ( array( 'fixture', 'ordinary' ) as $kind ) {
 		$fixture_id = wp_insert_user(
@@ -191,6 +196,51 @@ try {
 		$conflict = true;
 	}
 	$assert( $conflict && 7 === $repository->find( $fixture )->revision && AccountState::Active === $repository->find( $fixture )->state && 7 === count( $repository->history( $fixture ) ), 'CAS antigo não altera estado nem auditoria' );
+
+	// Os presets novos percorrem o serviço auditado e o adaptador reais sem activar flags.
+	$grant_context           = new ChangeContext( $actor, 'Ensaio descartável de concessões', 'LAB-GRANT-MANAGEMENT', time() );
+	$own_id                  = $repository->find( $fixture )->stored_grants[0]->id;
+	[$before_replace_cookie] = $issue( $fixture );
+	$unit_id                 = $service->replaceGrant( $fixture, $own_id, LocalGrantPresets::grant( 'unit-manager-a', $fixture, time() ), 7, $grant_context );
+	$replaced                = $repository->find( $fixture );
+	$assert( 8 === $replaced->revision && 2 === count( $replaced->stored_grants ) && $replaced->stored_grants[0]->grant->revoked && ! $replaced->stored_grants[1]->grant->revoked, 'substituição atómica preserva histórico revogado' );
+	$assert( false === $resolve( $before_replace_cookie ), 'substituição invalida sessão anterior' );
+	$assert( 'grant_replaced' === $repository->history( $fixture )[0]['event'] && 'LAB-GRANT-MANAGEMENT' === $repository->history( $fixture )[0]['decision_ref'], 'substituição auditada com referência fixa' );
+	$before_replay = $repository->history( $fixture );
+	$replay_denied = false;
+	try {
+		$service->replaceGrant( $fixture, $own_id, LocalGrantPresets::grant( 'unit-manager-a', $fixture, time() ), 7, $grant_context );
+	} catch ( RuntimeException ) {
+		$replay_denied = true;
+	}
+	$assert( $replay_denied && $before_replay === $repository->history( $fixture ) && 8 === $repository->find( $fixture )->revision && 2 === count( $repository->find( $fixture )->stored_grants ), 'replay é recusado sem mudanças parciais' );
+	[$before_revoke_cookie] = $issue( $fixture );
+	$service->revokeGrant( $fixture, $unit_id, 8, $grant_context );
+	$assert( 9 === $repository->find( $fixture )->revision && $repository->find( $fixture )->stored_grants[1]->grant->revoked, 'revogação guarda registo e revisão' );
+	$assert( false === $resolve( $before_revoke_cookie ), 'revogação invalida sessão anterior' );
+	$active_own = $service->createGrant( LocalGrantPresets::grant( 'employee-own', $fixture, time() ), 9, $grant_context );
+	$assert( 10 === $repository->find( $fixture )->revision, 'criação por preset auditada' );
+	$service->changeState( $fixture, AccountState::Suspended, 10, $context );
+	foreach ( array( 'create', 'replace' ) as $operation ) {
+		$denied = false;
+		try {
+			$grant = LocalGrantPresets::grant( 'employee-own', $fixture, time() );
+			if ( 'create' === $operation ) {
+				$service->createGrant( $grant, 11, $grant_context );
+			} else {
+				$service->replaceGrant( $fixture, $active_own, $grant, 11, $grant_context );
+			}
+		} catch ( RuntimeException ) {
+			$denied = true;
+		}
+		$assert( $denied && 11 === $repository->find( $fixture )->revision && 11 === count( $repository->history( $fixture ) ), 'Suspended recusa ' . $operation . ' sem escrita parcial' );
+	}
+	$service->revokeGrant( $fixture, $active_own, 11, $grant_context );
+	$assert( 12 === $repository->find( $fixture )->revision && AccountState::Suspended === $repository->find( $fixture )->state, 'Suspended permite revogação' );
+	$service->changeState( $fixture, AccountState::Active, 12, $context );
+	$service->createGrant( LocalGrantPresets::grant( 'employee-own', $fixture, time() ), 13, $grant_context );
+	$assert( wp_authenticate( $prefix . 'fixture', $password ) instanceof WP_User, 'novo login funciona após mudanças de concessão' );
+	$assert( array( 'subscriber' ) === get_userdata( $fixture )->roles && array( 'subscriber' ) === get_userdata( $ordinary )->roles && null === $repository->find( $ordinary ), 'concessões não alteram papéis nem persistência da conta legítima' );
 
 	[$failure_cookie, $failure_token] = $issue( $fixture );
 	$query_failure                    = static function ( string $query ) use ( $prefix ): string {

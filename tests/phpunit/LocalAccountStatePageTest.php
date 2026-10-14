@@ -77,7 +77,7 @@ function wp_unslash( string $value ): string {
  * @param string $action Acção.
  */
 function wp_verify_nonce( string $nonce, string $action ): bool {
-	return 'valid' === $nonce && 'arn-local-account-state' === $action;
+	return ( 'valid' === $nonce && 'arn-local-account-state' === $action ) || ( 'valid-grants' === $nonce && 'arn-local-grants' === $action );
 }
 /** Fronteira do ensaio local.
  *
