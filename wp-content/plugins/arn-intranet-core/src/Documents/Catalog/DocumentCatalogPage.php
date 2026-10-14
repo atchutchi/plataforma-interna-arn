@@ -195,8 +195,10 @@ final class DocumentCatalogPage {
 	public static function formErrors( array $input, string $operation, array $roster_ids ): array {
 		$errors = array();
 		$reason = $input['reason'] ?? null;
-		if ( ! is_string( $reason ) || '' === trim( $reason ) || strlen( trim( $reason ) ) > 500 || 1 === preg_match( '/\p{Cc}|\A\s|\s\z/u', trim( $reason ) ) ) {
-			$errors['reason'] = 'Escreve uma justificação sem quebras de linha, até 500 bytes.';
+		if ( ! is_string( $reason ) || '' === trim( $reason ) || 1 !== preg_match( '/\A[^\p{Cc}]+\z/u', trim( $reason ) ) ) {
+			$errors['reason'] = 'Escreve uma justificação breve, sem quebras de linha.';
+		} elseif ( strlen( trim( $reason ) ) > 500 ) {
+			$errors['reason'] = 'Encurta a justificação.';
 		}
 		if ( ! in_array( $operation, array( 'create', 'revise' ), true ) ) {
 			return $errors;
@@ -227,6 +229,10 @@ final class DocumentCatalogPage {
 				continue;
 			}
 			if ( '' === $value ) {
+				continue;
+			}
+			if ( 1 !== preg_match( '/\A[0-9]{4}-[0-9]{2}-[0-9]{2}\z/D', $value ) ) {
+				$errors[ $key ] = $message;
 				continue;
 			}
 			$date = \DateTimeImmutable::createFromFormat( '!Y-m-d', $value );
@@ -419,7 +425,7 @@ final class DocumentCatalogPage {
 			<input type="hidden" name="document_id" value="<?php echo esc_attr( (string) $document->id ); ?>"><input type="hidden" name="expected_revision" value="<?php echo esc_attr( $get_value( 'expected_revision', (string) $document->revision ) ); ?>"><?php endif; ?>
 		<?php if ( in_array( $operation, array( 'create', 'revise' ), true ) ) : ?>
 		<label>Título <input name="title" maxlength="200" required value="<?php echo esc_attr( $get_value( 'title', $metadata?->title ?? '' ) ); ?>" <?php echo isset( $errors['title'] ) ? 'aria-invalid="true"' : ''; ?>><?php self::fieldError( $errors, 'title' ); ?></label>
-		<label>Resumo <textarea name="summary" maxlength="4000" <?php echo isset( $errors['summary'] ) ? 'aria-invalid="true"' : ''; ?>><?php echo esc_textarea( $get_value( 'summary', $metadata?->summary ?? '' ) ); ?></textarea><small>Texto simples, sem quebras de linha.</small><?php self::fieldError( $errors, 'summary' ); ?></label>
+		<div class="arn-document-field"><label for="arn-document-summary-<?php echo esc_attr( $operation ); ?>">Resumo</label><textarea id="arn-document-summary-<?php echo esc_attr( $operation ); ?>" name="summary" maxlength="4000" aria-describedby="arn-document-summary-help-<?php echo esc_attr( $operation ); ?>" <?php echo isset( $errors['summary'] ) ? 'aria-invalid="true"' : ''; ?>><?php echo esc_textarea( $get_value( 'summary', $metadata?->summary ?? '' ) ); ?></textarea><small id="arn-document-summary-help-<?php echo esc_attr( $operation ); ?>">Texto simples, sem quebras de linha.</small><?php self::fieldError( $errors, 'summary' ); ?></div>
 		<label>Categoria <select name="category" required>
 			<?php
 			foreach ( array(
@@ -451,7 +457,7 @@ final class DocumentCatalogPage {
 		if ( 'archive' === $operation ) :
 			?>
 			<p>Esta acção é definitiva. O documento deixará de estar disponível aos destinatários.</p><?php endif; ?>
-		<label>Justificação <textarea name="reason" maxlength="500" required <?php echo isset( $errors['reason'] ) ? 'aria-invalid="true"' : ''; ?>><?php echo esc_textarea( $get_value( 'reason', '' ) ); ?></textarea><small>Até 500 bytes, sem quebras de linha.</small><?php self::fieldError( $errors, 'reason' ); ?></label>
+		<div class="arn-document-field"><label for="arn-document-reason-<?php echo esc_attr( $operation ); ?>">Justificação</label><textarea id="arn-document-reason-<?php echo esc_attr( $operation ); ?>" name="reason" maxlength="500" required aria-describedby="arn-document-reason-help-<?php echo esc_attr( $operation ); ?>" <?php echo isset( $errors['reason'] ) ? 'aria-invalid="true"' : ''; ?>><?php echo esc_textarea( $get_value( 'reason', '' ) ); ?></textarea><small id="arn-document-reason-help-<?php echo esc_attr( $operation ); ?>">Escreve uma justificação breve, sem quebras de linha.</small><?php self::fieldError( $errors, 'reason' ); ?></div>
 		<button class="button button-primary" type="submit">
 		<?php
 		echo esc_html(

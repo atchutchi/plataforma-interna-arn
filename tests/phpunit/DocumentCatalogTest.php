@@ -128,7 +128,17 @@ final class DocumentCatalogTest extends TestCase {
 		self::assertArrayHasKey( 'summary', $errors );
 		self::assertArrayHasKey( 'valid_until', $errors );
 		self::assertArrayHasKey( 'reason', $errors );
+		self::assertSame( 'Encurta a justificação.', $errors['reason'] );
 		self::assertStringNotContainsString( 'Linha 1', implode( ' ', $errors ) );
+		foreach ( array(
+			'review_on'   => 'Indica uma data de revisão válida.',
+			'valid_from'  => 'Indica uma data inicial válida.',
+			'valid_until' => 'Indica uma data final válida.',
+		) as $date_field => $message ) {
+			$invalid_date                = $input;
+			$invalid_date[ $date_field ] = "2026-10-14\0";
+			self::assertSame( $message, DocumentCatalogPage::formErrors( $invalid_date, 'create', array( 2 ) )[ $date_field ] );
+		}
 	}
 
 	/** Categories, dates and audience are strictly validated. */

@@ -17,7 +17,7 @@
         summary.setCustomValidity(/[\r\n]/.test(summary.value) ? 'O resumo deve ficar numa única linha.' : '');
       }
       if (reason) {
-        reason.setCustomValidity(bytes.encode(reason.value.trim()).length > 500 ? 'A justificação não pode ultrapassar 500 bytes.' : '');
+        reason.setCustomValidity(bytes.encode(reason.value.trim()).length > 500 ? 'Encurta a justificação.' : '');
       }
     };
     form.addEventListener('change', validate);
