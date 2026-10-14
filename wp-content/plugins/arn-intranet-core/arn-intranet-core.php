@@ -27,6 +27,7 @@ use Arn\Intranet\Autoloader;
 use Arn\Intranet\Administration\AdminDashboard;
 use Arn\Intranet\Authorization\AuthorizationProbe;
 use Arn\Intranet\Authorization\Session\WordPressLocalAccountSessions;
+use Arn\Intranet\Authorization\Session\LocalAccountStatePage;
 use Arn\Intranet\Authorization\Storage\AuthorizationStorageProbe;
 use Arn\Intranet\Identity\GoogleLoginController;
 use Arn\Intranet\Identity\WordPressFederatedAccess;
@@ -157,5 +158,7 @@ PrivatePortal::register();
 add_action( 'plugins_loaded', array( new AuthorizationProbe(), 'register' ) );
 
 add_action( 'wp_loaded', array( new AuthorizationStorageProbe(), 'register' ) );
+
+add_action( 'wp_loaded', array( new LocalAccountStatePage(), 'register' ) );
 
 ( new AdminDashboard( __FILE__ ) )->register();
