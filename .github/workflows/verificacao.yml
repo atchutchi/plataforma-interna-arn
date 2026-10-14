@@ -59,5 +59,6 @@ jobs:
       - run: npm run test:account-sessions:integration
       - run: npm run test:notifications:integration
       - run: npm run test:units:integration
+      - run: npm run test:import-preview:integration
       - if: always()
         run: npm run env:stop:tests
