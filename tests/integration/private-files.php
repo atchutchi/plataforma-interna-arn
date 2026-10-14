@@ -13,7 +13,7 @@ use Arn\Intranet\Documents\PrivateFiles\PrivateBlobStore;
 use Arn\Intranet\Documents\PrivateFiles\WpdbFileRegistry;
 use Arn\Intranet\Identity\IdentityWpdb;
 
-if ( ! defined( 'WP_CLI' ) || ! WP_CLI || 'local' !== wp_get_environment_type() || ! current_user_can( 'manage_options' ) ) {
+if ( ! defined( 'WP_CLI' ) || ! WP_CLI || ! in_array( wp_get_environment_type(), array( 'local', 'development' ), true ) || ! current_user_can( 'manage_options' ) ) {
 	throw new RuntimeException( 'Ensaio exclusivo do laboratório.' );
 }
 $checks = 0;
