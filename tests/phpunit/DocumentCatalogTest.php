@@ -117,6 +117,20 @@ final class DocumentCatalogTest extends TestCase {
 		$this->assertInvalid( static fn() => $archived->archive( 5 ) );
 	}
 
+	/** Each version requires a distinct private ID even for identical bytes. */
+	public function testVersionsCannotSharePrivateBlobId(): void {
+		$one      = $this->version( 1 );
+		$same_id  = new Revision( 2, $one->metadata, $one->blob, 3, 11 );
+		$new_blob = new BlobDescriptor( str_repeat( 'b', 32 ), $one->blob->sha256, $one->blob->size, $one->blob->mime );
+		$distinct = new Revision( 2, $one->metadata, $new_blob, 3, 11 );
+		$scope    = Scope::units( array( 'LAB-A' ) );
+		$this->assertInvalid( static fn() => new Document( 1, $scope, 2, array( $one, $same_id ), null, false ) );
+		$draft = Document::create( 1, $scope, $one );
+		$this->assertInvalid( static fn() => $draft->revise( $same_id, 1 ) );
+		self::assertSame( $distinct, $draft->revise( $distinct, 1 )->version( 2 ) );
+		self::assertSame( $one->blob->sha256, $distinct->blob->sha256 );
+	}
+
 	/** Session generation, revoked grants, strict recipients and manager scope. */
 	public function testDocumentPolicy(): void {
 		$doc      = Document::create( 1, Scope::units( array( 'LAB-A' ) ), $this->version( 1, array( 2 ) ) )->publish( 1, 1 );

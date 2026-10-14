@@ -46,12 +46,14 @@ final readonly class Document {
 			|| ( null !== $published_version && ( $published_version < 1 || $published_version > $count ) ) ) {
 			self::invalid();
 		}
-		$copy = array();
+		$copy     = array();
+		$blob_ids = array();
 		foreach ( array_values( $versions ) as $index => $version ) {
-			if ( ! $version instanceof Revision || $version->number !== $index + 1 ) {
+			if ( ! $version instanceof Revision || $version->number !== $index + 1 || isset( $blob_ids[ $version->blob->id ] ) ) {
 				self::invalid();
 			}
-			$copy[] = $version;
+			$blob_ids[ $version->blob->id ] = true;
+			$copy[]                         = $version;
 		}
 		$this->versions = $copy;
 	}
