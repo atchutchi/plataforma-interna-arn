@@ -63,7 +63,7 @@ a:hover { text-decoration-thickness: 0.12em; }
 .arn-portal-breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: var(--arn-space-2); margin-bottom: var(--arn-space-3); color: var(--wp--preset--color--muted); }
 .arn-portal-breadcrumb a { padding-block: var(--arn-space-1); }
 .arn-portal-welcome { display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--arn-space-6); align-items: center; padding: var(--arn-space-6); color: var(--wp--preset--color--surface); background: var(--wp--preset--color--primary); border-radius: var(--arn-radius); }
-.arn-portal-welcome h1 { font-size: 2rem; max-width: 24ch; margin-bottom: var(--arn-space-2); }
+.arn-portal-welcome h1 { font-size: var(--wp--preset--font-size--heading); max-width: 24ch; margin-bottom: var(--arn-space-2); }
 .arn-portal-welcome p { margin-bottom: 0; }
 .arn-portal-welcome .arn-portal-kicker { color: inherit; margin-bottom: var(--arn-space-2); }
 .arn-portal-search label { display: block; font-weight: 600; margin-bottom: var(--arn-space-1); }
@@ -75,7 +75,7 @@ a:hover { text-decoration-thickness: 0.12em; }
 .arn-portal button:hover, .arn-portal-button:hover { background: var(--wp--preset--color--accent); color: white; }
 .arn-portal-search button { background: var(--wp--preset--color--surface); color: var(--wp--preset--color--primary); }
 .arn-portal-welcome :focus-visible { outline-color: white; outline-offset: 4px; }
-.arn-portal-notice { max-width: none !important; border-left: 3px solid var(--wp--preset--color--accent); padding-left: var(--arn-space-2); color: var(--wp--preset--color--muted); margin-block: var(--arn-space-3) var(--arn-space-6); font-size: var(--wp--preset--font-size--caption); }
+.arn-portal-notice { max-width: none !important; border: 1px solid var(--wp--preset--color--border); background: var(--wp--preset--color--surface); padding: var(--arn-space-2); color: var(--wp--preset--color--muted); margin-block: var(--arn-space-3) var(--arn-space-6); font-size: var(--wp--preset--font-size--caption); }
 .arn-portal-columns { display: grid; grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr); gap: var(--arn-space-6); align-items: start; }
 .arn-portal-section-heading { display: flex; gap: var(--arn-space-2); align-items: baseline; justify-content: space-between; flex-wrap: wrap; margin-bottom: var(--arn-space-3); }
 .arn-portal-section-heading :where(h2, p) { margin: 0; }
@@ -136,7 +136,7 @@ a:hover { text-decoration-thickness: 0.12em; }
 @media (max-width: 48rem) {
   .arn-portal-columns { grid-template-columns: minmax(0, 1fr); }
   .arn-portal-sidebar { border-left: 0; padding-left: 0; border-top: 1px solid var(--wp--preset--color--border); padding-top: var(--arn-space-4); }
-  .arn-portal h1, .arn-portal-welcome h1 { font-size: 2rem; }
+  .arn-portal h1, .arn-portal-welcome h1 { font-size: var(--wp--preset--font-size--heading); }
   .arn-portal-welcome, .arn-portal-featured, .arn-portal-source { padding: var(--arn-space-3); }
   .arn-portal-search-controls { flex-wrap: wrap; }
   .arn-portal-search-controls input { flex: 1 1 15rem; }
