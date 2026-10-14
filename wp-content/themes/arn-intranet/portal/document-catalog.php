@@ -19,6 +19,7 @@ $back          = add_query_arg(
 	),
 	$current
 );
+$format_date   = static fn( string $date ): string => substr( $date, 8, 2 ) . '/' . substr( $date, 5, 2 ) . '/' . substr( $date, 0, 4 );
 ?>
 <div class="arn-portal arn-document-portal alignwide">
 	<nav class="arn-portal-breadcrumb" aria-label="Localização"><a href="<?php echo esc_url( home_url( '/' ) ); ?>">Início</a><span aria-hidden="true">/</span>
@@ -37,15 +38,15 @@ $back          = add_query_arg(
 		<article class="arn-portal-detail"><header class="arn-portal-page-heading"><p class="arn-portal-kicker"><?php echo esc_html( $portal['categories'][ $item['category'] ] ); ?></p><h1><?php echo esc_html( $item['title'] ); ?></h1></header>
 		<div class="arn-portal-columns"><div class="arn-portal-reading"><p class="arn-portal-summary"><?php echo esc_html( $item['summary'] ); ?></p><a class="arn-portal-text-link" href="<?php echo esc_url( $back ); ?>">Voltar à colecção</a></div>
 		<aside class="arn-portal-source" aria-labelledby="arn-source-title"><p class="arn-portal-kicker">Ficha documental</p><h2 id="arn-source-title">Original privado</h2>
-		<dl><dt>Proprietário</dt><dd><?php echo esc_html( $item['owner'] ); ?></dd><dt>Referência de origem</dt><dd><?php echo esc_html( $item['reference'] ); ?></dd><dt>Versão publicada</dt><dd><?php echo esc_html( (string) $item['version'] ); ?></dd><dt>Revisão prevista</dt><dd><?php echo esc_html( $item['review_on'] ); ?></dd>
+		<dl><dt>Proprietário</dt><dd><?php echo esc_html( $item['owner'] ); ?></dd><dt>Referência de origem</dt><dd><?php echo esc_html( $item['reference'] ); ?></dd><dt>Versão publicada</dt><dd><?php echo esc_html( (string) $item['version'] ); ?></dd><dt>Revisão prevista</dt><dd><?php echo esc_html( $format_date( $item['review_on'] ) ); ?></dd>
 		<?php
 		if ( null !== $item['valid_from'] ) :
 			?>
-			<dt>Válido desde</dt><dd><?php echo esc_html( $item['valid_from'] ); ?></dd><?php endif; ?>
+			<dt>Válido desde</dt><dd><?php echo esc_html( $format_date( $item['valid_from'] ) ); ?></dd><?php endif; ?>
 		<?php
 		if ( null !== $item['valid_until'] ) :
 			?>
-			<dt>Válido até</dt><dd><?php echo esc_html( $item['valid_until'] ); ?></dd><?php endif; ?></dl>
+			<dt>Válido até</dt><dd><?php echo esc_html( $format_date( $item['valid_until'] ) ); ?></dd><?php endif; ?></dl>
 		<a class="arn-portal-button" href="<?php echo esc_url( $item['download_url'] ); ?>">Descarregar original</a></aside></div></article>
 	<?php else : ?>
 		<header class="arn-portal-page-heading"><p class="arn-portal-kicker">Portal interno</p><h1><?php echo esc_html( $catalog_title ); ?></h1><p>Consulta as versões publicadas para ti.</p></header>
@@ -76,7 +77,7 @@ $back          = add_query_arg(
 			<?php
 			foreach ( $portal['items'] as $item ) :
 				?>
-				<article class="arn-portal-item"><div class="arn-portal-meta"><span class="arn-portal-category"><?php echo esc_html( $portal['categories'][ $item['category'] ] ); ?></span><span>Versão <?php echo esc_html( (string) $item['version'] ); ?></span><span><?php echo esc_html( $item['reference'] ); ?></span></div><h3><a href="<?php echo esc_url( $item['detail_url'] ); ?>"><?php echo esc_html( $item['title'] ); ?></a></h3><p><?php echo esc_html( $item['summary'] ); ?></p><p>Proprietário: <?php echo esc_html( $item['owner'] ); ?>. Revisão: <?php echo esc_html( $item['review_on'] ); ?>.</p></article><?php endforeach; ?></section>
+				<article class="arn-portal-item"><div class="arn-portal-meta"><span class="arn-portal-category"><?php echo esc_html( $portal['categories'][ $item['category'] ] ); ?></span><span>Versão <?php echo esc_html( (string) $item['version'] ); ?></span><span><?php echo esc_html( $item['reference'] ); ?></span></div><h3><a href="<?php echo esc_url( $item['detail_url'] ); ?>"><?php echo esc_html( $item['title'] ); ?></a></h3><p><?php echo esc_html( $item['summary'] ); ?></p><p>Proprietário: <?php echo esc_html( $item['owner'] ); ?>. Revisão: <?php echo esc_html( $format_date( $item['review_on'] ) ); ?>.</p></article><?php endforeach; ?></section>
 			<?php
 			if ( $portal['pages'] > 1 ) :
 				?>

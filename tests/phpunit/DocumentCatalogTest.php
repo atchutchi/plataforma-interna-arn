@@ -17,6 +17,7 @@ use Arn\Intranet\Authorization\Storage\StoredGrant;
 use Arn\Intranet\Documents\Catalog\Document;
 use Arn\Intranet\Documents\Catalog\DocumentPolicy;
 use Arn\Intranet\Documents\Catalog\DocumentPortal;
+use Arn\Intranet\Documents\Catalog\DocumentCatalogPage;
 use Arn\Intranet\Documents\Catalog\Metadata;
 use Arn\Intranet\Documents\Catalog\Revision;
 use Arn\Intranet\Documents\PrivateFiles\BlobDescriptor;
@@ -99,6 +100,35 @@ final class DocumentCatalogTest extends TestCase {
 		self::assertArrayNotHasKey( 'versions', $item );
 		self::assertNotContains( 'Rascunho reservado', array_values( $item ) );
 		self::assertNull( DocumentPortal::published( $revised->archive( 3 ) ) );
+	}
+
+	/** Common form mistakes receive field-specific messages without echoing submitted content. */
+	public function testDocumentFormValidationFeedback(): void {
+		$input = array(
+			'title'            => 'Teste fictício',
+			'summary'          => 'Resumo simples',
+			'category'         => 'circular',
+			'source_reference' => 'LAB-01',
+			'review_on'        => '2026-10-14',
+			'valid_from'       => '2026-10-15',
+			'valid_until'      => '2026-10-16',
+			'reason'           => 'Criar no laboratório',
+			'recipient_ids'    => array( '2' ),
+		);
+		self::assertSame( array(), DocumentCatalogPage::formErrors( $input, 'create', array( 2 ) ) );
+		$missing = $input;
+		unset( $missing['recipient_ids'] );
+		self::assertSame( 'Selecciona pelo menos um destinatário.', DocumentCatalogPage::formErrors( $missing, 'create', array( 2 ) )['recipient_ids'] );
+		self::assertSame( 'Teste fictício', $missing['title'] );
+		$bad                = $input;
+		$bad['summary']     = "Linha 1\nLinha 2";
+		$bad['valid_until'] = '2026-10-14';
+		$bad['reason']      = str_repeat( 'á', 251 );
+		$errors             = DocumentCatalogPage::formErrors( $bad, 'revise', array( 2 ) );
+		self::assertArrayHasKey( 'summary', $errors );
+		self::assertArrayHasKey( 'valid_until', $errors );
+		self::assertArrayHasKey( 'reason', $errors );
+		self::assertStringNotContainsString( 'Linha 1', implode( ' ', $errors ) );
 	}
 
 	/** Categories, dates and audience are strictly validated. */

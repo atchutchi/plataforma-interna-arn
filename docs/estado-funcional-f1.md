@@ -16,7 +16,7 @@ A conta fictícia dispõe de regras persistentes de estado e concessões, revoga
 | Unidades e cadastro | US-RH01, US-A03, US-ARN-01 | Unidades fictícias e validação sintética disponíveis. Falta cadastro profissional, vínculos e importação confirmada segundo contrato aprovado. |
 | Directório e perfil | US-F03/10, US-M01 | F1-07 por implementar depois do cadastro e da autorização dos campos profissionais visíveis. |
 | Ficheiros privados | US-ARN-05 | Parcela F1-08 local com binários imutáveis, registo auditado e entrega autorizada de originais/derivados sintéticos. Falta ligação aos módulos operacionais e protecção de uploads nativos, além da homologação institucional. |
-| Documentos e versões | US-F06, US-RH03, US-ARN-09 | A vista de revisão não constitui catálogo documental operacional. Falta persistência de categorias, destinatários, versões e gestão autorizada. |
+| Documentos e versões | US-F06, US-RH03, US-ARN-09 | Parcela F1-09 local com catálogo auditado, versões, destinatários fictícios, gestão CMS e entrega privada autorizada. F1-09 continua Em curso. Faltam classificação e audiência institucionais, origem oficial, antimalware, media nativa e homologação IIS/MySQL. Seguir catalogo-documental-local-f1-09.md. |
 | Notícias e fluxo editorial | US-NOT-01 a US-NOT-14, US-ARN-04 | O tema apresenta conteúdos de revisão. Faltam autoria operacional, rascunhos, submissão, fila editorial, decisão por versão, notificações e publicação por audiência. |
 | Comunicados e eventos | US-M05, US-F07 | F1-12 por implementar com âmbitos, destinatários e eventos autorizados. |
 | Tarefas e equipa | US-F04/05, US-M02/03 | F1-13 por implementar com atribuição, transições validadas, concorrência, histórico e notificações. |

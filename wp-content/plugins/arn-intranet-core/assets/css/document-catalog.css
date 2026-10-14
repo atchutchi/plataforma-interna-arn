@@ -16,4 +16,9 @@
 .arn-document-form textarea { min-height: 88px; }
 .arn-document-form .button { min-height: 44px; justify-self: start; }
 .arn-document-admin :where(a, button, input, select, textarea):focus-visible { outline: 3px solid #0b3a5b; outline-offset: 3px; }
+.arn-document-admin .arn-document-notice { border: 1px solid #d8e1e7; border-radius: 0.375rem; box-shadow: none; padding: .5rem 1rem; }
+.arn-document-admin .arn-document-notice.notice-error { background: #fff5f5; border-color: #b32d2e; }
+.arn-document-admin .arn-document-notice.notice-success { background: #f2faf5; border-color: #1f6b4a; }
+.arn-document-field-error { display: block; color: #8b1a1a; font-weight: 600; }
+.arn-document-form [aria-invalid="true"] { border-color: #b32d2e; }
 @media (max-width: 650px) { .arn-document-form { grid-template-columns: 1fr; } .arn-document-admin section { padding: 1rem; } }
