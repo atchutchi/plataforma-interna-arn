@@ -18,17 +18,17 @@ Só laboratório e fixtures explicitamente marcadas. Não consultar segredos, al
 
 Criar LocalAccountSessionPolicy.php e WordPressLocalAccountSessions.php em src/Authorization/Session, testes dirigidos em tests/phpunit e registar no bootstrap. Versão plugin0.4.0.
 
-- [ ] Testes RED das APIs exactas da spec, estados/revisões/flags, identidade e hooks. Defaults usam ligação dedicada apenas para fixtures.
-- [ ] Implementar GREEN, incluindo send_auth_cookies, reset e application passwords. Não cachear decisões.
-- [ ] PHPCS owned, report detalhado de APIs/resultados e commit. Revisão independente antes da fase seguinte.
+- [x] Testes RED das APIs exactas da spec, estados/revisões/flags, identidade e hooks. Defaults usam ligação dedicada apenas para fixtures.
+- [x] Implementar GREEN, incluindo send_auth_cookies, reset e application passwords. Não cachear decisões.
+- [x] PHPCS owned, report detalhado de APIs/resultados e commit. Revisão independente antes da fase seguinte.
 
 ### Task 2: integração real e ferramenta de estado
 
 Criar tests/integration/account-sessions.php, script test:account-sessions:integration e etapa CI. Criar src/Authorization/Session/LocalAccountStatePage.php com menu e POST guardado. Bootstrap liga wp_loaded/admin_post no momento apropriado. Novos testes PHPUnit para entrada/nonce/CAS/alvo fixo, sem mudar a ferramenta de leitura antiga.
 
-- [ ] RED/GREEN com WP tokens/cookies reais, prefixo aleatório, contas descartáveis e limpeza em finally. Cobrir transições/revisão/erro/ausência/estadoSuspended/Reactivate/noresurrection e conta legítima preservada.
-- [ ] RED/GREEN do POST: método, nonce, capacidade, flags, revisão, justificação, estado, fixture. GET nunca escreve. UI usa texto ptPT e markup nativo acessível.
-- [ ] Commit e revisão. Não preparar contas reais ou exportar cookies.
+- [x] RED/GREEN com WP tokens/cookies reais, prefixo aleatório, contas descartáveis e limpeza em finally. Cobrir transições/revisão/erro/ausência/estadoSuspended/Reactivate/noresurrection e conta legítima preservada.
+- [x] RED/GREEN do POST: método, nonce, capacidade, flags, revisão, justificação, estado, fixture. GET nunca escreve. UI usa texto ptPT e markup nativo acessível.
+- [x] Commit e revisão. Não preparar contas reais ou exportar cookies.
 
 ### Task 3: laboratório, Playwright e integração
 

@@ -29,3 +29,7 @@ Uma segunda fase acrescenta uma ferramenta Estado de contas local, slug arn-loca
 TDD puro e dos hooks cobre estados, tipos, revisões, destinatário, erro de leitura, gate efectivo, identificação legada/marca removida, preservação de conta legítima, sessões antigas/nova, flag desligada e vias alternativas. Ensaio WordPress/MariaDB com prefixo e utilizadores exclusivos verifica criação real de tokens, cookies, autenticação, suspensão auditada, recusa, reactivação, não ressurreição e limpeza. Bootstrap real precisa ser exercitado além de doubles.
 
 Playwright em sessões fictícias isoladas: login Active, página privada, suspensão via serviço ou ferramenta local auditada, cookie antigo recusado, login suspenso recusado, REST/AJAX fechados, reactivação e cookie antigo ainda recusado, novo login permitido. Nenhum cookie ou segredo entra no Git. Guardar capturas ignoradas. Repetir suites relevantes, revisão independente, commits/push por fases e PR após CI verde. F1-03 institucional, F0-02/06 completo, IIS/MySQL8.4, F2 e dados reais continuam condicionados.
+
+## Ajuste de revisão
+
+A revisão da primeira tarefa identificou que a abertura inicial herdada de wpdb pode terminar o pedido antes de a guarda tratar a falha. Admite-se uma correcção mínima da ligação inicial em IdentityWpdb, se necessária, para produzir falha controlada sem detalhes nem wp_die. Esta excepção não altera configuração, schema, protocolo ou vínculo OIDC. Exige teste dirigido da falha e repetição das integrações reais existentes.

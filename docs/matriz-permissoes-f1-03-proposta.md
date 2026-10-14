@@ -2,7 +2,7 @@
 
 Versão 0.1, 13 de outubro de 2026. Estado: proposta para validação, sem atribuições ou activação. Fonte funcional: README, secções 5, 7, 9, 10 e 11. Histórias principais: US-A01, US-A02, US-S03, US-ARN-02 e US-ARN-03.
 
-Esta proposta define quem pode executar cada acção e sobre que registos. Não identifica funcionários, não confirma cargos ou hierarquias e não substitui a validação F0-02/F0-06. O login local homologado em F1-02 permanece independente desta preparação. F1-03 continua Por iniciar quanto à implementação.
+Esta proposta define quem pode executar cada acção e sobre que registos. Não identifica funcionários, não confirma cargos ou hierarquias e não substitui a validação F0-02/F0-06. O login local homologado em F1-02 permanece independente desta preparação. F1-03 estava Por iniciar à data inicial desta proposta. A continuação autorizada preparou depois o motor, a persistência auditada e a ligação local do estado às sessões fictícias. Isso não valida esta matriz para atribuições institucionais. Ver docs/autorizacao-local-f1-03.md, docs/persistencia-autorizacao-f1-03.md e docs/sessoes-estado-local-f1-03.md.
 
 ## Regra de decisão
 
