@@ -6,9 +6,10 @@
 
 use Arn\Intranet\Identity\IdentityWpdb;
 use Arn\Intranet\Organization\Storage\{LocalUnitContext, LocalUnitInstaller, WpdbLocalUnitRepository};
-if ( ! defined( 'WP_CLI' ) || true !== WP_CLI || 'local' !== wp_get_environment_type() || ! current_user_can( 'manage_options' ) ) {
+$environment = wp_get_environment_type();
+if ( ! defined( 'WP_CLI' ) || true !== WP_CLI || ! in_array( $environment, array( 'local', 'development' ), true ) || ! current_user_can( 'manage_options' ) ) {
 	throw new RuntimeException( 'Ensaio exclusivo do laboratório.' ); }
-if ( ! defined( 'ARN_ALLOW_LOCAL_ORGANIZATION_STORAGE' ) ) {
+if ( 'local' === $environment && ! defined( 'ARN_ALLOW_LOCAL_ORGANIZATION_STORAGE' ) ) {
 	define( 'ARN_ALLOW_LOCAL_ORGANIZATION_STORAGE', true ); }
 $checks = 0;
 $assert = static function ( bool $ok, string $label ) use ( &$checks ): void {
@@ -25,6 +26,11 @@ $deny   = static function ( callable $run ) use ( $assert ): void {
 		return; }
 	$assert( false, 'operação devia ser recusada' );
 };
+if ( 'development' === $environment ) {
+	$assert( ! LocalUnitInstaller::allowed(), 'administrador development sem acesso às unidades locais' );
+	$deny( static fn() => LocalUnitInstaller::repository() );
+	$deny( static fn() => LocalUnitInstaller::install() );
+}
 $prefix = 'arn_units_' . bin2hex( random_bytes( 6 ) ) . '_';
 $db     = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
 $db->set_prefix( $prefix );
