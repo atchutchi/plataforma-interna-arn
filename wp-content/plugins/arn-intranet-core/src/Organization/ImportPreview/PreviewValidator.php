@@ -77,7 +77,7 @@ final class PreviewValidator {
 				if ( '' === $name || mb_strlen( $name, 'UTF-8' ) > 100 || ! str_starts_with( $name, 'Pessoa fictícia ' ) || preg_match( '/(?:\A[\p{Z}\s]|[\p{Z}\s]\z|\p{C})/u', $name ) ) {
 					$errors['name'] = 'Nome fictício inválido.';
 				}
-				if ( trim( $email ) !== $email || ! preg_match( '/^(?![^@]*\.\.)[a-z0-9](?:[a-z0-9._+-]*[a-z0-9])?@example\.invalid$/D', $email ) ) {
+				if ( trim( $email ) !== $email || ! preg_match( '/^(?=[^@]{1,64}@)(?![^@]*\.\.)[a-z0-9](?:[a-z0-9._+-]*[a-z0-9])?@example\.invalid$/D', $email ) ) {
 					$errors['email'] = 'Email fictício inválido.';
 				} elseif ( $emails[ $email ] > 1 || self::belongsToOther( $catalog, $email, $id ) ) {
 					$errors['email'] = 'Email em conflito.';

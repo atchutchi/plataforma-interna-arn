@@ -136,4 +136,15 @@ final class ImportPreviewTest extends TestCase {
 		self::assertArrayHasKey( 'email', $report->rows[2]['errors'] );
 		self::assertArrayHasKey( 'row', $report->rows[3]['errors'] );
 	}
+
+	/** A parte local do email tem o limite canónico de 64 caracteres. */
+	public function testEmailLocalPartBoundary(): void {
+		$valid   = str_repeat( 'a', 64 ) . '@example.invalid';
+		$invalid = str_repeat( 'b', 65 ) . '@example.invalid';
+		$csv     = "professional_id,name,email,unit_id\nLAB-PER-003,Pessoa fictícia 003,$valid,LAB-A\nLAB-PER-004,Pessoa fictícia 004,$invalid,LAB-A\n";
+		$report  = PreviewValidator::validate( $csv, $this->snapshot() );
+		self::assertSame( 'create', $report->rows[0]['proposal'] );
+		self::assertSame( 'invalid', $report->rows[1]['proposal'] );
+		self::assertArrayHasKey( 'email', $report->rows[1]['errors'] );
+	}
 }
