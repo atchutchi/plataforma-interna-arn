@@ -39,6 +39,25 @@ class WP_Session_Tokens {
 	}
 
 	/**
+	 * Obtém metadados ou null quando o token não existe.
+	 *
+	 * @param string $token Token fictício.
+	 * @return array|null
+	 */
+	public function get( string $token ): ?array {
+		return ArnWordPressDoubles::$sessions[ $this->user_id ][ $token ] ?? null;
+	}
+
+	/**
+	 * Elimina só o token indicado.
+	 *
+	 * @param string $token Token fictício.
+	 */
+	public function destroy( string $token ): void {
+		unset( ArnWordPressDoubles::$sessions[ $this->user_id ][ $token ] );
+	}
+
+	/**
 	 * Elimina todos os tokens da conta, sem afetar as restantes.
 	 */
 	public function destroy_all(): void {
