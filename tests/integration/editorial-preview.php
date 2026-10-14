@@ -59,8 +59,8 @@ try {
 		Selection::detailQuery(
 			Selection::query(
 				array(
-					'q'     => 'texto',
-					'paged' => '2',
+					'q'        => 'texto',
+					'arn_page' => '2',
 				)
 			),
 			'fixture'
@@ -70,15 +70,24 @@ try {
 	parse_str( (string) wp_parse_url( $context_url, PHP_URL_QUERY ), $context_args );
 	$check(
 		array(
-			'page_id' => '17',
-			'q'       => 'texto',
-			'paged'   => '2',
-			'item'    => 'fixture',
+			'page_id'  => '17',
+			'q'        => 'texto',
+			'arn_page' => '2',
+			'item'     => 'fixture',
 		) === $context_args,
 		'contexto de detalhe e page_id'
 	);
 	$services = Portal::model( 'services', array( 'item' => 'fixture' ) );
 	$check( null === $services['selected'] && 0 === array_sum( $services['counts'] ), 'serviços sem metadados' );
+	$prior_get = $_GET; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Ensaio CLI com parâmetros sintéticos.
+	$_GET      = array(
+		'q'        => "texto\\'citado",
+		'arn_year' => '2026',
+		'arn_page' => '2',
+	);
+	$unslashed = Portal::requestInput();
+	$check( "texto'citado" === $unslashed['q'] && '2026' === $unslashed['arn_year'], 'wp_unslash antes da validação' );
+	$_GET     = $prior_get;
 	$old_user = get_current_user_id();
 	wp_set_current_user( 0 );
 	$empty = Portal::model( 'news', array() );

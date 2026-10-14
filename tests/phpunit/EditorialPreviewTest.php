@@ -90,7 +90,7 @@ final class EditorialPreviewTest extends TestCase {
 		$items = ( new Manifest( $this->directory ) )->items();
 		$this->assertSame( array( 'a', 'c', 'b' ), array_column( Selection::filter( $items, 'documents', array() ), 'id' ) );
 		$this->assertCount( 3, Selection::filter( $items, 'news', array() ) );
-		$this->assertSame( array( 'a', 'c' ), array_column( Selection::filter( $items, 'documents', array( 'year' => '2026' ) ), 'id' ) );
+		$this->assertSame( array( 'a', 'c' ), array_column( Selection::filter( $items, 'documents', Selection::query( array( 'arn_year' => '2026' ) ) ), 'id' ) );
 	}
 
 	/** Recusa IDs repetidos. */
@@ -137,7 +137,7 @@ final class EditorialPreviewTest extends TestCase {
 
 	/** Recusa filtros acima dos limites definidos. */
 	public function test_rejects_query_limits(): void {
-		foreach ( array( array( 'q' => str_repeat( 'a', 161 ) ), array( 'paged' => '1000' ), array( 'year' => '26' ), array( 'category' => 'unknown' ) ) as $input ) {
+		foreach ( array( array( 'q' => str_repeat( 'a', 161 ) ), array( 'arn_page' => '1000' ), array( 'arn_year' => '26' ), array( 'category' => 'unknown' ) ) as $input ) {
 			try {
 				Selection::query( $input );
 				$this->fail( 'Filtro devia ser recusado.' );
@@ -153,8 +153,8 @@ final class EditorialPreviewTest extends TestCase {
 			array(
 				'q'        => 'pesquisa',
 				'category' => 'circular',
-				'year'     => '2026',
-				'paged'    => '3',
+				'arn_year' => '2026',
+				'arn_page' => '3',
 				'item'     => 'anterior',
 				'unsafe'   => 'ignorar',
 			)
@@ -163,12 +163,45 @@ final class EditorialPreviewTest extends TestCase {
 			array(
 				'q'        => 'pesquisa',
 				'category' => 'circular',
-				'year'     => '2026',
-				'paged'    => 3,
+				'arn_year' => '2026',
+				'arn_page' => 3,
 				'item'     => 'novo',
 			),
 			Selection::detailQuery( $query, 'novo' )
 		);
 		$this->assertSame( array( 'item' => 'novo' ), Selection::detailQuery( Selection::query( array() ), 'novo' ) );
+		$this->assertSame(
+			'',
+			Selection::query(
+				array(
+					'year'  => '2025',
+					'paged' => '2',
+				)
+			)['year']
+		);
+		$this->assertSame(
+			1,
+			Selection::query(
+				array(
+					'year'  => '2025',
+					'paged' => '2',
+				)
+			)['paged']
+		);
+	}
+
+	/** A pesquisa textual pelo carácter zero é aplicada. */
+	public function test_query_zero_is_not_treated_as_empty(): void {
+		$zero               = $this->item( 'zero' );
+		$other              = $this->item( 'other' );
+		$zero['title']      = 'Circular 0';
+		$other['title']     = 'Circular X';
+		$zero['reference']  = '';
+		$zero['summary']    = '';
+		$other['reference'] = '';
+		$other['summary']   = '';
+		$zero['body']       = array();
+		$other['body']      = array();
+		$this->assertSame( array( 'zero' ), array_column( Selection::filter( array( $zero, $other ), 'news', Selection::query( array( 'q' => '0' ) ) ), 'id' ) );
 	}
 }

@@ -89,10 +89,19 @@ final class Portal {
 		if ( ! is_string( $view ) || ! in_array( $view, array( 'home', 'news', 'documents', 'regulations', 'services' ), true ) ) {
 			$view = 'home';
 		}
-		$model = self::model( $view, $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Filtros apenas de leitura.
+		$model = self::model( $view, self::requestInput() );
 		ob_start();
 		get_template_part( 'portal/view', null, array( 'portal' => $model ) );
 		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Retira as barras acrescentadas pelo WordPress aos parâmetros GET.
+	 *
+	 * @return array<string,mixed> Parâmetros ainda não validados.
+	 */
+	public static function requestInput(): array {
+		return wp_unslash( $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Apenas filtros de leitura.
 	}
 
 	/**

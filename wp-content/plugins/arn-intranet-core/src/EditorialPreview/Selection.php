@@ -21,15 +21,15 @@ final class Selection {
 	 * @throws InvalidArgumentException Filtro inválido.
 	 */
 	public static function query( array $input ): array {
-		foreach ( array( 'q', 'category', 'year', 'paged', 'item' ) as $key ) {
+		foreach ( array( 'q', 'category', 'arn_year', 'arn_page', 'item' ) as $key ) {
 			if ( isset( $input[ $key ] ) && ! is_string( $input[ $key ] ) ) {
 				throw new InvalidArgumentException( 'Filtro inválido.' );
 			}
 		}
 		$q        = (string) ( $input['q'] ?? '' );
 		$category = (string) ( $input['category'] ?? '' );
-		$year     = (string) ( $input['year'] ?? '' );
-		$paged    = (string) ( $input['paged'] ?? '1' );
+		$year     = (string) ( $input['arn_year'] ?? '' );
+		$paged    = (string) ( $input['arn_page'] ?? '1' );
 		$item     = (string) ( $input['item'] ?? '' );
 		if ( strlen( $q ) > 160 || ( '' !== $category && ! isset( Manifest::CATEGORIES[ $category ] ) ) || ( '' !== $year && ! preg_match( '/^\d{4}$/D', $year ) ) || ! preg_match( '/^[1-9][0-9]{0,2}$/D', $paged ) || ( '' !== $item && ! preg_match( '/^[a-z0-9][a-z0-9-]{0,79}$/D', $item ) ) ) {
 			throw new InvalidArgumentException( 'Filtro inválido.' );
@@ -52,13 +52,16 @@ final class Selection {
 	 */
 	public static function detailQuery( array $query, string $id ): array {
 		$args = array();
-		foreach ( array( 'q', 'category', 'year' ) as $key ) {
+		foreach ( array( 'q', 'category' ) as $key ) {
 			if ( '' !== $query[ $key ] ) {
 				$args[ $key ] = $query[ $key ];
 			}
 		}
+		if ( '' !== $query['year'] ) {
+			$args['arn_year'] = $query['year'];
+		}
 		if ( $query['paged'] > 1 ) {
-			$args['paged'] = $query['paged'];
+			$args['arn_page'] = $query['paged'];
 		}
 		$args['item'] = $id;
 		return $args;
@@ -90,7 +93,7 @@ final class Selection {
 						return false;
 					}
 					$haystack = implode( ' ', array( $item['title'], $item['reference'], $item['summary'], implode( ' ', $item['body'] ) ) );
-					return empty( $query['q'] ) || false !== mb_stripos( $haystack, $query['q'] );
+					return ! isset( $query['q'] ) || '' === $query['q'] || false !== mb_stripos( $haystack, $query['q'] );
 				}
 			)
 		);
