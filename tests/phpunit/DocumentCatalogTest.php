@@ -33,6 +33,17 @@ final class DocumentCatalogTest extends TestCase {
 		return new Metadata( 'Título', 'Resumo', 'circular', 'ORIG-1', 'RH', '2026-10-14', null, null, $recipients );
 	}
 
+	/** External references cannot change a stored audience after publication. */
+	public function testAudienceIsDetachedFromCallerReferences(): void {
+		$recipient = 2;
+		$metadata  = $this->metadata( array( &$recipient ) );
+		$document  = Document::create( 1, Scope::units( array( 'LAB-A' ) ), new Revision( 1, $metadata, new BlobDescriptor( str_repeat( 'a', 32 ), str_repeat( 'b', 64 ), 1, 'application/pdf' ), 3, 10 ) )->publish( 1, 1 );
+		$recipient = 4;
+		self::assertSame( array( 2 ), $document->version( 1 )->metadata->recipient_ids );
+		self::assertTrue( DocumentPolicy::canRead( $document, 1, $this->snapshot( 2, Role::Employee, Scope::own() ), $this->session( 2 ), 10 ) );
+		self::assertFalse( DocumentPolicy::canRead( $document, 1, $this->snapshot( 4, Role::Employee, Scope::own() ), $this->session( 4 ), 10 ) );
+	}
+
 	/** Build one private version.
 	 *
 	 * @param int        $number     Version number.

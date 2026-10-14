@@ -19,6 +19,23 @@ use PHPUnit\Framework\TestCase;
 require_once __DIR__ . '/PrivateFilesReadDouble.php';
 
 final class PrivateFilesTest extends TestCase {
+	public function testDuplicateCreatesIndependentVerifiedBlob(): void {
+		$source = $this->base . '/public/source.pdf';
+		file_put_contents( $source, "%PDF-1.4\n%%EOF\n" );
+		$store = new PrivateBlobStore( $this->base . '/private', array( $this->base . '/public' ), array( 'application/pdf' ), 100 );
+		$first = $store->importFile( $source );
+		$next  = $store->duplicate( $first );
+		self::assertNotSame( $first->id, $next->id );
+		self::assertSame( $first->sha256, $next->sha256 );
+		self::assertSame( $first->size, $next->size );
+		self::assertSame( $first->mime, $next->mime );
+		$original = $store->open( $first );
+		$copy     = $store->open( $next );
+		self::assertIsResource( $original );
+		self::assertIsResource( $copy );
+		fclose( $original );
+		fclose( $copy );
+	}
 	private string $base;
 
 	protected function setUp(): void {

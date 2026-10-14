@@ -130,6 +130,59 @@ final class PrivateBlobStore {
 		}
 	}
 
+	/** Duplicate verified bytes from the same locked handle into a new opaque blob.
+	 *
+	 * @param BlobDescriptor $source Verified source descriptor.
+	 * @return BlobDescriptor Independent copy.
+	 * @throws RuntimeException When the copy cannot be verified.
+	 */
+	public function duplicate( BlobDescriptor $source ): BlobDescriptor {
+		$input   = $this->open( $source );
+		$id      = bin2hex( random_bytes( 16 ) );
+		$path    = $this->root . DIRECTORY_SEPARATOR . $id;
+		$output  = false;
+		$created = false;
+		try {
+			$output = @fopen( $path, 'xb' );
+			if ( false === $output ) {
+				throw new RuntimeException( 'Ficheiro privado indisponível.' );
+			}
+			$created = true;
+			$size    = 0;
+			$hash    = hash_init( 'sha256' );
+			while ( ! feof( $input ) ) {
+				$chunk = fread( $input, 8192 );
+				if ( false === $chunk || ( '' === $chunk && ! feof( $input ) ) ) {
+					throw new RuntimeException( 'Ficheiro privado indisponível.' );
+				}
+				$size += strlen( $chunk );
+				if ( $size > $this->max_bytes || strlen( $chunk ) !== fwrite( $output, $chunk ) ) {
+					throw new RuntimeException( 'Ficheiro privado indisponível.' );
+				}
+				hash_update( $hash, $chunk );
+			}
+			if ( $size !== $source->size || ! hash_equals( $source->sha256, hash_final( $hash ) ) || ! fflush( $output ) ) {
+				throw new RuntimeException( 'Ficheiro privado indisponível.' );
+			}
+			fclose( $output );
+			$output = false;
+			$copy   = new BlobDescriptor( $id, $source->sha256, $source->size, $source->mime );
+			$check  = $this->open( $copy );
+			fclose( $check );
+			return $copy;
+		} catch ( Throwable ) {
+			if ( is_resource( $output ) ) {
+				fclose( $output );
+			}
+			if ( $created ) {
+				@unlink( $path );
+			}
+			throw new RuntimeException( 'Ficheiro privado indisponível.' );
+		} finally {
+			fclose( $input );
+		}
+	}
+
 	/**
 	 * Abre e verifica o mesmo handle que será entregue.
 	 *

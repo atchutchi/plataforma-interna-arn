@@ -26,6 +26,7 @@
     "test:import-preview:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/import-preview.php --user=admin",
     "test:editorial:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/editorial-preview.php --user=admin",
     "test:private-files:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/private-files.php --user=admin",
+    "test:document-catalog:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/document-catalog.php --user=admin",
     "test:local-private-files:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/local-private-files.php --user=admin",
     "test:notifications:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/local-notifications.php --user=admin",
     "test:account-sessions:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/account-sessions.php --user=admin",

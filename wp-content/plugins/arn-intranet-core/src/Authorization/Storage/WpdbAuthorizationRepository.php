@@ -217,18 +217,43 @@ final class WpdbAuthorizationRepository implements AuthorizationRepository {
 	public function find( int $user_id ): ?AuthorizationSnapshot {
 		$this->positive( $user_id );
 		return $this->operation(
+			fn (): ?AuthorizationSnapshot => $this->lockedSnapshot( $user_id )
+		);
+	}
+
+	/** Read an account under an existing transaction on this exact connection.
+	 *
+	 * @param int $user_id Account ID.
+	 * @return AuthorizationSnapshot|null
+	 */
+	public function findInTransaction( int $user_id ): ?AuthorizationSnapshot {
+		$this->positive( $user_id );
+		return $this->silently(
 			function () use ( $user_id ): ?AuthorizationSnapshot {
-				$account = $this->account( $user_id );
-				if ( null === $account ) {
-						return null;
+				$row = $this->database->get_row( 'SELECT @@session.in_transaction AS active' );
+				if ( ! is_object( $row ) || '' !== $this->database->last_error || '1' !== (string) $row->active ) {
+					throw new RuntimeException( 'Transacção de autorização ausente.' );
 				}
-				$grants = array();
-				foreach ( $this->rows( $this->database->prepare( 'SELECT * FROM %i WHERE user_id = %d ORDER BY id FOR UPDATE', $this->schema->table( 'grants' ), $user_id ) ) as $row ) {
-					$grants[] = $this->hydrate( $row );
-				}
-				return new AuthorizationSnapshot( $user_id, $account->state, $account->revision, $grants );
+				return $this->lockedSnapshot( $user_id );
 			}
 		);
+	}
+
+	/** Hydrate account and grants with the established lock order.
+	 *
+	 * @param int $user_id Account ID.
+	 * @return AuthorizationSnapshot|null
+	 */
+	private function lockedSnapshot( int $user_id ): ?AuthorizationSnapshot {
+		$account = $this->account( $user_id );
+		if ( null === $account ) {
+			return null;
+		}
+		$grants = array();
+		foreach ( $this->rows( $this->database->prepare( 'SELECT * FROM %i WHERE user_id = %d ORDER BY id FOR UPDATE', $this->schema->table( 'grants' ), $user_id ) ) as $row ) {
+			$grants[] = $this->hydrate( $row );
+		}
+		return new AuthorizationSnapshot( $user_id, $account->state, $account->revision, $grants );
 	}
 
 	/**

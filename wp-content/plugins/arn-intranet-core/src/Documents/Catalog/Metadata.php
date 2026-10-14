@@ -59,7 +59,7 @@ final readonly class Metadata {
 			}
 			$seen[ $recipient_id ] = true;
 		}
-		$this->recipient_ids = array_values( $recipient_ids );
+		$this->recipient_ids = array_keys( $seen );
 	}
 
 	/** Validate a plain Unicode field against character limits.
