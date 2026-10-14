@@ -8,7 +8,7 @@
 /**
  * Plugin Name: Núcleo da intranet ARN
  * Description: Regras institucionais da plataforma interna. Na fundação, o acesso fictício só pode funcionar no ambiente local.
- * Version: 0.6.0
+ * Version: 0.7.0
  * Requires at least: 6.7
  * Requires PHP: 8.4
  * Author: ARN
@@ -19,6 +19,7 @@
 
 declare(strict_types=1);
 
+use Arn\Intranet\Notifications\LocalNotificationsPage;
 use Arn\Intranet\Access\LocalAccessPolicy;
 use Arn\Intranet\Access\LocalFixtureAccess;
 use Arn\Intranet\Access\LocalFixtureUser;
@@ -168,3 +169,5 @@ add_action( 'wp_loaded', array( new LocalGrantManagementPage(), 'register' ) );
 add_action( 'wp_loaded', array( new LocalRecordsPage(), 'register' ) );
 
 ( new AdminDashboard( __FILE__ ) )->register();
+
+add_action( 'wp_loaded', array( new LocalNotificationsPage(), 'register' ) );
