@@ -13,7 +13,10 @@ use Arn\Intranet\Documents\PrivateFiles\PrivateBlobStore;
 use Arn\Intranet\Documents\PrivateFiles\PrivateFileDelivery;
 use Arn\Intranet\Documents\PrivateFiles\BlobDescriptor;
 use Arn\Intranet\Documents\PrivateFiles\FileRecord;
+use Arn\Intranet\Documents\PrivateFiles\PrivateFilesReadControl;
 use PHPUnit\Framework\TestCase;
+
+require_once __DIR__ . '/PrivateFilesReadDouble.php';
 
 final class PrivateFilesTest extends TestCase {
 	private string $base;
@@ -26,8 +29,11 @@ final class PrivateFilesTest extends TestCase {
 	}
 
 	protected function tearDown(): void {
+		PrivateFilesReadControl::reset();
 		if ( is_link( $this->base . '/link' ) ) {
 			unlink( $this->base . '/link' ); }
+		if ( is_link( $this->base . '/ancestor' ) ) {
+			unlink( $this->base . '/ancestor' ); }
 		foreach ( glob( $this->base . '/private/*' ) ? glob( $this->base . '/private/*' ) : array() as $file ) {
 			unlink( $file );
 		}
@@ -56,6 +62,39 @@ final class PrivateFilesTest extends TestCase {
 		}
 		$this->expectException( RuntimeException::class );
 		new PrivateBlobStore( $this->base . '/link', array( $this->base . '/public' ), array( 'application/pdf' ), 100 );
+	}
+
+	public function testRejectsLinkedAncestor(): void {
+		if ( ! @symlink( $this->base, $this->base . '/ancestor' ) ) {
+			self::markTestSkipped( 'Symlink indisponível.' );
+		}
+		$this->expectException( RuntimeException::class );
+		new PrivateBlobStore( $this->base . '/ancestor/private', array( $this->base . '/public' ), array( 'application/pdf' ), 100 );
+	}
+
+	public function testRejectsLinkedSource(): void {
+		$real = $this->base . '/public/real.pdf';
+		$link = $this->base . '/public/source-link.pdf';
+		file_put_contents( $real, "%PDF-1.4\n%%EOF\n" );
+		if ( ! @symlink( $real, $link ) ) {
+			self::markTestSkipped( 'Symlink indisponível.' );
+		}
+		$store = new PrivateBlobStore( $this->base . '/private', array( $this->base . '/public' ), array( 'application/pdf' ), 100 );
+		$this->expectException( RuntimeException::class );
+		$store->importFile( $link );
+	}
+
+	public function testRejectsLinkedBlob(): void {
+		$source = $this->base . '/public/real.pdf';
+		file_put_contents( $source, "%PDF-1.4\n%%EOF\n" );
+		$store = new PrivateBlobStore( $this->base . '/private', array( $this->base . '/public' ), array( 'application/pdf' ), 100 );
+		$blob  = $store->importFile( $source );
+		unlink( $this->base . '/private/' . $blob->id );
+		if ( ! @symlink( $source, $this->base . '/private/' . $blob->id ) ) {
+			self::markTestSkipped( 'Symlink indisponível.' );
+		}
+		$this->expectException( RuntimeException::class );
+		$store->open( $blob );
 	}
 
 	public function testImportAndDeliveryRejectMutationAndAuthorizeFirst(): void {
@@ -93,13 +132,22 @@ final class PrivateFilesTest extends TestCase {
 		self::assertNull( $service->open( $blob->id ) );
 	}
 
-	public function testRejectsGrowthBeyondLimit(): void {
-		$source = $this->base . '/public/large.pdf';
-		file_put_contents( $source, "%PDF-1.4\n%%EOF\n" );
-		$store = new PrivateBlobStore( $this->base . '/private', array( $this->base . '/public' ), array( 'application/pdf' ), 100 );
-		file_put_contents( $source, str_repeat( 'a', 101 ), FILE_APPEND );
-		$this->expectException( RuntimeException::class );
-		$store->importFile( $source );
+	public function testRejectsSourceGrowthDuringCopyBelowAndAboveLimit(): void {
+		foreach ( array( 20, 101 ) as $growth ) {
+			$source = $this->base . '/public/growing.pdf';
+			file_put_contents( $source, "%PDF-1.4\n%%EOF\n" );
+			$store                           = new PrivateBlobStore( $this->base . '/private', array( $this->base . '/public' ), array( 'application/pdf' ), 100 );
+			PrivateFilesReadControl::$source = $source;
+			PrivateFilesReadControl::$append = str_repeat( 'a', $growth );
+			PrivateFilesReadControl::$fired  = false;
+			try {
+				$store->importFile( $source );
+				self::fail( 'Fonte crescida aceite.' );
+			} catch ( RuntimeException ) {
+				self::assertTrue( PrivateFilesReadControl::$fired );
+				self::assertSame( array(), glob( $this->base . '/private/*' ) );
+			}
+		}
 	}
 
 	public function testRejectsInvalidDescriptorsAndTraversalIds(): void {
@@ -132,10 +180,15 @@ final class PrivateFilesTest extends TestCase {
 	}
 
 	public function testDeliveryFailsClosedForResolverAndAuthorization(): void {
+		$source = $this->base . '/public/real.pdf';
+		file_put_contents( $source, "%PDF-1.4\n%%EOF\n" );
 		$store  = new PrivateBlobStore( $this->base . '/private', array( $this->base . '/public' ), array( 'application/pdf' ), 100 );
-		$blob   = new BlobDescriptor( str_repeat( 'a', 32 ), str_repeat( 'b', 64 ), 1, 'application/pdf' );
+		$blob   = $store->importFile( $source );
 		$record = new FileRecord( $blob, 'doc', 1, 1, 'original', 1, 1 );
-		$cases  = array(
+		$opened = ( new PrivateFileDelivery( $store, static fn (): FileRecord => $record, static fn (): bool => true ) )->open( $blob->id );
+		self::assertSame( $record, $opened['record'] );
+		fclose( $opened['handle'] );
+		$cases = array(
 			array(
 				static function (): never {
 										throw new RuntimeException( 'falha' ); },
