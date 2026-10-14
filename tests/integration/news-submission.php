@@ -13,6 +13,7 @@ use Arn\Intranet\Authorization\Storage\WpdbAuthorizationRepository;
 use Arn\Intranet\Documents\PrivateFiles\BlobDescriptor;
 use Arn\Intranet\Documents\PrivateFiles\FileRecord;
 use Arn\Intranet\Documents\PrivateFiles\FileSchema;
+use Arn\Intranet\Documents\PrivateFiles\PrivateBlobStore;
 use Arn\Intranet\Documents\PrivateFiles\WpdbFileRegistry;
 use Arn\Intranet\Identity\IdentityWpdb;
 use Arn\Intranet\News\Asset;
@@ -20,6 +21,9 @@ use Arn\Intranet\News\Content;
 use Arn\Intranet\News\CurrentNewsActor;
 use Arn\Intranet\News\NewsConfiguration;
 use Arn\Intranet\News\NewsSchema;
+use Arn\Intranet\News\DraftInput;
+use Arn\Intranet\News\LocalNewsroom;
+use Arn\Intranet\News\MediaInput;
 use Arn\Intranet\News\Version;
 use Arn\Intranet\News\WpdbNewsAuthority;
 use Arn\Intranet\News\WpdbNewsRepository;
@@ -365,6 +369,131 @@ try {
 				unlink( $marker );
 			}
 		}
+	}
+	$private_root = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'arn_news_' . bin2hex( random_bytes( 8 ) );
+	if ( ! mkdir( $private_root, 0700 ) ) {
+		throw new RuntimeException( 'Raiz privada de ensaio indisponível.' );
+	}
+	try {
+		$fixture = static fn( string $name ): string => $private_root . DIRECTORY_SEPARATOR . $name;
+		$chunk   = static function ( string $type, string $bytes ): string {
+			return pack( 'N', strlen( $bytes ) ) . $type . $bytes . pack( 'N', crc32( $type . $bytes ) );
+		};
+		$png     = static function ( int $width, int $height ) use ( $chunk ): string {
+			$row = "\0" . str_repeat( "\x20\x50\x80\xff", $width );
+			return "\x89PNG\r\n\x1a\n" . $chunk( 'IHDR', pack( 'NNC5', $width, $height, 8, 6, 0, 0, 0 ) )
+				. $chunk( 'IDAT', gzcompress( str_repeat( $row, $height ) ) ) . $chunk( 'IEND', '' );
+		};
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- JPEG sintético fixo para o ensaio.
+		$jpeg = base64_decode(
+			'/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA0JCgsKCA0LCgsODg0PEyAVExISEyccHhcgLikxMC4pLSwzOko+MzZGNywtQFdBRkxOUlNSMj5aYVpQYEpRUk//2wBDAQ4ODhMREyYVFSZPNS01T09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0//wAARCAACAAIDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDlKKKKxPZP/9k=',
+			true
+		);
+		file_put_contents( $fixture( 'featured.png' ), $png( 4, 4 ) );
+		file_put_contents( $fixture( 'gallery-a.jpg' ), $jpeg );
+		file_put_contents( $fixture( 'gallery-b.png' ), $png( 3, 3 ) );
+		file_put_contents( $fixture( 'attachment.pdf' ), "%PDF-1.4\n%%EOF\n" );
+		file_put_contents( $fixture( 'image-too-wide.png' ), $png( 5000, 10 ) );
+		file_put_contents( $fixture( 'not-an-image.jpg' ), '<?php echo "not an image";' );
+		file_put_contents( $fixture( 'oversize.pdf' ), "%PDF-1.4\n" . str_repeat( 'A', 1048585 ) . "\n%%EOF\n" );
+		$store       = new PrivateBlobStore( $private_root, array( realpath( ABSPATH ), realpath( WP_CONTENT_DIR ) ), array( 'application/pdf', 'image/png', 'image/jpeg' ), 1048576 );
+		$room        = new LocalNewsroom( $current, static fn(): array => array( $repo, $registry ), static fn(): PrivateBlobStore => $store, static fn(): bool => true );
+		$media       = static fn( string $name, string $description ): MediaInput => new MediaInput( null, $fixture( $name ), $description );
+		$draft_input = new DraftInput( 'Texto de ensaio', 'Corpo', 'nota-interna', $media( 'featured.png', 'Destaque' ), array( $media( 'gallery-a.jpg', 'Galeria A' ), $media( 'gallery-b.png', 'Galeria B' ) ), array( $media( 'attachment.pdf', 'Anexo' ) ) );
+		$news        = $room->create( $draft_input, 'Rascunho com binários' );
+		$first       = $news->version( 1 )->content;
+		$opened      = $room->file( $first->featured->blob->id );
+		$assert( null !== $opened && hash( 'sha256', stream_get_contents( $opened['handle'] ) ) === $first->featured->blob->sha256, 'binário copiado e entregue pelo handle privado' );
+		fclose( $opened['handle'] );
+		$assert( 1 === count( $room->visible() ) || null !== $room->findVisible( $news->id ), 'rascunho do autor visível' );
+		$rejected = false;
+		try {
+			$room->create( new DraftInput( 'Outro', '', 'nota-interna', new MediaInput( $first->featured->blob->id, null, 'Conservar' ), array(), array() ), 'ID no criar' );
+		} catch ( RuntimeException ) {
+			$rejected = true;
+		}
+		$assert( $rejected, 'criar recusa ID conservado' );
+		$rejected = false;
+		try {
+			$room->revise( $news->id, new DraftInput( 'Texto', 'Corpo', 'categoria-livre', null, array(), array() ), 1, 'Categoria recusada' );
+		} catch ( InvalidArgumentException ) {
+			$rejected = true;
+		}
+		$assert( $rejected, 'categoria fechada' );
+		foreach ( array( 'not-an-image.jpg', 'image-too-wide.png' ) as $bad_image ) {
+			$rejected = false;
+			try {
+				$room->revise( $news->id, new DraftInput( 'Texto', 'Corpo', 'nota-interna', $media( $bad_image, 'Inválida' ), array(), array() ), 1, 'Imagem recusada' );
+			} catch ( RuntimeException ) {
+				$rejected = true;
+			}
+			$assert( $rejected && 1 === $repo->find( $news->id )->revision, 'imagem recusada após cópia ' . $bad_image );
+		}
+		$rejected = false;
+		try {
+			$room->revise( $news->id, new DraftInput( 'Texto', 'Corpo', 'nota-interna', null, array(), array( $media( 'oversize.pdf', 'Grande' ) ) ), 1, 'Anexo grande' );
+		} catch ( RuntimeException ) {
+			$rejected = true;
+		}
+		$assert( $rejected, 'limite individual de 1 MiB' );
+		$keep         = static fn( Asset $asset, string $description ): MediaInput => new MediaInput( $asset->blob->id, null, $description );
+		$second_input = new DraftInput( 'Texto final', 'Corpo final', 'nota-interna', $keep( $first->featured, 'Novo destaque' ), array( $keep( $first->gallery[1], 'Agora primeira' ), $keep( $first->gallery[0], 'Agora segunda' ) ), array() );
+		$news         = $room->revise( $news->id, $second_input, 1, 'Reordenar e remover' );
+		$second       = $news->version( 2 )->content;
+		$assert( $second->featured->blob->id !== $first->featured->blob->id && $second->gallery[0]->blob->id !== $first->gallery[1]->blob->id && $second->gallery[0]->blob->sha256 === $first->gallery[1]->blob->sha256 && array() === $second->attachments, 'retenção copia IDs, reordena e remove' );
+		$old_attachment = $room->file( $first->attachments[0]->blob->id );
+		$assert( null !== $old_attachment && count( $room->historyVisible( $news->id ) ) === 2, 'histórico e anexo antigo preservados' );
+		fclose( $old_attachment['handle'] );
+		$rejected = false;
+		try {
+			$room->revise( $news->id, new DraftInput( 'Texto', 'Corpo', 'nota-interna', $keep( $first->featured, 'Antiga' ), array(), array() ), 2, 'Versão antiga' );
+		} catch ( RuntimeException ) {
+			$rejected = true;
+		}
+		$assert( $rejected, 'retenção da versão antiga recusada' );
+		$rejected = false;
+		try {
+			$room->revise( $news->id, new DraftInput( 'Texto', 'Corpo', 'nota-interna', null, array( $keep( $second->gallery[0], 'Duplicada' ), $keep( $second->gallery[0], 'Duplicada' ) ), array() ), 2, 'Duplicação' );
+		} catch ( RuntimeException ) {
+			$rejected = true;
+		}
+		$assert( $rejected, 'ID repetido no mesmo input recusado' );
+		$other_news = $room->create( new DraftInput( 'Outra notícia', '', 'nota-interna', null, array(), array() ), 'Outro rascunho' );
+		$rejected   = false;
+		try {
+			$room->revise( $other_news->id, new DraftInput( 'Outra', 'Corpo', 'nota-interna', $keep( $second->featured, 'Alheia' ), array(), array() ), 1, 'Reter alheia' );
+		} catch ( RuntimeException ) {
+			$rejected = true;
+		}
+		$assert( $rejected, 'asset de outra notícia recusado' );
+		$rejected = false;
+		try {
+			$room->revise( $news->id, new DraftInput( 'Texto', 'Corpo', 'nota-interna', null, array(), array( $keep( $second->gallery[0], 'Kind errado' ) ) ), 2, 'Trocar kind' );
+		} catch ( RuntimeException ) {
+			$rejected = true;
+		}
+		$assert( $rejected, 'retenção com kind errado recusada' );
+		$session_revision[ $author_id ] = 2;
+		$assert( null === $room->visible() && null === $room->file( $second->featured->blob->id ), 'sessão antiga não lê notícia nem ficheiro' );
+		$session_revision[ $author_id ] = 3;
+		$news                           = $room->submit( $news->id, 2, 'Enviar ao editor' );
+		$active_id                      = $reviewer_id;
+		$notices                        = $room->notifications();
+		$submitted_file                 = $room->file( $second->featured->blob->id );
+		$assert( null !== $submitted_file, 'editor lê binário da versão submetida' );
+		$assert( null === $room->file( $first->featured->blob->id ), 'editor não lê binário de versão anterior' );
+		$assert( 0 < count( $notices ), 'editor vê aviso autorizado' );
+		fclose( $submitted_file['handle'] );
+		$room->markRead( (int) $notices[0]->id );
+		$room->markRead( (int) $notices[0]->id );
+		$assert( null !== $room->notifications()[0]->read_at, 'recibo idempotente' );
+		$active_id = $author_id;
+	} finally {
+		$private_entries = glob( $private_root . DIRECTORY_SEPARATOR . '*' );
+		foreach ( false === $private_entries ? array() : $private_entries as $private_file ) {
+			unlink( $private_file );
+		}
+		rmdir( $private_root );
 	}
 	$authorization->revokeGrant( $reviewer_id, $reviewer_grant, 3, $context( 'Revogação exclusiva' ) );
 	$session_revision[ $reviewer_id ] = 4;
