@@ -46,8 +46,10 @@ final class PreviewValidator {
 		$emails = array();
 		foreach ( $parsed as $record ) {
 			$fields = $record['fields'];
-			if ( 4 === count( $fields ) ) {
-				$ids[ $fields[0] ]    = ( $ids[ $fields[0] ] ?? 0 ) + 1;
+			if ( isset( $fields[0] ) ) {
+				$ids[ $fields[0] ] = ( $ids[ $fields[0] ] ?? 0 ) + 1;
+			}
+			if ( isset( $fields[2] ) ) {
 				$emails[ $fields[2] ] = ( $emails[ $fields[2] ] ?? 0 ) + 1;
 			}
 		}
@@ -59,6 +61,12 @@ final class PreviewValidator {
 			$changed  = array();
 			if ( 4 !== count( $values ) ) {
 				$errors['row'] = 'São necessários quatro campos.';
+				if ( isset( $values[0] ) && ( $ids[ $values[0] ] ?? 0 ) > 1 ) {
+					$errors['professional_id'] = 'Identificador repetido no lote.';
+				}
+				if ( isset( $values[2] ) && ( $emails[ $values[2] ] ?? 0 ) > 1 ) {
+					$errors['email'] = 'Email em conflito.';
+				}
 			} else {
 				[ $id, $name, $email, $unit_id ] = $values;
 				if ( ! preg_match( '/^LAB-PER-(?!000)[0-9]{3}$/D', $id ) ) {
@@ -69,7 +77,7 @@ final class PreviewValidator {
 				if ( '' === $name || mb_strlen( $name, 'UTF-8' ) > 100 || ! str_starts_with( $name, 'Pessoa fictícia ' ) || preg_match( '/(?:\A[\p{Z}\s]|[\p{Z}\s]\z|\p{C})/u', $name ) ) {
 					$errors['name'] = 'Nome fictício inválido.';
 				}
-				if ( trim( $email ) !== $email || ! preg_match( '/^[a-z0-9](?:[a-z0-9._+-]*[a-z0-9])?@example\.invalid$/D', $email ) ) {
+				if ( trim( $email ) !== $email || ! preg_match( '/^(?![^@]*\.\.)[a-z0-9](?:[a-z0-9._+-]*[a-z0-9])?@example\.invalid$/D', $email ) ) {
 					$errors['email'] = 'Email fictício inválido.';
 				} elseif ( $emails[ $email ] > 1 || self::belongsToOther( $catalog, $email, $id ) ) {
 					$errors['email'] = 'Email em conflito.';

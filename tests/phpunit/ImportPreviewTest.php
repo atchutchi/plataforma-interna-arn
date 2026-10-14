@@ -114,4 +114,26 @@ final class ImportPreviewTest extends TestCase {
 		self::assertArrayHasKey( 'name', $report->rows[0]['errors'] );
 		self::assertArrayHasKey( 'name', $report->rows[1]['errors'] );
 	}
+
+	/** Rejeita pontos consecutivos e nas pontas da parte local. */
+	public function testEmailLocalPartRejectsMisplacedDots(): void {
+		$csv    = "professional_id,name,email,unit_id\nLAB-PER-003,Pessoa fictícia 003,a..b@example.invalid,LAB-A\nLAB-PER-004,Pessoa fictícia 004,.abc@example.invalid,LAB-A\nLAB-PER-005,Pessoa fictícia 005,abc.@example.invalid,LAB-A\n";
+		$report = PreviewValidator::validate( $csv, $this->snapshot() );
+		self::assertSame( 3, $report->totals['invalid'] );
+		foreach ( $report->rows as $row ) {
+			self::assertArrayHasKey( 'email', $row['errors'] );
+		}
+	}
+
+	/** Conta um ID/email disponível mesmo numa linha com colunas extra. */
+	public function testWrongArityStillInvalidatesMatchingCompleteRows(): void {
+		$csv    = "professional_id,name,email,unit_id\nLAB-PER-003,Pessoa fictícia 003,pessoa003@example.invalid,LAB-A\nLAB-PER-003,Pessoa fictícia 003,pessoa003@example.invalid,LAB-A,extra\nLAB-PER-004,Pessoa fictícia 004,pessoa004@example.invalid,LAB-A\nLAB-PER-005,Pessoa fictícia 005,pessoa004@example.invalid,LAB-A,extra\n";
+		$report = PreviewValidator::validate( $csv, $this->snapshot() );
+		self::assertFalse( $report->valid );
+		self::assertSame( 4, $report->totals['invalid'] );
+		self::assertArrayHasKey( 'professional_id', $report->rows[0]['errors'] );
+		self::assertArrayHasKey( 'row', $report->rows[1]['errors'] );
+		self::assertArrayHasKey( 'email', $report->rows[2]['errors'] );
+		self::assertArrayHasKey( 'row', $report->rows[3]['errors'] );
+	}
 }
