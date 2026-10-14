@@ -156,6 +156,26 @@ final class DocumentCatalogPage {
 		return (int) $value;
 	}
 
+	/**
+	 * Present the object row returned by WpdbDocumentRepository::history().
+	 *
+	 * @param \stdClass $event Stored audit row.
+	 * @return string Portuguese audit summary, escaped by the caller.
+	 */
+	public static function auditLine( \stdClass $event ): string {
+		$action = match ( $event->event ) {
+			'created' => 'Rascunho criado',
+			'revised' => 'Nova versão',
+			'published' => 'Versão publicada',
+			'archived' => 'Documento arquivado',
+			default => 'Operação documental',
+		};
+		return 'Revisão ' . (int) $event->revision . ': ' . $action
+			. '. Conta #' . (int) $event->actor_id
+			. '. ' . gmdate( 'd/m/Y H:i', (int) $event->occurred_at ) . ' UTC'
+			. '. Justificação: ' . $event->reason;
+	}
+
 	public static function submit(): void {
 		if ( ! self::allowed() ) {
 			wp_die( esc_html__( 'Operação documental não autorizada.', 'arn-intranet-core' ), '', array( 'response' => 403 ) );
@@ -259,7 +279,7 @@ final class DocumentCatalogPage {
 				<?php
 				foreach ( $history as $event ) :
 					?>
-				<li><?php echo esc_html( 'Revisão ' . ( $event['revision'] ?? '' ) . ': ' . ( $event['event'] ?? '' ) . '. ' . ( $event['reason'] ?? '' ) ); ?></li><?php endforeach; ?></ul><?php endif; ?>
+				<li><?php echo esc_html( self::auditLine( $event ) ); ?></li><?php endforeach; ?></ul><?php endif; ?>
 			<?php if ( ! $chosen->archived ) : ?>
 		<h3>Acrescentar revisão</h3><?php self::form( 'revise', $chosen, $roster ); ?>
 		<h3>Publicar versão <?php echo esc_html( (string) count( $chosen->versions ) ); ?></h3><?php self::form( 'publish', $chosen, $roster ); ?>

@@ -11,6 +11,7 @@ use Arn\Intranet\Documents\PrivateFiles\FileRecord;
 use Arn\Intranet\Documents\PrivateFiles\WpdbFileRegistry;
 use Arn\Intranet\Identity\IdentityWpdb;
 use Arn\Intranet\Documents\Catalog\CatalogSchema;
+use Arn\Intranet\Documents\Catalog\DocumentCatalogPage;
 use Arn\Intranet\Documents\Catalog\CurrentDocumentActor;
 use Arn\Intranet\Documents\Catalog\LocalDocumentCatalog;
 use Arn\Intranet\Documents\Catalog\WpdbDocumentAuthority;
@@ -104,6 +105,9 @@ try {
 	$assert( 'Documento privado' === (string) $db->get_var( $db->prepare( 'SELECT post_title FROM %i WHERE ID=%d', $prefix . 'posts', $document->id ) ), 'âncora genérica' );
 	$assert( $registry->find( $blob->id )?->object_type === 'document', 'ficheiro atómico associado' );
 	$assert( 1 === count( $repository->history( $document->id ) ), 'auditoria da criação' );
+	$first_event = $repository->history( $document->id )[0];
+	$first_line  = $first_event instanceof stdClass ? DocumentCatalogPage::auditLine( $first_event ) : '';
+	$assert( str_contains( $first_line, 'Rascunho criado' ) && str_contains( $first_line, 'Conta #1' ) && str_contains( $first_line, 'Ensaio de criação' ) && str_contains( $first_line, 'UTC' ), 'linha real de auditoria apresentada' );
 	$next_blob = new BlobDescriptor( bin2hex( random_bytes( 16 ) ), str_repeat( 'c', 64 ), 12, 'application/pdf' );
 	$next      = new Revision( 2, $metadata, $next_blob, 1, time() );
 	$document  = $repository->revise( $document->id, $next, 1, 'Revisão fictícia' );
