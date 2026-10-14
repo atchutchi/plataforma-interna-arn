@@ -13,6 +13,10 @@ $portal = $args['portal'] ?? array();
 if ( ! is_array( $portal ) || empty( $portal['view'] ) ) {
 	return;
 }
+if ( 'news_preview' === $portal['view'] && is_array( $portal['news'] ?? null ) ) {
+	get_template_part( 'portal/news-preview', null, array( 'news' => $portal['news'] ) );
+	return;
+}
 if ( in_array( $portal['view'], array( 'documents', 'regulations' ), true ) && ! empty( $portal['catalog'] ) ) {
 	get_template_part( 'portal/document-catalog', null, array( 'portal' => $portal ) );
 	return;

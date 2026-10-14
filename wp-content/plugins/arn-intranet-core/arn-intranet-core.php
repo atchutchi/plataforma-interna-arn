@@ -39,6 +39,9 @@ use Arn\Intranet\Documents\PrivateFiles\LocalPrivateFiles;
 use Arn\Intranet\Documents\PrivateFiles\LocalPrivateFilesPage;
 use Arn\Intranet\Documents\Catalog\DocumentCatalogPage;
 use Arn\Intranet\Documents\Catalog\DocumentFileController;
+use Arn\Intranet\News\NewsroomPage;
+use Arn\Intranet\News\NewsFileController;
+use Arn\Intranet\News\NewsPreviewController;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -159,6 +162,9 @@ PrivatePortal::register();
 Portal::register();
 DocumentCatalogPage::register();
 DocumentFileController::register();
+NewsroomPage::register();
+NewsFileController::register();
+NewsPreviewController::register();
 
 ( new LocalFixtureAccess(
 	arn_intranet_core_environment_type(),

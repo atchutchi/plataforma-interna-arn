@@ -13,6 +13,7 @@ use InvalidArgumentException;
 use RuntimeException;
 use Arn\Intranet\Documents\Catalog\DocumentPortal;
 use Arn\Intranet\Documents\Catalog\LocalDocumentCatalog;
+use Arn\Intranet\News\NewsPreviewController;
 
 // phpcs:disable WordPress.WP.AlternativeFunctions -- A descarga privada usa stream local verificado.
 
@@ -126,6 +127,12 @@ final class Portal {
 	 * @return array<string,mixed> Modelo para o tema.
 	 */
 	public static function model( string $view, array $input ): array {
+		if ( 'news' === $view && NewsPreviewController::requested() && null !== NewsPreviewController::current() ) {
+			return array(
+				'view' => 'news_preview',
+				'news' => NewsPreviewController::current(),
+			);
+		}
 		if ( in_array( $view, array( 'documents', 'regulations' ), true ) && ! self::allowed() ) {
 			return DocumentPortal::model( $view, $input );
 		}
