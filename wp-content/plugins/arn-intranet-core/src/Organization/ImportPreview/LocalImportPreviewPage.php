@@ -105,7 +105,15 @@ final class LocalImportPreviewPage {
 			wp_die( 'Pré-validação indisponível.', '', array( 'response' => 403 ) );
 		}
 		nocache_headers();
-		echo '<div class="wrap"><h1>Validar importação sintética</h1><p>Ensaio informativo sem importação de pessoas ou alteração de dados.</p>';
+		echo '<style>
+			#arn-import-preview { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+			#arn-import-preview *, #arn-import-preview *::before, #arn-import-preview *::after { box-sizing: border-box; }
+			#arn-import-preview form { display: grid; gap: .75rem; width: min(100%, 40rem); justify-items: start; }
+			#arn-import-preview select { width: 100%; max-width: 100%; min-width: 0; }
+			#arn-import-preview .arn-import-hashes { overflow-wrap: anywhere; word-break: break-word; }
+			#arn-import-preview li { overflow-wrap: anywhere; }
+		</style>';
+		echo '<div class="wrap" id="arn-import-preview"><h1>Validar importação sintética</h1><p>Ensaio informativo sem importação de pessoas ou alteração de dados.</p>';
 		if ( $this->unavailable || null === $this->snapshot ) {
 			echo '<p>Pré-validação indisponível.</p></div>';
 			return;
@@ -122,16 +130,49 @@ final class LocalImportPreviewPage {
 		if ( null !== $this->report ) {
 			$r = $this->report;
 			echo '<h2>Relatório em memória</h2><p>Estado: ' . esc_html( $r->valid ? 'Válido apenas neste ensaio' : 'Inválido' ) . '. Criações: ' . esc_html( (string) $r->totals['create'] ) . '. Alterações: ' . esc_html( (string) $r->totals['update'] ) . '. Sem mudança: ' . esc_html( (string) $r->totals['unchanged'] ) . '. Inválidas: ' . esc_html( (string) $r->totals['invalid'] ) . '.</p>';
-			echo '<p>Identificador: ' . esc_html( $r->batch_id ) . '. CSV SHA-256: ' . esc_html( $r->csv_hash ) . '. Catálogo SHA-256: ' . esc_html( $r->catalog_hash ) . ' (revisão ' . esc_html( (string) $r->catalog_revision ) . '). Unidades SHA-256: ' . esc_html( $r->units_hash ) . ' (revisão ' . esc_html( (string) $r->units_revision ) . '). Validador: ' . esc_html( $r->validator_version ) . '.</p>';
+			echo '<p class="arn-import-hashes">Identificador: ' . esc_html( $r->batch_id ) . '. CSV SHA-256: ' . esc_html( $r->csv_hash ) . '. Catálogo SHA-256: ' . esc_html( $r->catalog_hash ) . ' (revisão ' . esc_html( (string) $r->catalog_revision ) . '). Unidades SHA-256: ' . esc_html( $r->units_hash ) . ' (revisão ' . esc_html( (string) $r->units_revision ) . '). Validador: ' . esc_html( $r->validator_version ) . '.</p>';
 			echo '<p>Actor: ' . esc_html( (string) get_current_user_id() ) . '. Instante UTC: ' . esc_html( gmdate( 'Y-m-d H:i:s' ) ) . '.</p><ul>';
 			foreach ( $r->global_errors as $error ) {
 				echo '<li>' . esc_html( $error ) . '</li>';
 			}
 			foreach ( $r->rows as $row ) {
-				echo '<li>Linha ' . esc_html( (string) $row['line'] ) . ': ' . esc_html( implode( ' | ', $row['values'] ) ) . '. Proposta: ' . esc_html( $row['proposal'] ) . '. Campos diferentes: ' . esc_html( implode( ', ', $row['changed_fields'] ) ) . '. Erros: ' . esc_html( implode( ', ', array_map( static fn( string $key, string $value ): string => $key . ': ' . $value, array_keys( $row['errors'] ), $row['errors'] ) ) ) . '.</li>';
+				$changed = array_map( self::fieldLabel( ... ), $row['changed_fields'] );
+				$errors  = array_map( static fn( string $key, string $value ): string => self::fieldLabel( $key ) . ': ' . $value, array_keys( $row['errors'] ), $row['errors'] );
+				echo '<li>Linha ' . esc_html( (string) $row['line'] ) . ': ' . esc_html( implode( ' | ', $row['values'] ) ) . '. Proposta: ' . esc_html( self::proposalLabel( $row['proposal'] ) ) . '. Campos diferentes: ' . esc_html( array() === $changed ? 'nenhum' : implode( ', ', $changed ) ) . '. Erros: ' . esc_html( array() === $errors ? 'nenhum' : implode( ', ', $errors ) ) . '.</li>';
 			}
 			echo '</ul>';
 		}
 		echo '</div>';
+	}
+
+	/**
+	 * Traduz as chaves internas dos campos apenas para apresentação.
+	 *
+	 * @param string $key Chave interna do campo.
+	 */
+	private static function fieldLabel( string $key ): string {
+		return match ( $key ) {
+			'professional_id' => 'identificador profissional',
+			'name' => 'nome',
+			'email' => 'email',
+			'unit_id' => 'unidade',
+			'row' => 'linha',
+			default => $key,
+		};
+	}
+
+	/**
+	 * Traduz os estados do motor para quem lê o relatório.
+	 *
+	 * @param string $proposal Estado interno da proposta.
+	 */
+	private static function proposalLabel( string $proposal ): string {
+		return match ( $proposal ) {
+			'create' => 'criação',
+			'update' => 'alteração',
+			'unchanged' => 'sem mudança',
+			'invalid' => 'inválida',
+			default => 'desconhecida',
+		};
 	}
 }
