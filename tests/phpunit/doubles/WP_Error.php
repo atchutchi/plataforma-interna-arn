@@ -47,6 +47,18 @@ class WP_Error {
 	}
 
 	/**
+	 * Acrescenta um erro sem substituir o primeiro código.
+	 *
+	 * @param string $code Código novo.
+	 * @param string $message Mensagem pública.
+	 */
+	public function add( string $code, string $message ): void { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Assinatura nativa, sem renderização no double.
+		if ( '' === $this->code ) {
+			$this->code = $code;
+		}
+	}
+
+	/**
 	 * Obtém os dados.
 	 */
 	public function get_error_data(): mixed {

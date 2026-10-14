@@ -55,5 +55,7 @@ jobs:
       - run: npm run test:identity:integration
       - run: npm run test:oidc:integration
       - run: npm run test:authorization:integration
+      - run: npm run test:identity-connection:integration
+      - run: npm run test:account-sessions:integration
       - if: always()
         run: npm run env:stop:tests

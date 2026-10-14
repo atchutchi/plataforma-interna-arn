@@ -22,6 +22,8 @@
     "test:identity:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/identity-persistence.php --user=admin",
     "test:oidc:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/federated-session.php --user=admin",
     "test:authorization:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/authorization-persistence.php --user=admin",
+    "test:account-sessions:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/account-sessions.php --user=admin",
+    "test:identity-connection:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo php tests/integration/identity-connection-failure.php /var/www/html/wp-includes/class-wpdb.php",
     "composer:install": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo composer install --no-interaction --no-progress --prefer-dist"
   },
   "devDependencies": {
