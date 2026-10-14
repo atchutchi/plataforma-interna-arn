@@ -138,8 +138,12 @@ try {
 	$query_failure = null;
 	$assert( null === $notifications->page( $b, 2 )['rows'][0]['read_at'], 'falha SQL não produz recibo' );
 	$db->query( 'START TRANSACTION' );
-	$db->query( $db->prepare( 'INSERT INTO %i (user_id,actor_id,event,revision,previous_json,new_json,reason,decision_ref,occurred_at) VALUES (%d,%d,%s,3,NULL,%s,%s,%s,123)', $prefix . 'arn_authz_audit', $a, $saved_actor, 'grant_created', '{}', 'fixture', 'fixture' ) );
+	$inserted          = $db->query( $db->prepare( 'INSERT INTO %i (user_id,actor_id,event,revision,previous_json,new_json,reason,decision_ref,occurred_at) VALUES (%d,%d,%s,3,NULL,%s,%s,%s,123)', $prefix . 'arn_authz_audit', $a, $saved_actor, 'grant_created', '{}', 'fixture', 'fixture' ) );
+	$rolled_back_event = (int) $db->insert_id;
+	$assert( 1 === $inserted && '' === $db->last_error && $rolled_back_event > 0, 'evento inserido antes do rollback' );
 	$db->query( 'ROLLBACK' );
+	$remaining_event = $db->get_var( $db->prepare( 'SELECT id FROM %i WHERE id=%d', $prefix . 'arn_authz_audit', $rolled_back_event ) );
+	$assert( null === $remaining_event && '' === $db->last_error, 'rollback remove o evento independentemente do filtro de revisão' );
 	$assert( 1 === count( $notifications->page( $a, 2 )['rows'] ), 'evento revertido não cria aviso' );
 	wp_set_current_user( $saved_actor );
 	// Eventos sintéticos só nas tabelas exclusivas: não precisam de payloads públicos.
