@@ -49,4 +49,17 @@ final class NewsPresentationTest extends TestCase {
 		$this->assertNull( NewsPortal::project( $draft, false, static fn( string $id ): string => '/media/' . $id ) );
 		$this->assertSame( 'Texto anterior reservado', NewsPortal::project( $draft, true, static fn( string $id ): string => '/media/' . $id )['title'] );
 	}
+
+	/** The CMS return target is provided only after the visible version is projected. */
+	public function test_authorized_projection_has_detail_return_without_history(): void {
+		$blob    = new BlobDescriptor( str_repeat( 'c', 32 ), str_repeat( 'd', 64 ), 100, 'image/png' );
+		$version = new Version( 1, new Content( 'Enviada', 'Texto', 'circular', new Asset( 'featured', $blob, 'Imagem' ), array(), array() ), 7, 10 );
+		$article = new Article( 41, 7, Scope::queues( array( 'editorial-ficticia' ) ), 2, array( $version ), 1, 20 );
+		$detail  = static fn( int $id ): string => '/wp-admin/admin.php?page=arn-newsroom&article_id=' . $id;
+		$editor  = NewsPortal::project( $article, false, static fn( string $id ): string => '/media/' . $id, $detail );
+		$author  = NewsPortal::project( $article, true, static fn( string $id ): string => '/media/' . $id, $detail );
+		self::assertSame( '/wp-admin/admin.php?page=arn-newsroom&article_id=41', $editor['cms_url'] );
+		self::assertSame( $editor['cms_url'], $author['cms_url'] );
+		self::assertSame( array( 'id', 'state', 'version', 'title', 'body', 'category', 'featured', 'gallery', 'attachments', 'cms_url' ), array_keys( $editor ) );
+	}
 }

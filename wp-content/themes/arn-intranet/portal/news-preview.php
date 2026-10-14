@@ -15,6 +15,7 @@ if ( ! is_array( $news ) ) {
 <article class="arn-portal arn-news-preview alignwide">
 	<nav class="arn-portal-breadcrumb" aria-label="Localização"><a href="<?php echo esc_url( arn_intranet_portal_url( 'noticias' ) ); ?>">Notícias</a><span aria-hidden="true">/</span><span aria-current="page">Pré-visualização</span></nav>
 	<div class="arn-news-preview-status" role="status"><strong>Pré-visualização: <?php echo esc_html( $news['state'] ); ?></strong><span>Versão <?php echo esc_html( (string) $news['version'] ); ?>. Esta notícia ainda não foi publicada.</span></div>
+	<p><a class="arn-portal-text-link" href="<?php echo esc_url( $news['cms_url'] ); ?>">Voltar à notícia no CMS</a></p>
 	<header class="arn-portal-page-heading"><p class="arn-portal-kicker"><?php echo esc_html( $news['category'] ); ?></p><h1><?php echo esc_html( $news['title'] ); ?></h1></header>
 	<?php
 	if ( is_array( $news['featured'] ) ) :

@@ -54,9 +54,9 @@ final class NewsFormInput {
 				if ( ! is_array( $post['featured'] ?? null ) ) {
 					throw new \InvalidArgumentException();
 				}
-				$featured = self::media( $post['featured'], self::file( $files['featured_file'] ?? null ), 'featured' );
-			} catch ( Throwable ) {
-				$errors['featured'] = 'Indica uma imagem válida e o texto alternativo ou retira o destaque.';
+				$featured = self::media( $post['featured'], self::file( $files['featured_file'] ?? null, 'featured' ), 'featured' );
+			} catch ( Throwable $error ) {
+				$errors['featured'] = '' !== $error->getMessage() ? $error->getMessage() : 'Indica uma imagem válida e o texto alternativo ou retira o destaque.';
 			}
 		}
 		$gallery     = self::list( $post['gallery'] ?? array(), $files['gallery_file'] ?? null, 'gallery', 8, $errors );
@@ -100,9 +100,10 @@ final class NewsFormInput {
 					'size'     => $files['size'][ $index ] ?? null,
 					'tmp_name' => $files['tmp_name'][ $index ] ?? null,
 				);
-				$result[] = self::media( $row, self::file( $file ), 'gallery' === $key ? 'gallery' : 'attachment' );
-			} catch ( Throwable ) {
-				$errors[ $key . '_' . $index ] = 'Confirma o ficheiro e a descrição desta posição. Selecciona de novo um ficheiro novo após erro.';
+				$kind     = 'gallery' === $key ? 'gallery' : 'attachment';
+				$result[] = self::media( $row, self::file( $file, $kind ), $kind );
+			} catch ( Throwable $error ) {
+				$errors[ $key . '_' . $index ] = '' !== $error->getMessage() ? $error->getMessage() : 'Confirma o ficheiro e a descrição desta posição. Selecciona de novo um ficheiro novo após erro.';
 			}
 		}
 		return $result;
@@ -120,7 +121,7 @@ final class NewsFormInput {
 		return new MediaInput( '' === $id ? null : $id, $source, $description );
 	}
 
-	private static function file( mixed $file ): ?string {
+	private static function file( mixed $file, string $kind ): ?string {
 		if ( null === $file ) {
 			return null;
 		}
@@ -130,8 +131,15 @@ final class NewsFormInput {
 		if ( UPLOAD_ERR_NO_FILE === $file['error'] ) {
 			return null;
 		}
-		if ( UPLOAD_ERR_OK !== $file['error'] || ! is_int( $file['size'] ) || $file['size'] < 1 || $file['size'] > 1048576 || ! is_string( $file['tmp_name'] ) || ! is_uploaded_file( $file['tmp_name'] ) ) {
+		if ( in_array( $file['error'], array( UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE ), true ) || ( is_int( $file['size'] ?? null ) && $file['size'] > 1048576 ) ) {
+			throw new \InvalidArgumentException( 'Cada ficheiro pode ter no máximo 1 MiB.' );
+		}
+		if ( UPLOAD_ERR_OK !== $file['error'] || ! is_int( $file['size'] ) || $file['size'] < 1 || ! is_string( $file['tmp_name'] ) || ! is_uploaded_file( $file['tmp_name'] ) ) {
 			throw new \InvalidArgumentException();
+		}
+		$problem = NewsUploadInspector::error( $file['tmp_name'], $kind );
+		if ( null !== $problem ) {
+			throw new \InvalidArgumentException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed server-authored field message, escaped at rendering.
 		}
 		return $file['tmp_name'];
 	}

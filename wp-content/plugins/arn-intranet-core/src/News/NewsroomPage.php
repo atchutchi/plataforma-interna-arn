@@ -414,7 +414,7 @@ else :
 			);
 		}
 		?>
-		<fieldset class="arn-newsroom-media" data-media-group="featured" data-limit="1"><legend>Imagem de destaque</legend><p>PNG ou JPEG até 1 MiB. Obrigatória antes do envio.</p><div data-media-rows>
+		<fieldset class="arn-newsroom-media" data-media-group="featured" data-limit="1"><legend>Imagem de destaque</legend><p>PNG ou JPEG até 1 MiB, 4096 píxeis por lado e 16 milhões de píxeis no total. Obrigatória antes do envio.</p><div data-media-rows>
 		<?php
 		if ( is_array( $featured ) ) :
 			self::mediaRow( 'featured', 0, $featured, $errors, $operation );
@@ -436,7 +436,7 @@ endif;
 					$assets
 				); }
 			?>
-			<fieldset class="arn-newsroom-media" data-media-group="<?php echo esc_attr( $key ); ?>" data-limit="<?php echo esc_attr( (string) $limit ); ?>"><legend><?php echo esc_html( $label ); ?></legend><p><?php echo esc_html( 'gallery' === $key ? 'Até 8 imagens PNG ou JPEG, cada uma com texto alternativo.' : 'Até 5 anexos PDF, PNG ou JPEG, cada um com designação.' ); ?> Cada ficheiro pode ter até 1 MiB.</p><div data-media-rows>
+			<fieldset class="arn-newsroom-media" data-media-group="<?php echo esc_attr( $key ); ?>" data-limit="<?php echo esc_attr( (string) $limit ); ?>"><legend><?php echo esc_html( $label ); ?></legend><p><?php echo esc_html( 'gallery' === $key ? 'Até 8 imagens PNG ou JPEG, cada uma com texto alternativo. Cada imagem pode ter até 1 MiB, 4096 píxeis por lado e 16 milhões de píxeis no total.' : 'Até 5 anexos PDF, PNG ou JPEG, cada um com designação. Cada ficheiro pode ter até 1 MiB.' ); ?></p><div data-media-rows>
 			<?php
 			if ( is_array( $rows ) ) :
 				foreach ( $rows as $index => $row ) :

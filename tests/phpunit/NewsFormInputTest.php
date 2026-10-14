@@ -56,9 +56,9 @@ final class NewsFormInputTest extends TestCase {
 		);
 		$this->assertArrayHasKey( 'featured', NewsFormInput::validate( $with_file, $files )['errors'] );
 		$files['featured_file']['size'] = 1048577;
-		$this->assertArrayHasKey( 'featured', NewsFormInput::validate( $with_file, $files )['errors'] );
+		$this->assertStringContainsString( '1 MiB', NewsFormInput::validate( $with_file, $files )['errors']['featured'] );
 		$files['featured_file']['error'] = UPLOAD_ERR_INI_SIZE;
-		$this->assertArrayHasKey( 'featured', NewsFormInput::validate( $with_file, $files )['errors'] );
+		$this->assertStringContainsString( '1 MiB', NewsFormInput::validate( $with_file, $files )['errors']['featured'] );
 	}
 
 	/** Only editorial fields enter the draft, and order is retained. */
@@ -84,5 +84,41 @@ final class NewsFormInputTest extends TestCase {
 		$this->assertArrayHasKey( 'form', NewsFormInput::validate( array_replace( $base, array( 'actor_id' => '17' ) ), array() )['errors'] );
 		$this->assertArrayHasKey( 'form', NewsFormInput::validate( array_replace( $base, array( 'review_queue' => 'alheia' ) ), array() )['errors'] );
 		$this->assertArrayHasKey( 'gallery', NewsFormInput::validate( array_replace( $base, array( 'gallery' => array_fill( 0, 9, $base['gallery'][0] ) ) ), array() )['errors'] );
+	}
+
+	/** Size errors retain the exact media position instead of becoming form errors. */
+	public function test_upload_size_error_names_the_gallery_and_attachment_positions(): void {
+		$post   = array(
+			'title'       => 'Título',
+			'body'        => '',
+			'category'    => 'circular',
+			'reason'      => 'Rascunho',
+			'gallery'     => array(
+				array(
+					'id'          => '',
+					'description' => 'Imagem',
+				),
+			),
+			'attachments' => array(
+				array(
+					'id'          => '',
+					'description' => 'Documento',
+				),
+			),
+		);
+		$file   = array(
+			'error'    => array( UPLOAD_ERR_INI_SIZE ),
+			'size'     => array( 1048577 ),
+			'tmp_name' => array( '/invalid' ),
+		);
+		$result = NewsFormInput::validate(
+			$post,
+			array(
+				'gallery_file'    => $file,
+				'attachment_file' => $file,
+			)
+		);
+		self::assertStringContainsString( '1 MiB', $result['errors']['gallery_0'] );
+		self::assertStringContainsString( '1 MiB', $result['errors']['attachments_0'] );
 	}
 }

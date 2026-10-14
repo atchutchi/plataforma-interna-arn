@@ -34,11 +34,22 @@ final class NewsPortal {
 		if ( null === $article || null === $actor ) {
 			return null;
 		}
-		return self::project( $article, $article->author_id === $actor[1], static fn( string $blob ): string => add_query_arg( 'arn_news_media', $blob, home_url( '/' ) ) );
+		return self::project(
+			$article,
+			$article->author_id === $actor[1],
+			static fn( string $blob ): string => add_query_arg( 'arn_news_media', $blob, home_url( '/' ) ),
+			static fn( int $article_id ): string => add_query_arg(
+				array(
+					'page'       => 'arn-newsroom',
+					'article_id' => $article_id,
+				),
+				admin_url( 'admin.php' )
+			)
+		);
 	}
 
 	/** Pure projection. An editor can receive no unpublished history from this value. */
-	public static function project( Article $article, bool $own, callable $media_url ): ?array {
+	public static function project( Article $article, bool $own, callable $media_url, ?callable $cms_url = null ): ?array {
 		$number = $own ? count( $article->versions ) : $article->submitted_version;
 		if ( null === $number ) {
 			return null;
@@ -53,7 +64,7 @@ final class NewsPortal {
 			'url'         => $media_url( $item->blob->id ),
 			'mime'        => $item->blob->mime,
 		);
-		return array(
+		$model   = array(
 			'id'          => $article->id,
 			'state'       => $article->pending() ? 'Pendente' : 'Rascunho',
 			'version'     => $version->number,
@@ -64,5 +75,9 @@ final class NewsPortal {
 			'gallery'     => array_map( $asset, $content->gallery ),
 			'attachments' => array_map( $asset, $content->attachments ),
 		);
+		if ( null !== $cms_url ) {
+			$model['cms_url'] = $cms_url( $article->id );
+		}
+		return $model;
 	}
 }
