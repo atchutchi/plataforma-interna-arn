@@ -80,9 +80,14 @@ final class NewsroomPage {
 		if ( 'toplevel_page_' . self::SLUG !== $hook || null === self::access() ) {
 			return;
 		}
-		$root = dirname( __DIR__, 3 );
+		$root = self::assetRoot();
 		wp_enqueue_style( 'arn-newsroom', plugins_url( 'assets/css/newsroom.css', $root . '/arn-intranet-core.php' ), array(), (string) filemtime( $root . '/assets/css/newsroom.css' ) );
 		wp_enqueue_script( 'arn-newsroom', plugins_url( 'assets/js/newsroom.js', $root . '/arn-intranet-core.php' ), array(), (string) filemtime( $root . '/assets/js/newsroom.js' ), true );
+	}
+
+	/** Resolve the plugin root for the page's own CSS and JavaScript. */
+	public static function assetRoot(): string {
+		return dirname( __DIR__, 2 );
 	}
 
 	public static function nonceAction( string $operation, int $id = 0 ): string {
@@ -384,7 +389,7 @@ else :
 			foreach ( NewsPortal::categories() as $key => $label ) :
 				?>
 			<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $value( 'category', $content?->category ?? '' ), $key ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select><small id="arn-news-category-help-<?php echo esc_attr( $operation ); ?>">Categoria da comunicação.</small><?php self::error( $errors, 'category', $operation ); ?></div>
-			<?php self::mediaFields( $operation, $post, $errors, $content ); ?>
+			<?php self::mediaFields( $operation, $post, $errors, $content, $recover ); ?>
 		<?php endif; ?>
 		<div class="arn-newsroom-field"><label for="arn-news-reason-<?php echo esc_attr( $operation ); ?>">Justificação</label><input id="arn-news-reason-<?php echo esc_attr( $operation ); ?>" name="reason" maxlength="500" required value="<?php echo esc_attr( $value( 'reason', '' ) ); ?>" <?php self::described( $errors, 'reason', $operation ); ?>><small id="arn-news-reason-help-<?php echo esc_attr( $operation ); ?>">Uma linha breve para a auditoria.</small><?php self::error( $errors, 'reason', $operation ); ?></div>
 		<button class="button button-primary" type="submit">
@@ -400,9 +405,9 @@ else :
 		<?php
 	}
 
-	private static function mediaFields( string $operation, array $post, array $errors, ?Content $content ): void {
+	private static function mediaFields( string $operation, array $post, array $errors, ?Content $content, bool $recovered ): void {
 		$featured = $post['featured'] ?? null;
-		if ( null === $featured && null !== $content?->featured ) {
+		if ( ! $recovered && null === $featured && null !== $content?->featured ) {
 			$featured = array(
 				'id'          => $content->featured->blob->id,
 				'description' => $content->featured->description,
@@ -421,8 +426,8 @@ endif;
 			'gallery'     => array( 'Galeria', 8, $content?->gallery ?? array() ),
 			'attachments' => array( 'Anexos', 5, $content?->attachments ?? array() ),
 		) as $key => [$label, $limit, $assets] ) :
-			$rows = $post[ $key ] ?? null;
-			if ( null === $rows ) {
+			$rows = $post[ $key ] ?? array();
+			if ( ! $recovered ) {
 				$rows = array_map(
 					static fn( Asset $asset ): array => array(
 						'id'          => $asset->blob->id,
