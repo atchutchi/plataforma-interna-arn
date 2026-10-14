@@ -26,6 +26,15 @@ $selected     = $portal['selected'] ?? null;
 $categories   = $portal['categories'] ?? array();
 $available    = ! empty( $portal['available'] );
 $current      = get_permalink();
+$collection   = add_query_arg(
+	array(
+		'q'        => $portal['query'],
+		'category' => $portal['category'],
+		'year'     => $portal['year'],
+		'paged'    => $portal['page'],
+	),
+	$current
+);
 $intro        = array(
 	'news'        => 'Circulares, notas internas, despachos e comunicação sindical. Consulta as comunicações por assunto, categoria ou ano.',
 	'documents'   => 'Encontra os documentos do arquivo e consulta a sua fonte original.',
@@ -40,7 +49,7 @@ $intro        = array(
 			<?php
 			if ( $selected ) :
 				?>
-				<a href="<?php echo esc_url( $current ); ?>"><?php echo esc_html( $portal_title ); ?></a><span aria-hidden="true">/</span><span aria-current="page">Detalhe</span>
+				<a href="<?php echo esc_url( $collection ); ?>"><?php echo esc_html( $portal_title ); ?></a><span aria-hidden="true">/</span><span aria-current="page">Detalhe</span>
 				<?php
 			else :
 				?>
@@ -55,7 +64,7 @@ $intro        = array(
 			array(
 				'item'       => $selected,
 				'categories' => $categories,
-				'current'    => $current,
+				'current'    => $collection,
 			)
 		);
 		?>
