@@ -1,4 +1,4 @@
-# Próximas parcelas de F1 após a PR 15
+# Próximas parcelas locais de F1
 
 14 de outubro de 2026. Leitura do backlog README15.3, dos limites de AGENTS e da implementação local. Este roteiro actualiza a orientação de trabalho, sem substituir a auditoria histórica de 13 de outubro ou validar decisões institucionais.
 
@@ -6,8 +6,8 @@
 | --- | --- | --- |
 | F1-01/02 | Ambiente portátil e Google local já ensaiados. Manter regressões. | Segundo PC, Windows/IIS/MySQL8.4, HTTPS, LAN/VPN e procedimento institucional DCSI. |
 | F1-03 | Motor, persistência auditada, estado/sessões, concessões e leitura por objecto fictício implementados. | Matriz, autoridade delegada e contratos de módulos reais em F0-02/06. |
-| F1-04 | Parcela seleccionada: notificações internas derivadas de eventos de acesso confirmados, destinatário protegido e recibos idempotentes. Consulta administrativa da auditoria já existe no laboratório. | Eventos dos módulos ainda ausentes, canais externos, falhas de entrega desses canais e validação institucional. |
-| F1-05 | Próxima preparação possível: modelo persistente de unidades fictícias e contratos de cadastro/importação, com ensaios isolados. | Organograma, nomes, relações, campos e autoridade aprovados por RH. Não importar funcionários reais. |
+| F1-04 | Parcela implementada no laboratório: notificações internas derivadas de eventos de acesso confirmados, destinatário protegido e recibos idempotentes. Consulta administrativa da auditoria já existe no laboratório. | Eventos dos módulos ainda ausentes, canais externos, falhas de entrega desses canais e validação institucional. |
+| F1-05 | Parcela local: modelo persistente auditado de unidades fictícias, gestão por cenários e contratos documentados de cadastro/importação. Evidência em unidades-locais-f1-05.md. Próximo passo: validador de importação sintética sem escrita, antes do cadastro executável. | Organograma, nomes, relações, campos e autoridade aprovados por RH. Não importar funcionários reais. |
 | F1-06 | Continuar componentes e navegação para funcionalidades locais já disponíveis, preservando tema e marca. | Navegação por competências e conteúdo dos módulos institucionais. |
 | F1-07 | Preparar contratos de directório e perfil depois do cadastro. | F1-05/06 e campos públicos autorizados. |
 | F1-08 | Preparar armazenamento privado local e ensaios de entrega autorizada quando o contrato de ficheiros estiver definido. | F0-03/06, auditoria e homologação do armazenamento/IIS. |

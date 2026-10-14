@@ -57,6 +57,8 @@ A persistência local de funções, âmbitos e estado fica em `Authorization\Sto
 
 F1-04 inicia notificações internas locais derivadas apenas dos eventos de acesso confirmados da conta destinatária. Seguir docs/notificacoes-locais-f1-04.md. A tabela separada de recibos exige instalação explícita por CLI local administradora e schema compatível. Nunca instalar por GET. Marcar como lida não altera permissões, revisão ou auditoria. Usar nonce e verificar evento, titular e revisão na transacção. Sem emails ou canais externos. O roteiro docs/proximas-fases-f1-2026-10-14.md não substitui os pré-requisitos institucionais.
 
+F1-05 tem persistência auditada de unidades fictícias separada do catálogo documental e da autorização. Seguir docs/unidades-locais-f1-05.md. A ferramenta exige ambiente local, ARN_ALLOW_LOCAL_ORGANIZATION_STORAGE booleano true e manage_options. Só cenários fechados LAB-ROOT/LAB-A/LAB-B. Instalação CLI explícita, revisão global e alteração/auditoria na mesma transacção. Não criar pessoas ou privilégios a partir das unidades. O contrato de cadastro/importação ainda não é um importador executável.
+
 Commits e push ficam na branch da tarefa. Nunca faças push directo em `main` nem uses force push. A sessão de 13 de outubro de 2026 autoriza integração de PRs após revisão do diff e CI verde no SHA exacto. Esta autorização não inclui deploy.
 
 Panthera-Onca .205 está fora de arn.local e deve permanecer assim. Windows Server 2019 Standard, 1809, build 17763, 64 bits. Hyper-V instalado e WSL ausente. Produção nativa em IIS/PHP 8.4 x64 NTS/MySQL 8.4 LTS. Não instalar WSL ou Docker Desktop no servidor. Não depender de GPO, Kerberos, LDAP, conta de computador ou autenticação AD. DNS institucional apenas se aprovado pela DCSI.
