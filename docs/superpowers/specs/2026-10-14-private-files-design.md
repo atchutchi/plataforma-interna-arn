@@ -18,11 +18,15 @@ FileRecord readonly: blob, object_type, object_id, version, variant, actor_id, c
 
 PrivateFileDelivery::__construct(PrivateBlobStore, Closure find_record, Closure authorize), open(mixed id): ?array. Sucesso devolve record e handle verificado. Recusa, ausência, corrupção e excepção devolvem null sem caminho nem causa para o browser. O resolvedor é código do servidor, nunca inputs de query.
 
+O registo disponibiliza também findForObject(string object_type, int object_id, int version, string variant): ?FileRecord. É uma consulta singular parametrizada para o objecto conhecido pelo servidor. Evita duplicar um manifesto com IDs e não cria um endpoint de listagem.
+
 ## Adaptador local
 
 Uma ferramenta Ferramentas/Ficheiros privados fictícios fica disponível apenas com ambiente local e ARN_ALLOW_LOCAL_PRIVATE_FILES booleano true. O download usa apenas arn_private_file=id, sem caminhos, MIME, versão, audiência ou âmbito fornecidos pelo browser. O handler corre antes do redireccionamento do portal e devolve 404 vazio para ausência e recusa. Sucesso usa attachment, application/pdf ou image/png/jpeg verificado, nosniff, no-store e Content-Length correcto. HEAD e métodos não GET não entregam bytes. Sem ranges ou cache nesta entrega.
 
 A conta Ana Teste continua com as permissões existentes. CurrentLocalAccount valida snapshot e sessão. Um catálogo fechado do servidor resolve três objectos sintéticos próprios/unidade A/unidade B, com três variantes e uma versão antiga por objecto. O download aplica AuthorizationPolicy a ReadContent, com Scope e audiência calculados no servidor. Não há excepção para lab_admin. O administrador instala e prepara as fixtures por CLI. Não cria ou altera concessões, contas ou estados durante pedidos HTTP. Os ficheiros sintéticos e respectivo registo são separados dos anexos reais e o directório fica fora de ABSPATH e do Git. Só os objectos permitidos entram na lista ou nas contagens.
+
+O instalador local é uma instância: LocalFileInstaller::__construct(?string prefix = null, ?string root = null), install(int owner_id): array. As dependências alternativas só são chamadas por CLI para ensaios exclusivos. A composição HTTP não as aceita do browser. O instalador positivo é ensaiado no laboratório local. O wp-env de CI conserva development e verifica a recusa do gate real nesse contexto, exercendo o núcleo e a entrega com dependências internas exclusivas.
 
 ## Evidência de aceitação
 
