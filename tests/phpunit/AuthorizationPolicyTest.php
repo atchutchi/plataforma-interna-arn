@@ -27,7 +27,7 @@ final class AuthorizationPolicyTest extends TestCase {
 		$catalogue = array(
 			'Employee'               => array( 'ReadContent', 'ReadDirectory', 'UpdateOwnProfile', 'ReadOwnTask', 'UpdateOwnTask', 'CreateNewsDraft', 'SubmitNews' ),
 			'UnitManager'            => array( 'ReadDirectory', 'AssignUnitTask', 'ReadUnitTask', 'PublishTeamNotice' ),
-			'HumanResources'         => array( 'ReadHrRecord', 'WriteHrRecord' ),
+			'HumanResources'         => array( 'ReadHrRecord', 'WriteHrRecord', 'ManageDocuments' ),
 			'Editorial'              => array( 'ReviewNews', 'ApproveNews', 'PublishNews' ),
 			'AccessAdministrator'    => array( 'ManageAccount', 'ManageGrants' ),
 			'TechnicalAdministrator' => array(),

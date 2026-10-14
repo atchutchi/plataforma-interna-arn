@@ -69,7 +69,7 @@ final class AuthorizationPolicy {
 		$actions = match ( $role ) {
 			Role::Employee => array( Action::ReadContent, Action::ReadDirectory, Action::UpdateOwnProfile, Action::ReadOwnTask, Action::UpdateOwnTask, Action::CreateNewsDraft, Action::SubmitNews ),
 			Role::UnitManager => array( Action::ReadDirectory, Action::AssignUnitTask, Action::ReadUnitTask, Action::PublishTeamNotice ),
-			Role::HumanResources => array( Action::ReadHrRecord, Action::WriteHrRecord ),
+			Role::HumanResources => array( Action::ReadHrRecord, Action::WriteHrRecord, Action::ManageDocuments ),
 			Role::Editorial => array( Action::ReviewNews, Action::ApproveNews, Action::PublishNews ),
 			Role::AccessAdministrator => array( Action::ManageAccount, Action::ManageGrants ),
 			Role::TechnicalAdministrator, Role::Leadership, Role::Support => array(),
