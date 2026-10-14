@@ -32,6 +32,8 @@ Exigir local e as flags booleanas ARN_ALLOW_LOCAL_NEWSROOM, ARN_ALLOW_LOCAL_PRIV
 
 MediaInput selecciona um upload temporário do servidor OU um ID conservado. Conservar só permite um asset da versão mais recente da própria notícia e do mesmo kind, com autorização antes da duplicação. Criar não aceita IDs conservados. Cada ficheiro tem limite 1 MiB, fileinfo/assinatura e política existente. Imagens exigem dimensões reais positivas, máximo 4096 por lado e 16000000 píxeis, verificadas no binário copiado. Não se acrescenta GD ou outra dependência. Esta admissão não é antimalware.
 
+O formulário admite até 14 ficheiros no mesmo envio. Antes da activação, o controlador verifica no PHP HTTP isolado post_max_size de pelo menos 20M, upload_max_filesize de pelo menos 1M e max_file_uploads de pelo menos 14. O limite individual da aplicação mantém-se em 1 MiB. A interface não promete recuperar texto quando o PHP rejeita o corpo completo antes de o entregar à aplicação. Este requisito é local e não altera configuração de produção.
+
 A rota GET arn_news_media usa ID opaco, autorização artigo/versão e integridade do handle. Imagens featured/gallery são inline com MIME verificado, CSP restritiva e nosniff. Anexos são attachment. No-store/private e comprimento verificado em ambos. Outros métodos, IDs malformados, ausência e recusa dão 404 vazio. Nenhum original vai para uploads, URL estática, REST ou endpoint documental anterior.
 
 ## Interface
