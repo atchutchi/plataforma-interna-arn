@@ -142,7 +142,11 @@ final class Portal {
 			);
 		}
 		if ( 'news' === $view ) {
-			$model = NewsPublishedPortal::model( $input );
+			$filters = NewsPublishedPortal::filters( $input );
+			$model   = NewsPublishedPortal::model( $input );
+			if ( null === $filters ) {
+				return $model;
+			}
 			if ( self::allowed() ) {
 				$model['review'] = self::reviewModel( 'news', $input );
 			}
