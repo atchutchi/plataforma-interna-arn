@@ -201,4 +201,54 @@ final class NewsRuntimeTest extends TestCase {
 		self::assertNull( $outside->findPublished( 7 ) );
 		self::assertSame( array(), $outside->published() );
 	}
+
+	/** A published reader has content access but no editorial audit history. */
+	public function testPublishedReaderCannotReadEditorialHistoryWithoutReviewQueue(): void {
+		$asset      = new Asset( 'featured', new BlobDescriptor( str_repeat( 'a', 32 ), str_repeat( 'b', 64 ), 1, 'image/png' ), 'Imagem' );
+		$version    = new Version( 1, new Content( 'Publicado', 'Corpo', 'circular', $asset, array(), array(), Audience::all() ), 11, 10 );
+		$article    = Article::create( 7, 11, Scope::queues( array( 'editorial-ficticia' ) ), $version )->submit( 1, 11 )->approve( 2, 1, 12, 12, 'Aprovado' );
+		$repository = new class( $article ) {
+			public function __construct( private Article $article ) {}
+			public function find( int $id ): ?Article {
+				return 7 === $id ? $this->article : null; }
+			public function history( int $id ): array {
+				return array(
+					(object) array(
+						'revision'    => 2,
+						'version'     => 1,
+						'event'       => 'submitted',
+						'actor_id'    => 11,
+						'occurred_at' => 11,
+						'reason'      => 'Envio',
+					),
+				); }
+		};
+		$room       = static function ( int $id, Role $role, Scope $scope ) use ( $repository ): LocalNewsroom {
+			$snapshot = new AuthorizationSnapshot( $id, AccountState::Active, 4, array( new StoredGrant( 1, new Grant( $id, $role, $scope, 0, null ) ) ) );
+			$session  = array(
+				'arn_authz_local'    => true,
+				'arn_authz_user_id'  => $id,
+				'arn_authz_revision' => 4,
+			);
+			$actor    = new CurrentNewsActor(
+				static fn() => new class( $snapshot ) {
+					public function __construct( private AuthorizationSnapshot $snapshot ) {}
+					public function find( int $requested ): ?AuthorizationSnapshot {
+				return $requested === $this->snapshot->user_id ? $this->snapshot : null; }
+				},
+				static fn(): int => $id,
+				static fn(): array => $session,
+				static fn(): array => array(),
+				static fn(): array => array( $id => array( 'LAB-A' ) )
+			);
+			return new LocalNewsroom( $actor, static fn(): array => array( $repository, null ), null, static fn(): bool => true );
+		};
+		$reader     = $room( 14, Role::Employee, Scope::own() );
+		self::assertSame( 1, $reader->findPublished( 7 )?->published_version );
+		self::assertNull( $reader->historyVisible( 7 ) );
+		$author = $room( 11, Role::Employee, Scope::own() );
+		self::assertCount( 1, $author->historyVisible( 7 ) );
+		$editor = $room( 12, Role::Editorial, Scope::queues( array( 'editorial-ficticia' ) ) );
+		self::assertCount( 1, $editor->historyVisible( 7 ) );
+	}
 }

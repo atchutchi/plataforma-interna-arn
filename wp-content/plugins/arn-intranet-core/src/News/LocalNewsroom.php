@@ -173,7 +173,10 @@ final class LocalNewsroom {
 			if ( null === $article ) {
 				return null;
 			}
-			$own    = $article->author_id === $actor[1];
+			$own = $article->author_id === $actor[1];
+			if ( ! $own && ! NewsPolicy::canReviewScope( $article->review_scope, $actor[0], $actor[2], time() ) ) {
+				return null;
+			}
 			$number = $own ? count( $article->versions ) : $article->submitted_version;
 			return null !== $number && NewsPolicy::canRead( $article, $number, $actor[0], $actor[2], time() )
 				? NewsroomProjection::history( $repository->history( $id ), $article, $own ) : null;
