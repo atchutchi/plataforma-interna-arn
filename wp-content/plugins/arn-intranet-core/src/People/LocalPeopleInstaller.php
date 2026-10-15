@@ -58,11 +58,6 @@ final class LocalPeopleInstaller {
 		if ( false === $root || false === $project || is_link( $requested_root ) || ! LocalNewsInstaller::allowedLocation( $root, $project ) ) {
 			throw new RuntimeException( self::ERROR );
 		}
-		try {
-			LocalPrivateFiles::store( $root );
-		} catch ( Throwable ) {
-			throw new RuntimeException( self::ERROR );
-		}
 		$accounts = $this->accounts();
 		$present  = array();
 		foreach ( $accounts as $label => [$login, $email, $file] ) {
@@ -76,6 +71,13 @@ final class LocalPeopleInstaller {
 		$all  = ! in_array( false, $present, true );
 		$none = ! in_array( true, $present, true );
 		if ( ! $all && ! $none ) {
+			throw new RuntimeException( self::ERROR );
+		}
+		$pages          = new PeoplePages( $this->exclusive_prefix );
+		$existing_pages = $pages->preflight( $all );
+		try {
+			LocalPrivateFiles::store( $root );
+		} catch ( Throwable ) {
 			throw new RuntimeException( self::ERROR );
 		}
 		global $wpdb;
@@ -118,7 +120,9 @@ final class LocalPeopleInstaller {
 		}
 		$this->assertUnits( $unit_snapshot );
 		if ( $all ) {
-			return $this->verifyExisting( $accounts, $auth_repository, new WpdbPeopleRepository( $db, new WpdbPeopleAuthority( $db ) ) );
+			$result          = $this->verifyExisting( $accounts, $auth_repository, new WpdbPeopleRepository( $db, new WpdbPeopleAuthority( $db ) ) );
+			$result['pages'] = $existing_pages;
+			return $result;
 		}
 		$people_schema->install();
 		$service = new AuthorizationStorageService( $auth_repository, new LocalAuthorizationStorageAuthority() );
@@ -144,6 +148,7 @@ final class LocalPeopleInstaller {
 			$result['user_ids'][ $label ] = $user->ID;
 			$result['created'][ $label ]  = true;
 		}
+		$result['pages'] = $pages->install();
 		return $result;
 	}
 

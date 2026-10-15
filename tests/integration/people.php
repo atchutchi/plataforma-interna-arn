@@ -20,6 +20,7 @@ use Arn\Intranet\People\LocalPeopleDirectory;
 use Arn\Intranet\People\LocalPeopleInstaller;
 use Arn\Intranet\People\LocalPeopleRoster;
 use Arn\Intranet\People\PeopleQuery;
+use Arn\Intranet\People\PeoplePages;
 use Arn\Intranet\People\SelfService;
 use Arn\Intranet\People\WpdbPeopleAuthority;
 use Arn\Intranet\People\WpdbPeopleRepository;
@@ -32,8 +33,16 @@ $root   = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'arn_people_private_' . bin
 if ( ! mkdir( $root, 0700 ) ) {
 	throw new RuntimeException( 'Raiz privada indisponível.' );
 }
-$logins  = LocalPeopleRoster::logins( $prefix );
-$owned   = array();
+$logins       = LocalPeopleRoster::logins( $prefix );
+$owned        = array();
+$owned_pages  = array();
+$capture_page = static function ( int $id ) use ( &$owned_pages, $prefix ): void {
+	$post = get_post( $id );
+	if ( $post instanceof WP_Post && 'page' === $post->post_type && str_starts_with( $post->post_name, rtrim( $prefix, '_' ) . '-' ) ) {
+		$owned_pages[ $id ] = $id;
+	}
+};
+add_action( 'save_post_page', $capture_page, PHP_INT_MIN, 1 );
 $capture = static function ( int $id ) use ( &$owned, $logins ): void {
 	$user = get_userdata( $id );
 	if ( $user instanceof WP_User && in_array( $user->user_login, $logins, true ) && $user->user_email === $user->user_login . '@example.invalid' ) {
@@ -44,17 +53,18 @@ add_action( 'user_register', $capture, PHP_INT_MIN, 1 );
 $db = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
 $db->set_prefix( $prefix );
 $db->suppress_errors( true );
-$other   = null;
-$failure = null;
-$workers = array();
-$checks  = 0;
-$assert  = static function ( bool $value, string $name ) use ( &$checks ): void {
+$initial_post_count = (int) $GLOBALS['wpdb']->get_var( 'SELECT COUNT(*) FROM ' . $GLOBALS['wpdb']->posts );
+$other              = null;
+$failure            = null;
+$workers            = array();
+$checks             = 0;
+$assert             = static function ( bool $value, string $name ) use ( &$checks ): void {
 	if ( ! $value ) {
 		throw new RuntimeException( 'Falhou People: ' . esc_html( $name ) );
 	}
 	++$checks;
 };
-$deny    = static function ( callable $operation ) use ( $assert ): void {
+$deny               = static function ( callable $operation ) use ( $assert ): void {
 	try {
 		$operation();
 	} catch ( Throwable ) {
@@ -65,10 +75,10 @@ $deny    = static function ( callable $operation ) use ( $assert ): void {
 };
 try {
 	if ( 'development' === wp_get_environment_type() ) {
-		$before = array( (int) $GLOBALS['wpdb']->get_var( 'SELECT COUNT(*) FROM ' . $GLOBALS['wpdb']->users ), (int) $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME LIKE %s', $db->esc_like( $prefix ) . '%' ) ) );
+		$before = array( (int) $GLOBALS['wpdb']->get_var( 'SELECT COUNT(*) FROM ' . $GLOBALS['wpdb']->users ), (int) $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME LIKE %s', $db->esc_like( $prefix ) . '%' ) ), (int) $GLOBALS['wpdb']->get_var( 'SELECT COUNT(*) FROM ' . $GLOBALS['wpdb']->posts ), (int) $GLOBALS['wpdb']->get_var( 'SELECT COUNT(*) FROM ' . $GLOBALS['wpdb']->options ) );
 		$deny( static fn() => ( new LocalPeopleInstaller( $prefix, $root ) )->install() );
-		$after = array( (int) $GLOBALS['wpdb']->get_var( 'SELECT COUNT(*) FROM ' . $GLOBALS['wpdb']->users ), (int) $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME LIKE %s', $db->esc_like( $prefix ) . '%' ) ) );
-		$assert( $before === $after && array() === $owned, 'development negativo sem efeitos' );
+		$after = array( (int) $GLOBALS['wpdb']->get_var( 'SELECT COUNT(*) FROM ' . $GLOBALS['wpdb']->users ), (int) $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME LIKE %s', $db->esc_like( $prefix ) . '%' ) ), (int) $GLOBALS['wpdb']->get_var( 'SELECT COUNT(*) FROM ' . $GLOBALS['wpdb']->posts ), (int) $GLOBALS['wpdb']->get_var( 'SELECT COUNT(*) FROM ' . $GLOBALS['wpdb']->options ) );
+		$assert( $before === $after && array() === $owned && array() === $owned_pages, 'development negativo sem efeitos' );
 		echo esc_html( 'People SQL: development negativo, ' . $checks . ' verificações.' . PHP_EOL );
 		return;
 	}
@@ -79,9 +89,11 @@ try {
 		$assert( true === constant( $flag ), 'flag local' );
 	}
 	$installed = ( new LocalPeopleInstaller( $prefix, $root ) )->install();
-	$ids       = $installed['user_ids'];
-	$auth      = new WpdbAuthorizationRepository( $db );
-	$units     = new WpdbLocalUnitRepository( $db );
+	foreach ( $installed['pages'] as $page_id ) {
+		$owned_pages[ $page_id ] = $page_id; }
+	$ids   = $installed['user_ids'];
+	$auth  = new WpdbAuthorizationRepository( $db );
+	$units = new WpdbLocalUnitRepository( $db );
 	$assert( 3 === count( $ids ), 'três perfis próprios' );
 	$deny( static fn() => $units->snapshotInTransaction() );
 	$original_b      = array_column( $units->snapshot()->units, null, 'id' )['LAB-B'];
@@ -288,6 +300,18 @@ try {
 	$assert( 1 === $directory->contactList( $query )['total'] && 1 === $directory->team( $query )['total'], 'dois alvos suspensos saem antes da contagem' );
 	echo esc_html( 'People SQL: local exclusivo, ' . $checks . ' verificações.' . PHP_EOL );
 } finally {
+	remove_action( 'save_post_page', $capture_page, PHP_INT_MIN );
+	foreach ( $owned_pages as $page_id ) {
+		$owned_post = get_post( $page_id );
+		if ( $owned_post instanceof WP_Post && 'page' === $owned_post->post_type && str_starts_with( $owned_post->post_name, rtrim( $prefix, '_' ) . '-' ) ) {
+			wp_delete_post( $page_id, true );
+		}
+	}
+	foreach ( array( 'directory', 'profile', 'team' ) as $view ) {
+		if ( get_page_by_path( ( new PeoplePages( $prefix ) )->slug( $view ), OBJECT, 'page' ) instanceof WP_Post ) {
+			throw new RuntimeException( 'Limpeza People de páginas incompleta.' );
+		}
+	}
 	if ( null !== $failure ) {
 		remove_filter( 'query', $failure );
 	}
@@ -345,6 +369,9 @@ try {
 		if ( false !== get_user_by( 'login', $login ) ) {
 			throw new RuntimeException( 'Limpeza People de contas incompleta.' );
 		}
+	}
+	if ( $initial_post_count !== (int) $GLOBALS['wpdb']->get_var( 'SELECT COUNT(*) FROM ' . $GLOBALS['wpdb']->posts ) ) {
+		throw new RuntimeException( 'Limpeza People de posts incompleta.' );
 	}
 	$db->close();
 }

@@ -1,0 +1,17 @@
+# Directório e perfil local F1-07
+
+15 de outubro de 2026. Esta parcela implementa três vistas locais para o elenco fictício fechado de F1-07. A activação normal, a aceitação no browser e a decisão institucional continuam pendentes. Não usar estes perfis como dados de funcionários reais.
+
+O directório apresenta nome, cargo, unidade, email e contactos profissionais. A ficha individual abre apenas em Funcionários com um identificador decimal canónico. Meu perfil resolve sempre a conta autenticada no servidor. O formulário altera apenas telefone, local de trabalho e apresentação. A minha equipa exige a concessão UnitManager para a unidade pedida. Nome, email institucional, cargo e unidade são dados de leitura. As iniciais substituem fotografias nesta parcela.
+
+As páginas nativas têm os slugs `funcionarios`, `meu-perfil` e `minha-equipa`. Cada uma guarda apenas um bloco dinâmico `arn/people-view` com a vista correspondente. O instalador explícito por WP-CLI administradora verifica os três slugs e conteúdos antes de criar recursos. Se existir uma página incompatível, recusa sem a substituir. Uma repetição exige as três páginas exactas e não grava posts, opções ou revisões de perfil. A criação normal depende dos quatro gates locais exactos, de autorização e unidades já existentes e de LAB-A/B activas. O instalador não repara B nem instala por GET.
+
+Antes de qualquer ensaio normal, o controlador deve conservar o baseline indicado no plano F1-07, reactivar LAB-B pelo serviço auditado e activar explicitamente ARN_ALLOW_LOCAL_PEOPLE. Não executar o instalador normal durante revisão de código. Para ensaio isolado, `tests/integration/people.php` e `tests/integration/people-installer.php` criam prefixos `arn_peo_` aleatórios exclusivos, contas e páginas com slugs próprios. O `finally` apaga apenas esses recursos e verifica a limpeza.
+
+O controlador responde com 404 vazio e `Cache-Control: private, no-store` perante método, página, actor, filtro, ficha ou autorização inválidos antes do redireccionamento do portal privado. Valida filtros antes da fonte People. POST em Meu perfil exige operação fechada, nonce da conta, revisão CAS e exactamente três campos editáveis. Os campos são desslashados uma vez. CRLF da apresentação passa uma vez a LF. CR isolado é recusado. O sucesso usa 303 para a página do próprio perfil. Erros recuperáveis mostram apenas os três valores próprios escapados. O tema recebe um modelo de vista, sem concessões, hashes, sessão ou auditoria interna. O histórico próprio contém somente data e nomes de campos alterados.
+
+A navegação acrescenta ligações nativas no filtro `block_core_navigation_render_inner_blocks` quando o actor está autorizado. Os cinco destinos guardados permanecem. O filtro não altera menus persistidos e não substitui as guardas HTTP. Os blocos People devolvem vazio em REST, administração e fora da página singular autorizada. O conteúdo guardado na página é só o marcador do bloco. A API de páginas não transporta contactos ou o formulário.
+
+As cores e fontes seguem DESIGN.md e PRODUCT.md. O tema usa Manrope e Source Sans 3 locais, azul #0b3a5b e verde #1f6b4a. A vista usa linhas, controlos de pelo menos 44 px, texto de formulário de 16 px e foco visível de 3 px. Não há dependências novas.
+
+F1-07 continua em curso até a revisão transversal, activação normal controlada, QA Playwright com as três contas, verificação de segurança e decisão institucional. Os ensaios locais não demonstram homologação IIS, MySQL 8.4 ou autorização para publicação.
