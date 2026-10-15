@@ -210,7 +210,7 @@ final class LocalNewsroom {
 	}
 
 	private function validateText( DraftInput $input ): void {
-		new Content( $input->title, $input->body, $input->category, null, array(), array() );
+		new Content( $input->title, $input->body, $input->category, null, array(), array(), $input->audience );
 	}
 
 	private function hasExisting( DraftInput $input ): bool {
@@ -257,7 +257,7 @@ final class LocalNewsroom {
 		$featured    = null === $input->featured ? null : $make( 'featured', $input->featured );
 		$gallery     = array_map( static fn( MediaInput $media ): Asset => $make( 'gallery', $media ), $input->gallery );
 		$attachments = array_map( static fn( MediaInput $media ): Asset => $make( 'attachment', $media ), $input->attachments );
-		return new Content( $input->title, $input->body, $input->category, $featured, $gallery, $attachments );
+		return new Content( $input->title, $input->body, $input->category, $featured, $gallery, $attachments, $input->audience );
 	}
 
 	/** Inspect the copied bytes, never browser MIME or name. */

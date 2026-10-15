@@ -99,5 +99,6 @@ jobs:
       - run: npm run env:check:tests
       - run: npm run composer:install
       - run: npm run test:news:integration
+      - run: npm run test:news-editorial:integration
       - if: always()
         run: npm run env:stop:tests

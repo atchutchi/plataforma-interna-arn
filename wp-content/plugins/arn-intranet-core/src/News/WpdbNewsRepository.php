@@ -9,7 +9,6 @@ namespace Arn\Intranet\News;
 
 use Arn\Intranet\Authorization\Scope;
 use Arn\Intranet\Authorization\Storage\AuthorizationSchema;
-use Arn\Intranet\Documents\PrivateFiles\BlobDescriptor;
 use Arn\Intranet\Documents\PrivateFiles\FileRecord;
 use Arn\Intranet\Documents\PrivateFiles\FileSchema;
 use Arn\Intranet\Documents\PrivateFiles\WpdbFileRegistry;
@@ -50,10 +49,10 @@ final class WpdbNewsRepository {
 				$now = gmdate( 'Y-m-d H:i:s', $initial->created_at );
 				$this->execute( $this->database->prepare( "INSERT INTO %i (post_author,post_date,post_date_gmt,post_content,post_title,post_status,post_type,post_name,post_modified,post_modified_gmt) VALUES (%d,%s,%s,'','Notícia privada','private','arn_noticia','',%s,%s)", $this->schema->table( 'posts' ), $author_id, $now, $now, $now, $now ), 1 );
 				$id      = (int) $this->database->insert_id;
-				$article = Article::create( $id, $author_id, $review_scope, $initial );
+				$article = Article::create( $id, $author_id, $review_scope, $initial, $reason );
 				$this->execute( $this->database->prepare( 'INSERT INTO %i (id,author_id,review_queue,revision,submitted_version,submitted_at,created_at) VALUES (%d,%d,%s,1,NULL,NULL,%d)', $this->schema->table( 'news' ), $id, $author_id, $review_scope->targets[0], $initial->created_at ), 1 );
 				$this->insertVersion( $id, $initial );
-				$this->audit( $id, 1, 'created', $author_id, $reason, $initial->created_at );
+				$this->audit( $id, 1, 'created', $author_id, $reason, $initial->created_at, 1 );
 				return $article;
 			}
 		);
@@ -69,10 +68,10 @@ final class WpdbNewsRepository {
 						throw new RuntimeException( self::ERROR );
 				}
 				$before = $this->lockedArticle( $id, $preflight );
-				$after  = $before->revise( $next, $expected );
+				$after  = $before->revise( $next, $expected, $reason );
 				$this->insertVersion( $id, $next );
-				$this->execute( $this->database->prepare( 'UPDATE %i SET revision=%d WHERE id=%d AND revision=%d AND submitted_version IS NULL', $this->schema->table( 'news' ), $after->revision, $id, $expected ), 1 );
-				$this->audit( $id, $after->revision, 'revised', $decision['actor_id'], $reason, $next->created_at );
+				$this->execute( $this->database->prepare( 'UPDATE %i SET revision=%d WHERE id=%d AND revision=%d', $this->schema->table( 'news' ), $after->revision, $id, $expected ), 1 );
+				$this->audit( $id, $after->revision, 'revised', $decision['actor_id'], $reason, $next->created_at, $next->number );
 				return $after;
 			}
 		);
@@ -86,18 +85,50 @@ final class WpdbNewsRepository {
 				$decision = $this->authority->lockAndAssert( $preflight['author_id'], $preflight['scope'], 'submit' );
 				$before   = $this->lockedArticle( $id, $preflight );
 				$now      = time();
-				$after    = $before->submit( $expected, $now );
+				$after    = $before->submit( $expected, $now, $reason );
 				if ( array() === $decision['reviewer_ids'] ) {
 						throw new RuntimeException( self::ERROR );
 				}
-				$this->execute( $this->database->prepare( 'UPDATE %i SET revision=%d,submitted_version=%d,submitted_at=%d WHERE id=%d AND revision=%d AND submitted_version IS NULL', $this->schema->table( 'news' ), $after->revision, $after->submitted_version, $now, $id, $expected ), 1 );
-				$this->audit( $id, $after->revision, 'submitted', $decision['actor_id'], $reason, $now );
+				$this->execute( $this->database->prepare( 'UPDATE %i SET revision=%d,submitted_version=%d,submitted_at=%d WHERE id=%d AND revision=%d', $this->schema->table( 'news' ), $after->revision, $after->submitted_version, $now, $id, $expected ), 1 );
+				$this->audit( $id, $after->revision, 'submitted', $decision['actor_id'], $reason, $now, $after->submitted_version );
 				foreach ( $decision['reviewer_ids'] as $recipient_id ) {
-					$this->execute( $this->database->prepare( 'INSERT INTO %i (article_id,version,recipient_id,created_at,read_at) VALUES (%d,%d,%d,%d,NULL)', $this->schema->table( 'notifications' ), $id, $after->submitted_version, $recipient_id, $now ), 1 );
+					$this->notice( $after, $after->submitted_version, $recipient_id, 'submitted', $now );
 				}
 				return $after;
 			}
 		);
+	}
+
+	public function decide( int $id, string $operation, int $version, int $expected, string $reason ): Article {
+		$this->reason( $reason );
+		if ( ! $this->authority instanceof EditorialAuthority || ! in_array( $operation, array( 'approve', 'reject', 'return', 'archive' ), true ) ) {
+			throw new RuntimeException( self::ERROR );
+		}
+		$preflight = $this->preflight( $id );
+		return $this->transaction(
+			function () use ( $id, $operation, $version, $expected, $reason, $preflight ): Article {
+				$locked = $this->authority->lockAndAssert( $preflight['author_id'], $preflight['scope'], $operation );
+				$before = $this->lockedArticle( $id, $preflight );
+				if ( $before->revision !== $expected ) {
+					throw new RuntimeException( self::ERROR );
+				}
+				$decision = $this->authority->authorizeDecision( $before, $version, $operation, $locked );
+				$now      = time();
+				$method   = 'return' === $operation ? 'returnForEditing' : $operation;
+				$after    = $before->$method( $expected, $version, $decision['actor_id'], $now, $reason );
+				$this->execute( $this->database->prepare( 'UPDATE %i SET revision=%d WHERE id=%d AND revision=%d', $this->schema->table( 'news' ), $after->revision, $id, $expected ), 1 );
+				$event = $after->transitions[ count( $after->transitions ) - 1 ];
+				$this->audit( $id, $after->revision, $event->event, $decision['actor_id'], $reason, $now, $version );
+				foreach ( $decision['recipient_kinds'] as $recipient_id => $kind ) {
+					$this->notice( $after, $version, $recipient_id, $kind, $now );
+				}
+				return $after;
+			}
+		);
+	}
+
+	private function notice( Article $article, int $version, int $recipient_id, string $kind, int $at ): void {
+		$this->execute( $this->database->prepare( 'INSERT INTO %i (article_id,version,revision,kind,recipient_id,created_at,read_at) VALUES (%d,%d,%d,%s,%d,%d,NULL)', $this->schema->table( 'notifications' ), $article->id, $version, $article->revision, $kind, $recipient_id, $at ), 1 );
 	}
 
 	public function find( int $id ): ?Article {
@@ -151,15 +182,18 @@ final class WpdbNewsRepository {
 	/** Envelope only; consumers still apply current actor and policy. */
 	public function notificationRows( int $recipient_id ): array {
 		$this->schema->assertReady();
-		return $recipient_id < 1 ? array() : $this->rows( $this->database->prepare( 'SELECT id,article_id,version,recipient_id,created_at,read_at FROM %i WHERE recipient_id=%d ORDER BY id DESC', $this->schema->table( 'notifications' ), $recipient_id ) );
+		return $recipient_id < 1 ? array() : $this->rows( $this->database->prepare( 'SELECT id,article_id,version,revision,kind,recipient_id,created_at,read_at FROM %i WHERE recipient_id=%d ORDER BY id DESC', $this->schema->table( 'notifications' ), $recipient_id ) );
 	}
 
 	public function markRead( int $notification_id, int $at ): void {
 		if ( $notification_id < 1 || $at < 0 ) {
 			throw new RuntimeException( self::ERROR );
 		}
+		if ( ! $this->authority instanceof EditorialAuthority ) {
+			throw new RuntimeException( self::ERROR );
+		}
 		$this->schema->assertReady();
-		$notice = $this->one( $this->database->prepare( 'SELECT article_id,version,recipient_id FROM %i WHERE id=%d', $this->schema->table( 'notifications' ), $notification_id ) );
+		$notice = $this->one( $this->database->prepare( 'SELECT article_id,version,revision,kind,recipient_id FROM %i WHERE id=%d', $this->schema->table( 'notifications' ), $notification_id ) );
 		if ( null === $notice ) {
 			throw new RuntimeException( self::ERROR );
 		}
@@ -172,7 +206,7 @@ final class WpdbNewsRepository {
 				}
 				$article       = $this->lockedArticle( (int) $notice->article_id, $preflight );
 				$locked_notice = $this->one( $this->database->prepare( 'SELECT * FROM %i WHERE id=%d FOR UPDATE', $this->schema->table( 'notifications' ), $notification_id ) );
-				if ( null === $locked_notice || ! $article->pending() || (int) $locked_notice->article_id !== $article->id || (int) $locked_notice->recipient_id !== $decision['actor_id'] || (int) $locked_notice->version !== $article->submitted_version || (int) $notice->version !== (int) $locked_notice->version ) {
+				if ( null === $locked_notice || (int) $locked_notice->article_id !== $article->id || (int) $notice->version !== (int) $locked_notice->version || (int) $notice->revision !== (int) $locked_notice->revision || $notice->kind !== $locked_notice->kind || ! $this->authority->authorizeNotice( $article, $locked_notice, $decision ) ) {
 					throw new RuntimeException( self::ERROR );
 				}
 				if ( null === $locked_notice->read_at ) {
@@ -206,67 +240,22 @@ final class WpdbNewsRepository {
 	}
 
 	private function hydrate( object $row ): Article {
-		$post = $this->one( $this->database->prepare( 'SELECT post_author,post_status,post_type,post_content,post_title FROM %i WHERE ID=%d', $this->schema->table( 'posts' ), (int) $row->id ) );
-		if ( null === $post || (int) $post->post_author !== (int) $row->author_id || 'private' !== $post->post_status || 'arn_noticia' !== $post->post_type || '' !== $post->post_content || 'Notícia privada' !== $post->post_title ) {
-			throw new RuntimeException( self::ERROR );
-		}
-		$versions    = array();
-		$asset_count = 0;
-		foreach ( $this->rows( $this->database->prepare( 'SELECT * FROM %i WHERE article_id=%d ORDER BY number', $this->schema->table( 'versions' ), (int) $row->id ) ) as $version ) {
-			$assets    = array(
-				'featured'   => null,
-				'gallery'    => array(),
-				'attachment' => array(),
-			);
-			$positions = array(
-				'featured'   => 0,
-				'gallery'    => 0,
-				'attachment' => 0,
-			);
-			foreach ( $this->rows( $this->database->prepare( 'SELECT * FROM %i WHERE article_id=%d AND version=%d ORDER BY kind,position', $this->schema->table( 'assets' ), (int) $row->id, (int) $version->number ) ) as $asset_row ) {
-				++$asset_count;
-				$kind = $asset_row->kind;
-				if ( ! array_key_exists( $kind, $positions ) || (int) $asset_row->position !== $positions[ $kind ]++ ) {
-					throw new RuntimeException( self::ERROR );
-				}
-				$this->assertFile( $asset_row );
-				$asset = $this->assetValue( $asset_row );
-				if ( 'featured' === $kind ) {
-					if ( 0 !== (int) $asset_row->position || null !== $assets['featured'] ) {
-						throw new RuntimeException( self::ERROR );
-					}
-					$assets['featured'] = $asset;
-				} else {
-					$assets[ $kind ][] = $asset;
-				}
-			}
-			$versions[] = new Version( (int) $version->number, new Content( $version->title, $version->body, $version->category, $assets['featured'], $assets['gallery'], $assets['attachment'] ), (int) $version->actor_id, (int) $version->created_at );
-		}
-		$total_assets = (int) $this->database->get_var( $this->database->prepare( 'SELECT COUNT(*) FROM %i WHERE article_id=%d', $this->schema->table( 'assets' ), (int) $row->id ) );
-		if ( '' !== $this->database->last_error || $total_assets !== $asset_count ) {
-			throw new RuntimeException( self::ERROR );
-		}
-		return new Article( (int) $row->id, (int) $row->author_id, Scope::queues( array( $row->review_queue ) ), (int) $row->revision, $versions, null === $row->submitted_version ? null : (int) $row->submitted_version, null === $row->submitted_at ? null : (int) $row->submitted_at );
+		return ( new NewsHydrator( $this->database ) )->hydrate( $row );
 	}
 
 	private function assetValue( object $row ): Asset {
-		return new Asset( $row->kind, new BlobDescriptor( $row->blob_id, $row->sha256, (int) $row->size_bytes, $row->mime ), $row->description );
+		return ( new NewsHydrator( $this->database ) )->assetValue( $row );
 	}
 
-	private function assertFile( object $asset ): void {
-		$file = $this->one( $this->database->prepare( 'SELECT * FROM %i WHERE blob_id=%s', $this->file_schema->table( 'files' ), $asset->blob_id ) );
-		if ( null === $file || 'news_asset' !== $file->object_type || (int) $file->object_id !== (int) $asset->id || '1' !== (string) $file->version || 'original' !== $file->variant || $file->sha256 !== $asset->sha256 || (int) $file->size_bytes !== (int) $asset->size_bytes || $file->mime !== $asset->mime ) {
-			throw new RuntimeException( self::ERROR );
-		}
-		$audit = $this->one( $this->database->prepare( 'SELECT event,actor_id,occurred_at FROM %i WHERE blob_id=%s', $this->file_schema->table( 'audit' ), $asset->blob_id ) );
-		if ( null === $audit || 'file_registered' !== $audit->event || (int) $audit->actor_id !== (int) $file->actor_id || (int) $audit->occurred_at !== (int) $file->created_at ) {
-			throw new RuntimeException( self::ERROR );
-		}
+	private function assertFile( object $row ): void {
+		( new NewsHydrator( $this->database ) )->assertFile( $row );
 	}
 
 	private function insertVersion( int $id, Version $version ): void {
-		$content = $version->content;
-		$this->execute( $this->database->prepare( 'INSERT INTO %i (article_id,number,title,body,category,actor_id,created_at) VALUES (%d,%d,%s,%s,%s,%d,%d)', $this->schema->table( 'versions' ), $id, $version->number, $content->title, $content->body, $content->category, $version->actor_id, $version->created_at ), 1 );
+		$content      = $version->content;
+		$json         = AudienceCodec::encode( $content->audience );
+		$audience_sql = null === $json ? 'NULL' : $this->database->prepare( '%s', $json );
+		$this->execute( $this->database->prepare( 'INSERT INTO %i (article_id,number,title,body,category,actor_id,created_at,audience_json) VALUES (%d,%d,%s,%s,%s,%d,%d,' . $audience_sql . ')', $this->schema->table( 'versions' ), $id, $version->number, $content->title, $content->body, $content->category, $version->actor_id, $version->created_at ), 1 );
 		$groups = array(
 			'featured'   => null === $content->featured ? array() : array( $content->featured ),
 			'gallery'    => $content->gallery,
@@ -282,8 +271,8 @@ final class WpdbNewsRepository {
 		}
 	}
 
-	private function audit( int $id, int $revision, string $event, int $actor, string $reason, int $at ): void {
-		$this->execute( $this->database->prepare( 'INSERT INTO %i (article_id,revision,event,actor_id,reason,occurred_at) VALUES (%d,%d,%s,%d,%s,%d)', $this->schema->table( 'audit' ), $id, $revision, $event, $actor, $reason, $at ), 1 );
+	private function audit( int $id, int $revision, string $event, int $actor, string $reason, int $at, int $version ): void {
+		$this->execute( $this->database->prepare( 'INSERT INTO %i (article_id,revision,event,actor_id,reason,occurred_at,version) VALUES (%d,%d,%s,%d,%s,%d,%d)', $this->schema->table( 'audit' ), $id, $revision, $event, $actor, $reason, $at, $version ), 1 );
 	}
 
 	private function transaction( callable $operation ): mixed {

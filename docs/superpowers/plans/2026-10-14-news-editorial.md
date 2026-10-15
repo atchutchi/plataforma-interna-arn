@@ -44,7 +44,7 @@ create/revise/submit acrescentam string reason = '' no último argumento, preser
 
 ### Task 2: Esquema 2, migração e persistência transaccional
 
-Files: alterar NewsSchema.php, WpdbNewsRepository.php e WpdbNewsAuthority.php, criar EditorialAuthority.php e componentes de migração/hidratação separados se necessário. Criar tests/integration/news-editorial.php e fixtures históricas v1, actualizar a job de notícias e package.json sem substituir ensaios anteriores. Ajustar fixtures F1-10 para novas submissões com audiência explícita.
+Files: alterar NewsSchema.php, WpdbNewsRepository.php e WpdbNewsAuthority.php, criar EditorialAuthority.php e componentes de migração/hidratação separados se necessário. Criar tests/integration/news-editorial.php e fixtures históricas v1, actualizar a job de notícias e package.json sem substituir ensaios anteriores. Ajustar fixtures F1-10 para novas submissões com audiência explícita. Antecipar apenas a passagem de DraftInput::audience a Content em LocalNewsroom::validateText/content, com teste de roundtrip, para preservar a integração existente. O restante runtime mantém-se na Task 3.
 
 Interfaces: EditorialAuthority::authorizeDecision(Article,int version,string operation,array locked):array{actor_id,recipient_kinds} e authorizeNotice(Article,object notice,array locked):bool. NewsSchema::upgrade(int actor_id,int at):array retorna from,to,articles,versions,audit_events,notifications,before_sha,after_sha. WpdbNewsRepository acrescenta decide(int id,string operation,int version,int expected,string reason):Article. Usa approve/reject/return/archive no agregado. create/revise/submit persistem transições e audiência. history e notifications incluem versão/revisão/tipo. Reads continuam internas e sem autorização automática.
 

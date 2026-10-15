@@ -19,7 +19,7 @@ use RuntimeException;
 /** Installs the six dedicated tables and rejects incompatible existing structures. */
 final class NewsSchema {
 	private const ERROR   = 'Esquema de notícias indisponível.';
-	private const VERSION = 1;
+	private const VERSION = 2;
 
 	public function __construct( private readonly IdentityWpdb $database ) {
 		if ( 1 !== preg_match( '/^[A-Za-z0-9_]{1,40}$/D', $database->prefix ) ) {
@@ -35,6 +35,7 @@ final class NewsSchema {
 			'audit' => $this->database->prefix . 'arn_news_audit',
 			'notifications' => $this->database->prefix . 'arn_news_notifications',
 			'schema' => $this->database->prefix . 'arn_news_schema',
+			'schema_history' => $this->database->prefix . 'arn_news_schema_history',
 			'posts' => $this->database->prefix . 'posts',
 			default => throw new RuntimeException( self::ERROR ),
 		};
@@ -42,17 +43,14 @@ final class NewsSchema {
 
 	/** Called only by an explicit local installer or exclusive integration test. */
 	public function install(): void {
+		if ( array() !== $this->rows( $this->database->prepare( 'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', $this->table( 'schema' ) ) ) ) {
+			$this->assertReady();
+			return;
+		}
 		$this->assertPosts();
 		( new FileSchema( $this->database ) )->assertReady();
 		( new AuthorizationSchema( $this->database ) )->validate();
-		$ddl = array(
-			'news'          => 'CREATE TABLE %i (id BIGINT UNSIGNED NOT NULL, author_id BIGINT UNSIGNED NOT NULL, review_queue VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, revision BIGINT UNSIGNED NOT NULL, submitted_version BIGINT UNSIGNED NULL, submitted_at BIGINT UNSIGNED NULL, created_at BIGINT UNSIGNED NOT NULL, PRIMARY KEY(id), KEY author_revision (author_id,revision), KEY queue_state (review_queue,submitted_version)) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin',
-			'versions'      => 'CREATE TABLE %i (article_id BIGINT UNSIGNED NOT NULL, number BIGINT UNSIGNED NOT NULL, title VARCHAR(800) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, body LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, category VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, actor_id BIGINT UNSIGNED NOT NULL, created_at BIGINT UNSIGNED NOT NULL, PRIMARY KEY(article_id,number)) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin',
-			'assets'        => 'CREATE TABLE %i (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, article_id BIGINT UNSIGNED NOT NULL, version BIGINT UNSIGNED NOT NULL, kind VARCHAR(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, position TINYINT UNSIGNED NOT NULL, blob_id CHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, sha256 CHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, size_bytes BIGINT UNSIGNED NOT NULL, mime VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, description VARCHAR(1200) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, PRIMARY KEY(id), UNIQUE KEY blob_id (blob_id), UNIQUE KEY slot (article_id,version,kind,position)) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin',
-			'audit'         => 'CREATE TABLE %i (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, article_id BIGINT UNSIGNED NOT NULL, revision BIGINT UNSIGNED NOT NULL, event VARCHAR(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, actor_id BIGINT UNSIGNED NOT NULL, reason VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, occurred_at BIGINT UNSIGNED NOT NULL, PRIMARY KEY(id), UNIQUE KEY article_revision (article_id,revision)) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin',
-			'notifications' => 'CREATE TABLE %i (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, article_id BIGINT UNSIGNED NOT NULL, version BIGINT UNSIGNED NOT NULL, recipient_id BIGINT UNSIGNED NOT NULL, created_at BIGINT UNSIGNED NOT NULL, read_at BIGINT UNSIGNED NULL, PRIMARY KEY(id), UNIQUE KEY delivery (article_id,version,recipient_id), KEY recipient_state (recipient_id,read_at,id)) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin',
-			'schema'        => 'CREATE TABLE %i (id INT UNSIGNED NOT NULL, version INT UNSIGNED NOT NULL, PRIMARY KEY(id)) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin',
-		);
+		$ddl = $this->ddl();
 		foreach ( $ddl as $suffix => $sql ) {
 			if ( array() === $this->rows( $this->database->prepare( 'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', $this->table( $suffix ) ) ) ) {
 				$this->execute( $this->database->prepare( $sql, $this->table( $suffix ) ) );
@@ -64,7 +62,39 @@ final class NewsSchema {
 		$this->assertReady();
 	}
 
+	public function upgrade( int $actor_id, int $at ): array {
+		return ( new NewsMigration( $this->database, $this ) )->upgrade( $actor_id, $at );
+	}
+
+	public function ddl(): array {
+		return array(
+			'news'           => 'CREATE TABLE %i (id BIGINT UNSIGNED NOT NULL, author_id BIGINT UNSIGNED NOT NULL, review_queue VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, revision BIGINT UNSIGNED NOT NULL, submitted_version BIGINT UNSIGNED NULL, submitted_at BIGINT UNSIGNED NULL, created_at BIGINT UNSIGNED NOT NULL, PRIMARY KEY(id), KEY author_revision (author_id,revision), KEY queue_state (review_queue,submitted_version)) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin',
+			'versions'       => 'CREATE TABLE %i (article_id BIGINT UNSIGNED NOT NULL, number BIGINT UNSIGNED NOT NULL, title VARCHAR(800) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, body LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, category VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, actor_id BIGINT UNSIGNED NOT NULL, created_at BIGINT UNSIGNED NOT NULL, audience_json LONGTEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL, PRIMARY KEY(article_id,number)) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin',
+			'assets'         => 'CREATE TABLE %i (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, article_id BIGINT UNSIGNED NOT NULL, version BIGINT UNSIGNED NOT NULL, kind VARCHAR(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, position TINYINT UNSIGNED NOT NULL, blob_id CHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, sha256 CHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, size_bytes BIGINT UNSIGNED NOT NULL, mime VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, description VARCHAR(1200) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, PRIMARY KEY(id), UNIQUE KEY blob_id (blob_id), UNIQUE KEY slot (article_id,version,kind,position)) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin',
+			'audit'          => 'CREATE TABLE %i (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, article_id BIGINT UNSIGNED NOT NULL, revision BIGINT UNSIGNED NOT NULL, event VARCHAR(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, actor_id BIGINT UNSIGNED NOT NULL, reason VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, occurred_at BIGINT UNSIGNED NOT NULL, version BIGINT UNSIGNED NOT NULL, PRIMARY KEY(id), UNIQUE KEY article_revision (article_id,revision)) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin',
+			'notifications'  => 'CREATE TABLE %i (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, article_id BIGINT UNSIGNED NOT NULL, version BIGINT UNSIGNED NOT NULL, recipient_id BIGINT UNSIGNED NOT NULL, created_at BIGINT UNSIGNED NOT NULL, read_at BIGINT UNSIGNED NULL, revision BIGINT UNSIGNED NOT NULL, kind VARCHAR(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, PRIMARY KEY(id), UNIQUE KEY delivery (article_id,revision,recipient_id,kind), KEY recipient_state (recipient_id,read_at,id)) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin',
+			'schema_history' => 'CREATE TABLE %i (id INT UNSIGNED NOT NULL, actor_id BIGINT UNSIGNED NOT NULL, occurred_at BIGINT UNSIGNED NOT NULL, articles BIGINT UNSIGNED NOT NULL, versions BIGINT UNSIGNED NOT NULL, audit_events BIGINT UNSIGNED NOT NULL, notifications BIGINT UNSIGNED NOT NULL, before_sha CHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, after_sha CHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL, PRIMARY KEY(id)) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin',
+			'schema'         => 'CREATE TABLE %i (id INT UNSIGNED NOT NULL, version INT UNSIGNED NOT NULL, PRIMARY KEY(id)) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin',
+		);
+	}
+
 	public function assertReady(): void {
+		$this->assertLayout( 6 );
+		$this->assertVersion( 2 );
+	}
+
+	public function assertVersion( int $expected ): void {
+		$version = $this->rows( $this->database->prepare( 'SELECT id,version FROM %i', $this->table( 'schema' ) ) );
+		if ( 1 !== count( $version ) || '1' !== (string) $version[0]->id || (string) $expected !== (string) $version[0]->version ) {
+			throw new RuntimeException( self::ERROR );
+		}
+	}
+
+	/** Exact ordered DDL preparation stages, never a permissive schema probe. */
+	public function assertLayout( int $stage ): void {
+		if ( $stage < 0 || $stage > 6 ) {
+			throw new RuntimeException( self::ERROR );
+		}
 		$this->assertPosts();
 		( new FileSchema( $this->database ) )->assertReady();
 		( new AuthorizationSchema( $this->database ) )->validate();
@@ -129,6 +159,33 @@ final class NewsSchema {
 			'notifications' => array( 'PRIMARY:1:id:0', 'delivery:1:article_id:0', 'delivery:2:version:0', 'delivery:3:recipient_id:0', 'recipient_state:1:recipient_id:1', 'recipient_state:2:read_at:1', 'recipient_state:3:id:1' ),
 			'schema'        => array( 'PRIMARY:1:id:0' ),
 		);
+		if ( $stage >= 1 ) {
+			$definitions['versions']['audience_json'] = 'longtext';
+		}
+		if ( $stage >= 2 ) {
+			$definitions['audit']['version'] = 'bigint unsigned';
+		}
+		if ( $stage >= 3 ) {
+			$definitions['notifications']['revision'] = 'bigint unsigned';
+			$definitions['notifications']['kind']     = 'varchar(16)';
+			$required['notifications']                = array( 'PRIMARY:1:id:0', 'delivery:1:article_id:0', 'delivery:2:revision:0', 'delivery:3:recipient_id:0', 'delivery:4:kind:0', 'recipient_state:1:recipient_id:1', 'recipient_state:2:read_at:1', 'recipient_state:3:id:1' );
+		}
+		if ( $stage >= 4 ) {
+			$definitions['schema_history'] = array(
+				'id'            => 'int unsigned',
+				'actor_id'      => 'bigint unsigned',
+				'occurred_at'   => 'bigint unsigned',
+				'articles'      => 'bigint unsigned',
+				'versions'      => 'bigint unsigned',
+				'audit_events'  => 'bigint unsigned',
+				'notifications' => 'bigint unsigned',
+				'before_sha'    => 'char(64)',
+				'after_sha'     => 'char(64)',
+			);
+			$required['schema_history']    = array( 'PRIMARY:1:id:0' );
+		} elseif ( array() !== $this->rows( $this->database->prepare( 'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', $this->table( 'schema_history' ) ) ) ) {
+			throw new RuntimeException( self::ERROR );
+		}
 		foreach ( $definitions as $suffix => $columns ) {
 			$table = $this->table( $suffix );
 			$this->assertEngine( $table );
@@ -138,7 +195,7 @@ final class NewsSchema {
 			}
 			foreach ( $actual as $field ) {
 				$type     = preg_replace( '/^(bigint|int|tinyint)\([0-9]+\)/', '$1', strtolower( $field->Type ) );
-				$nullable = in_array( $suffix . ':' . $field->Field, array( 'news:submitted_version', 'news:submitted_at', 'notifications:read_at' ), true );
+				$nullable = in_array( $suffix . ':' . $field->Field, array( 'news:submitted_version', 'news:submitted_at', 'notifications:read_at', 'versions:audience_json' ), true ) || ( $stage < 5 && 'audit:version' === $suffix . ':' . $field->Field ) || ( $stage < 6 && in_array( $suffix . ':' . $field->Field, array( 'notifications:revision', 'notifications:kind' ), true ) );
 				$extra    = in_array( $suffix . ':' . $field->Field, array( 'assets:id', 'audit:id', 'notifications:id' ), true ) ? 'auto_increment' : '';
 				$is_text  = preg_match( '/^(varchar|char|longtext)/', $type );
 				if ( ( $columns[ $field->Field ] ?? null ) !== $type || ( $nullable ? 'YES' : 'NO' ) !== $field->Null || $extra !== $field->Extra || null !== $field->Default || ( $is_text && 'utf8mb4_bin' !== $field->Collation ) ) {
@@ -152,13 +209,11 @@ final class NewsSchema {
 				}
 				$signature[] = $index->Key_name . ':' . $index->Seq_in_index . ':' . $index->Column_name . ':' . $index->Non_unique;
 			}
+			sort( $signature );
+			sort( $required[ $suffix ] );
 			if ( $signature !== $required[ $suffix ] ) {
 				throw new RuntimeException( self::ERROR );
 			}
-		}
-		$version = $this->rows( $this->database->prepare( 'SELECT id,version FROM %i', $this->table( 'schema' ) ) );
-		if ( 1 !== count( $version ) || '1' !== (string) $version[0]->id || (string) self::VERSION !== (string) $version[0]->version ) {
-			throw new RuntimeException( self::ERROR );
 		}
 	}
 
