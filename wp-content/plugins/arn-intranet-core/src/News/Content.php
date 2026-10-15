@@ -36,17 +36,23 @@ final readonly class Content {
 		return null !== $this->featured && 1 === preg_match( '/[^\s\p{Z}]/u', $this->body );
 	}
 
+	/** Require an explicit audience for every new submission. */
+	public function completeForPublication(): bool {
+		return $this->completeForSubmission() && null !== $this->audience;
+	}
+
 	/** Validate and detach text and ordered lists.
 	 *
-	 * @param string       $title Title.
-	 * @param string       $body Body with optional paragraphs.
-	 * @param string       $category Closed category.
-	 * @param Asset|null   $featured Optional featured image.
-	 * @param array<Asset> $gallery Ordered images.
-	 * @param array<Asset> $attachments Ordered private attachments.
+	 * @param string        $title Title.
+	 * @param string        $body Body with optional paragraphs.
+	 * @param string        $category Closed category.
+	 * @param Asset|null    $featured Optional featured image.
+	 * @param array<Asset>  $gallery Ordered images.
+	 * @param array<Asset>  $attachments Ordered private attachments.
+	 * @param Audience|null $audience Explicit audience, when selected.
 	 * @throws InvalidArgumentException For invalid content.
 	 */
-	public function __construct( public string $title, string $body, public string $category, public ?Asset $featured, array $gallery, array $attachments ) {
+	public function __construct( public string $title, string $body, public string $category, public ?Asset $featured, array $gallery, array $attachments, public ?Audience $audience = null ) {
 		$normal = str_replace( "\r\n", "\n", $body );
 		if ( ! self::plainText( $title, 1, 200 )
 			|| ! self::plainText( $normal, 0, 20000, true )

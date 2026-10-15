@@ -18,6 +18,7 @@ use Arn\Intranet\Authorization\Storage\StoredGrant;
 use Arn\Intranet\Documents\PrivateFiles\BlobDescriptor;
 use Arn\Intranet\News\Article;
 use Arn\Intranet\News\Asset;
+use Arn\Intranet\News\Audience;
 use Arn\Intranet\News\Content;
 use Arn\Intranet\News\NewsPolicy;
 use Arn\Intranet\News\Version;
@@ -45,7 +46,7 @@ final class NewsModelTest extends TestCase {
 	 * @return Content
 	 */
 	private function content( string $body = 'Corpo', ?Asset $featured = null, array $gallery = array(), array $attachments = array() ): Content {
-		return new Content( 'Título', $body, 'circular', $featured, $gallery, $attachments );
+		return new Content( 'Título', $body, 'circular', $featured, $gallery, $attachments, Audience::all() );
 	}
 
 	/** Build one version owned by the author.

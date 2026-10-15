@@ -2,6 +2,8 @@
 
 14 de outubro de 2026. Esta parcela implementa criação e revisão de Rascunho, destaque, galeria, anexos, pré-visualização, envio para aprovação, fila Pendente, aviso interno e recibo de leitura. Aplica-se apenas a contas fictícias instaladas localmente. F1-10 fica Em curso. Aprovação, rejeição, reenvio e publicação pertencem a F1-11.
 
+Actualização de 15 de outubro: a evolução [F1-11](publicacao-editorial-local-f1-11.md) implementa o circuito local de decisão/publicação e substitui a instalação antiga, as quatro flags e as duas contas descritas historicamente abaixo. O runtime corrente exige cinco flags, esquema 2 e o elenco completo de cinco fixtures. LocalNewsInstaller recusa a entrada antiga. A revisão independente antecede a activação normal pelo controlador, seguida da aceitação integrada. A homologação institucional continua pendente.
+
 ## Instalação e acesso
 
 O código regista o CPT `arn_noticia` como âncora privada sem editor nativo, REST, pesquisa pública ou capacidades WordPress de edição. O acesso exige ambiente efectivo `local` e as quatro constantes booleanas verdadeiras `ARN_ALLOW_LOCAL_NEWSROOM`, `ARN_ALLOW_LOCAL_PRIVATE_FILES`, `ARN_ALLOW_FICTIONAL_LOCAL_ACCESS` e `ARN_ALLOW_LOCAL_AUTHORIZATION_STORAGE`. A instalação das tabelas e das duas contas fictícias é explícita por CLI administradora local com `(new \Arn\Intranet\News\LocalNewsInstaller())->install()`. A operação não imprime passwords. Estas ficam exclusivamente na raiz privada validada. A instalação não acontece em GET, na activação do plugin nem no primeiro acesso ao menu.

@@ -15,10 +15,12 @@ use PHPUnit\Framework\TestCase;
 /** Pure storage contracts that do not require WordPress. */
 final class NewsStorageContractTest extends TestCase {
 	public function testNewsConfigurationRequiresExactLocalBooleanGates(): void {
-		self::assertTrue( NewsConfiguration::enabled( 'local', true, true, true, true ) );
-		self::assertFalse( NewsConfiguration::enabled( 'development', true, true, true, true ) );
-		self::assertFalse( NewsConfiguration::enabled( 'local', 1, true, true, true ) );
-		self::assertFalse( NewsConfiguration::enabled( 'local', true, true, false, true ) );
+		self::assertTrue( NewsConfiguration::enabled( 'local', true, true, true, true, true ) );
+		self::assertFalse( NewsConfiguration::enabled( 'development', true, true, true, true, true ) );
+		self::assertFalse( NewsConfiguration::enabled( 'local', true, true, true, true, false ) );
+		self::assertFalse( NewsConfiguration::enabled( 'local', true, 'true', true, true, true ) );
+		self::assertFalse( NewsConfiguration::enabled( 'local', 1, true, true, true, true ) );
+		self::assertFalse( NewsConfiguration::enabled( 'local', true, true, false, true, true ) );
 	}
 
 	public function testSchemaIdentifierCatalogIsClosed(): void {

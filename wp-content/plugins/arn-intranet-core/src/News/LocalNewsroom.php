@@ -31,7 +31,7 @@ final class LocalNewsroom {
 			global $wpdb;
 			$db = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
 			$db->set_prefix( $wpdb->prefix );
-			return array( new WpdbNewsRepository( $db, new WpdbNewsAuthority( $db, $this->current ) ), new WpdbFileRegistry( $db ) );
+			return array( new WpdbNewsRepository( $db, new WpdbNewsAuthority( $db, $this->current, null, fn(): array => $this->current->participantUnits() ) ), new WpdbFileRegistry( $db ) );
 		};
 		$this->store_factory      = $store_factory ?? static fn(): PrivateBlobStore => LocalPrivateFiles::store();
 		$this->gate               = $gate ?? static fn(): bool => NewsConfiguration::configured();
@@ -90,6 +90,53 @@ final class LocalNewsroom {
 		return $repository->submit( $id, $expected, $reason );
 	}
 
+	/** Decision input is rechecked under ordered SQL locks by the repository authority. */
+	public function decide( int $id, string $operation, int $version, int $expected, string $reason ): Article {
+		$actor        = $this->actor();
+		[$repository] = ( $this->repository_factory )();
+		$before       = $repository->find( $id );
+		if ( null === $before || $before->revision !== $expected || ! NewsPolicy::canDecide( $before, $operation, $version, $actor[0], $actor[2], time() ) ) {
+			throw new RuntimeException( self::ERROR );
+		}
+		return $repository->decide( $id, $operation, $version, $expected, $reason );
+	}
+
+	/** Internal envelopes only. Consumers project precisely published_version. */
+	public function published(): ?array {
+		try {
+			$actor = $this->actor();
+			$units = $this->current->unitsFor( $actor[1] );
+			if ( null === $units ) {
+				return null;
+			}
+			[$repository] = ( $this->repository_factory )();
+			$visible      = array();
+			foreach ( $repository->all() as $article ) {
+				if ( NewsPolicy::canReadPublished( $article, $actor[0], $actor[2], time(), $units ) ) {
+					$visible[] = $article;
+				}
+			}
+			return $visible;
+		} catch ( Throwable ) {
+			return null;
+		}
+	}
+
+	public function findPublished( int $id ): ?Article {
+		try {
+			$actor = $this->actor();
+			$units = $this->current->unitsFor( $actor[1] );
+			if ( null === $units ) {
+				return null;
+			}
+			[$repository] = ( $this->repository_factory )();
+			$article      = $repository->find( $id );
+			return null !== $article && NewsPolicy::canReadPublished( $article, $actor[0], $actor[2], time(), $units ) ? $article : null;
+		} catch ( Throwable ) {
+			return null;
+		}
+	}
+
 	public function visible(): ?array {
 		try {
 			$actor        = $this->actor();
@@ -123,8 +170,16 @@ final class LocalNewsroom {
 			$actor        = $this->actor();
 			[$repository] = ( $this->repository_factory )();
 			$article      = $repository->find( $id );
-			return null !== $article && $article->author_id === $actor[1]
-				&& NewsPolicy::canRead( $article, count( $article->versions ), $actor[0], $actor[2], time() ) ? $repository->history( $id ) : null;
+			if ( null === $article ) {
+				return null;
+			}
+			$own = $article->author_id === $actor[1];
+			if ( ! $own && ! NewsPolicy::canReviewScope( $article->review_scope, $actor[0], $actor[2], time() ) ) {
+				return null;
+			}
+			$number = $own ? count( $article->versions ) : $article->submitted_version;
+			return null !== $number && NewsPolicy::canRead( $article, $number, $actor[0], $actor[2], time() )
+				? NewsroomProjection::history( $repository->history( $id ), $article, $own ) : null;
 		} catch ( Throwable ) {
 			return null;
 		}
@@ -137,9 +192,16 @@ final class LocalNewsroom {
 			$visible      = array();
 			foreach ( $repository->notificationRows( $actor[1] ) as $notice ) {
 				$article = $repository->find( (int) $notice->article_id );
-				if ( null !== $article && $article->pending() && $article->submitted_version === (int) $notice->version
-					&& NewsPolicy::canRead( $article, (int) $notice->version, $actor[0], $actor[2], time() ) ) {
-					$visible[] = $notice;
+				$event   = null === $article ? null : ( $article->transitions[ (int) $notice->revision - 1 ] ?? null );
+				if ( null !== $event && $event->version === (int) $notice->version && $event->occurred_at === (int) $notice->created_at
+					&& $this->noticeVisible( $article, $notice, $event, $actor ) ) {
+					$visible_notice = clone $notice;
+					if ( in_array( $notice->kind, array( 'approved', 'rejected', 'returned', 'archived' ), true ) && $article->author_id === $actor[1] ) {
+						$visible_notice->reason = $event->reason;
+					} else {
+						unset( $visible_notice->reason );
+					}
+					$visible[] = $visible_notice;
 				}
 			}
 			return $visible;
@@ -182,7 +244,8 @@ final class LocalNewsroom {
 				return null;
 			}
 			$article = $repository->find( $row['article_id'] );
-			if ( null === $article || ! NewsPolicy::canRead( $article, $row['version'], $actor[0], $actor[2], time() ) ) {
+			$units   = $this->current->unitsFor( $actor[1] );
+			if ( null === $article || null === $units || ! NewsPolicy::canRead( $article, $row['version'], $actor[0], $actor[2], time(), $units ) ) {
 				return null;
 			}
 			$version = $article->version( $row['version'] );
@@ -206,11 +269,34 @@ final class LocalNewsroom {
 
 	private function visibleVersion( Article $article, array $actor ): ?int {
 		$number = $article->author_id === $actor[1] ? count( $article->versions ) : $article->submitted_version;
+		if ( $article->author_id !== $actor[1] && ( null === $number || ! $article->wasSubmitted( $number ) || ! NewsPolicy::canReviewScope( $article->review_scope, $actor[0], $actor[2], time() ) ) ) {
+			return null;
+		}
 		return null !== $number && NewsPolicy::canRead( $article, $number, $actor[0], $actor[2], time() ) ? $number : null;
 	}
 
+	/** A notice has its own historical visibility rule, never the current draft rule. */
+	private function noticeVisible( Article $article, object $notice, EditorialTransition $event, array $actor ): bool {
+		if ( (int) $notice->recipient_id !== $actor[1] ) {
+			return false;
+		}
+		if ( 'publication' === $notice->kind ) {
+			$units = $this->current->unitsFor( $actor[1] );
+			return 'approved' === $event->event && $article->published_version === (int) $notice->version && null !== $units
+				&& NewsPolicy::canReadPublished( $article, $actor[0], $actor[2], time(), $units );
+		}
+		if ( $notice->kind !== $event->event ) {
+			return false;
+		}
+		if ( 'submitted' === $notice->kind ) {
+			return $article->wasSubmitted( (int) $notice->version ) && NewsPolicy::canReviewScope( $article->review_scope, $actor[0], $actor[2], time() );
+		}
+		return in_array( $notice->kind, array( 'approved', 'rejected', 'returned', 'archived' ), true ) && $article->author_id === $actor[1]
+			&& NewsPolicy::canRead( $article, (int) $notice->version, $actor[0], $actor[2], time() );
+	}
+
 	private function validateText( DraftInput $input ): void {
-		new Content( $input->title, $input->body, $input->category, null, array(), array() );
+		new Content( $input->title, $input->body, $input->category, null, array(), array(), $input->audience );
 	}
 
 	private function hasExisting( DraftInput $input ): bool {
@@ -257,7 +343,7 @@ final class LocalNewsroom {
 		$featured    = null === $input->featured ? null : $make( 'featured', $input->featured );
 		$gallery     = array_map( static fn( MediaInput $media ): Asset => $make( 'gallery', $media ), $input->gallery );
 		$attachments = array_map( static fn( MediaInput $media ): Asset => $make( 'attachment', $media ), $input->attachments );
-		return new Content( $input->title, $input->body, $input->category, $featured, $gallery, $attachments );
+		return new Content( $input->title, $input->body, $input->category, $featured, $gallery, $attachments, $input->audience );
 	}
 
 	/** Inspect the copied bytes, never browser MIME or name. */

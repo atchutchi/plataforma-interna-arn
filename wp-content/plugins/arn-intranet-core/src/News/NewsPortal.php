@@ -50,10 +50,11 @@ final class NewsPortal {
 
 	/** Pure projection. An editor can receive no unpublished history from this value. */
 	public static function project( Article $article, bool $own, callable $media_url, ?callable $cms_url = null ): ?array {
-		$number = $own ? count( $article->versions ) : $article->submitted_version;
-		if ( null === $number ) {
+		$projection = NewsroomProjection::article( $article, $own );
+		if ( null === $projection ) {
 			return null;
 		}
+		$number  = $projection['version'];
 		$version = $article->version( $number );
 		if ( null === $version ) {
 			return null;
@@ -66,7 +67,7 @@ final class NewsPortal {
 		);
 		$model   = array(
 			'id'          => $article->id,
-			'state'       => $article->pending() ? 'Pendente' : 'Rascunho',
+			'state'       => NewsroomProjection::stateLabel( $projection['state'] ),
 			'version'     => $version->number,
 			'title'       => $content->title,
 			'body'        => $content->body,

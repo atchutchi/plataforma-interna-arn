@@ -30,6 +30,13 @@ final class NewsPresentationTest extends TestCase {
 		$this->assertFalse( NewsroomPage::postGate( array_replace( $base, array( '_wpnonce' => 'bad' ) ), 'POST', 'arn-newsroom', $verify ) );
 		$this->assertFalse( NewsroomPage::postGate( array_replace( $base, array( 'article_id' => array( '23' ) ) ), 'POST', 'arn-newsroom', $verify ) );
 		$this->assertFalse( NewsroomPage::postGate( $base, 'GET', 'arn-newsroom', $verify ) );
+		$decision = array(
+			'operation'  => 'approve',
+			'article_id' => '23',
+			'_wpnonce'   => 'good',
+		);
+		self::assertTrue( NewsroomPage::postGate( $decision, 'POST', 'arn-newsroom', static fn( string $nonce, string $action ): bool => 'good' === $nonce && 'arn_news_approve_23' === $action ) );
+		self::assertFalse( NewsroomPage::postGate( $decision, 'POST', 'arn-newsroom', $verify ) );
 	}
 
 	/** Pending editorial view carries only the submitted version. */

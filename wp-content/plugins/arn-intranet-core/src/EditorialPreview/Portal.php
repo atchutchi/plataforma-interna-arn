@@ -14,6 +14,8 @@ use RuntimeException;
 use Arn\Intranet\Documents\Catalog\DocumentPortal;
 use Arn\Intranet\Documents\Catalog\LocalDocumentCatalog;
 use Arn\Intranet\News\NewsPreviewController;
+use Arn\Intranet\News\NewsPublishedController;
+use Arn\Intranet\News\NewsPublishedPortal;
 
 // phpcs:disable WordPress.WP.AlternativeFunctions -- A descarga privada usa stream local verificado.
 
@@ -133,6 +135,45 @@ final class Portal {
 				'news' => NewsPreviewController::current(),
 			);
 		}
+		if ( 'news' === $view && null !== NewsPublishedController::current() ) {
+			return array(
+				'view' => 'news_published',
+				'news' => NewsPublishedController::current(),
+			);
+		}
+		if ( 'news' === $view ) {
+			$filters = NewsPublishedPortal::filters( $input );
+			$model   = NewsPublishedPortal::model( $input );
+			if ( null === $filters ) {
+				return $model;
+			}
+			if ( self::allowed() ) {
+				$model['review'] = self::reviewModel( 'news', $input );
+			}
+			return $model;
+		}
+		if ( 'home' === $view ) {
+			$model                   = self::reviewModel( $view, array() );
+			$news                    = NewsPublishedPortal::model( array() );
+			$model['items']          = array_slice( $news['items'], 0, 4 );
+			$model['featured']       = $model['items'][0] ?? null;
+			$model['available']      = $news['available'];
+			$model['total']          = $news['total'];
+			$model['pages']          = $news['pages'];
+			$model['counts']         = $news['counts'];
+			$model['published_news'] = true;
+			return $model;
+		}
+		return self::reviewModel( $view, $input );
+	}
+
+	/** Administrative originals remain separate from current news publications.
+	 *
+	 * @param string $view Existing collection.
+	 * @param array  $input Existing administrative filters.
+	 * @return array Administrative projection only after allowed().
+	 */
+	private static function reviewModel( string $view, array $input ): array {
 		if ( in_array( $view, array( 'documents', 'regulations' ), true ) && ! self::allowed() ) {
 			return DocumentPortal::model( $view, $input );
 		}

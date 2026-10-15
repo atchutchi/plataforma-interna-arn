@@ -54,7 +54,8 @@ final class NewsPolicy {
 	 * @return bool
 	 */
 	public static function canEdit( Article $article, AuthorizationSnapshot $snapshot, array $session, int $now ): bool {
-		return ! $article->pending() && self::canAuthorAction( Action::CreateNewsDraft, $article->author_id, $snapshot, $session, $now );
+		return in_array( $article->state, array( NewsState::Draft, NewsState::Rejected, NewsState::Published ), true )
+			&& self::canAuthorAction( Action::CreateNewsDraft, $article->author_id, $snapshot, $session, $now );
 	}
 
 	/** Check submission competence and completeness.
@@ -66,11 +67,11 @@ final class NewsPolicy {
 	 * @return bool
 	 */
 	public static function canSubmit( Article $article, AuthorizationSnapshot $snapshot, array $session, int $now ): bool {
-		if ( $article->pending() ) {
+		if ( NewsState::Draft !== $article->state || count( $article->versions ) <= ( $article->submitted_version ?? 0 ) ) {
 			return false;
 		}
 		$content = $article->version( count( $article->versions ) )->content;
-		return $content->completeForSubmission()
+		return $content->completeForPublication()
 			&& self::canAuthorAction( Action::SubmitNews, $article->author_id, $snapshot, $session, $now );
 	}
 
@@ -81,17 +82,72 @@ final class NewsPolicy {
 	 * @param AuthorizationSnapshot $snapshot Current snapshot.
 	 * @param array                 $session Server session metadata.
 	 * @param int                   $now Unix UTC time.
+	 * @param array                 $unit_ids Current unit memberships.
 	 * @return bool
 	 */
-	public static function canRead( Article $article, int $version, AuthorizationSnapshot $snapshot, array $session, int $now ): bool {
+	public static function canRead( Article $article, int $version, AuthorizationSnapshot $snapshot, array $session, int $now, array $unit_ids = array() ): bool {
 		if ( null === $article->version( $version ) ) {
 			return false;
 		}
 		if ( $snapshot->user_id === $article->author_id ) {
 			return self::canAuthorAction( Action::CreateNewsDraft, $article->author_id, $snapshot, $session, $now );
 		}
-		return $article->pending() && $version === $article->submitted_version
-			&& self::canReviewScope( $article->review_scope, $snapshot, $session, $now );
+		if ( $article->wasSubmitted( $version ) && self::canReviewScope( $article->review_scope, $snapshot, $session, $now ) ) {
+			return true;
+		}
+		return $version === $article->published_version && self::canReadPublished( $article, $snapshot, $session, $now, $unit_ids );
+	}
+
+	/** Read only the current approved version under the reader's own grant.
+	 *
+	 * @param Article               $article Existing aggregate.
+	 * @param AuthorizationSnapshot $snapshot Current account and grants.
+	 * @param array                 $session Current session generation.
+	 * @param int                   $now Unix UTC time.
+	 * @param array                 $unit_ids Current unit memberships.
+	 */
+	public static function canReadPublished( Article $article, AuthorizationSnapshot $snapshot, array $session, int $now, array $unit_ids ): bool {
+		if ( null === $article->published_version || NewsState::Archived === $article->state ) {
+			return false;
+		}
+		$version = $article->version( $article->published_version );
+		return null !== $version && null !== $version->content->audience
+			&& $version->content->audience->includes( $snapshot->user_id, $unit_ids )
+			&& self::allows( Action::ReadContent, Scope::own(), $snapshot->user_id, 0, $snapshot, $session, $now );
+	}
+
+	/** Editorial queue competence and separate complete publication coverage.
+	 *
+	 * @param Article               $article Existing aggregate.
+	 * @param string                $operation Approve, reject, return or archive.
+	 * @param int                   $version Version affected by the decision.
+	 * @param AuthorizationSnapshot $snapshot Current account and grants.
+	 * @param array                 $session Current session generation.
+	 * @param int                   $now Unix UTC time.
+	 */
+	public static function canDecide( Article $article, string $operation, int $version, AuthorizationSnapshot $snapshot, array $session, int $now ): bool {
+		if ( $snapshot->user_id === $article->author_id || ! in_array( $operation, array( 'approve', 'reject', 'return', 'archive' ), true ) ) {
+			return false;
+		}
+		if ( ! self::canReviewScope( $article->review_scope, $snapshot, $session, $now ) ) {
+			return false;
+		}
+		if ( 'archive' === $operation ) {
+			if ( NewsState::Archived === $article->state || null === $article->published_version || $version !== $article->published_version ) {
+				return false;
+			}
+			$audience = $article->version( $version )->content->audience;
+			return null !== $audience && self::allows( Action::PublishNews, $audience->permissionScope(), 0, $article->author_id, $snapshot, $session, $now );
+		}
+		if ( NewsState::Pending !== $article->state || $version !== $article->submitted_version
+			|| ! self::allows( Action::ApproveNews, $article->review_scope, 0, $article->author_id, $snapshot, $session, $now ) ) {
+			return false;
+		}
+		if ( 'approve' !== $operation ) {
+			return true;
+		}
+		$audience = $article->version( $version )->content->audience;
+		return null !== $audience && self::allows( Action::PublishNews, $audience->permissionScope(), 0, $article->author_id, $snapshot, $session, $now );
 	}
 
 	/** Check a single designated editorial queue.

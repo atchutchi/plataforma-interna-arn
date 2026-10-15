@@ -17,6 +17,7 @@ use Arn\Intranet\Documents\PrivateFiles\PrivateBlobStore;
 use Arn\Intranet\Documents\PrivateFiles\WpdbFileRegistry;
 use Arn\Intranet\Identity\IdentityWpdb;
 use Arn\Intranet\News\Asset;
+use Arn\Intranet\News\Audience;
 use Arn\Intranet\News\Content;
 use Arn\Intranet\News\CurrentNewsActor;
 use Arn\Intranet\News\NewsConfiguration;
@@ -68,7 +69,7 @@ try {
 	$assert( $rejected, 'catálogo de identificadores SQL fechado' );
 	$assert( ! NewsConfiguration::configured() || 'local' === wp_get_environment_type(), 'gate runtime não se abre em development' );
 	$assert( null === ( new CurrentNewsActor() )->read(), 'administrador não é actor editorial' );
-	$assert( NewsConfiguration::enabled( 'local', true, true, true, true ) && ! NewsConfiguration::enabled( 'local', 1, true, true, true ), 'gates booleanos exactos' );
+	$assert( NewsConfiguration::enabled( 'local', true, true, true, true, true ) && ! NewsConfiguration::enabled( 'local', true, true, true, true, false ) && ! NewsConfiguration::enabled( 'local', 1, true, true, true, true ), 'gates booleanos exactos' );
 	$login_seed = bin2hex( random_bytes( 5 ) );
 	foreach ( array( 'author', 'reviewer' ) as $kind ) {
 		$user = wp_insert_user(
@@ -112,7 +113,11 @@ try {
 			return $active_id;
 		},
 		static fn( int $id ): array => $session( $id ),
-		static fn(): array => array( $reviewer_id )
+		static fn(): array => array( $reviewer_id ),
+		static fn(): array => array(
+			$author_id   => array( 'LAB-A' ),
+			$reviewer_id => array(),
+		)
 	);
 	$authority        = new WpdbNewsAuthority( $db, $current );
 	$repo             = new WpdbNewsRepository( $db, $authority );
@@ -128,7 +133,7 @@ try {
 	$featured   = $asset( 'featured', 'Alternativa do destaque' );
 	$gallery    = array( $asset( 'gallery', 'Primeira imagem' ), $asset( 'gallery', 'Segunda imagem' ) );
 	$attachment = $asset( 'attachment', 'Documento anexo' );
-	$next       = new Version( 2, new Content( 'Notícia de ensaio', "Corpo de notícia\nParágrafo novo", 'nota-interna', $featured, $gallery, array( $attachment ) ), $author_id, time() );
+	$next       = new Version( 2, new Content( 'Notícia de ensaio', "Corpo de notícia\nParágrafo novo", 'nota-interna', $featured, $gallery, array( $attachment ), Audience::all() ), $author_id, time() );
 	$article    = $repo->revise( $article->id, $next, 1, 'Revisão com assets' );
 	$hydrated   = $repo->find( $article->id );
 	$assert( 2 === $hydrated->revision && 2 === count( $hydrated->version( 2 )->content->gallery ) && 1 === count( $hydrated->version( 2 )->content->attachments ), 'hidratação completa' );
@@ -258,7 +263,7 @@ try {
 	}
 	$create_staged = is_array( $staged_counts ) && $staged_counts[0] === $before[0] + 1 && $staged_counts[1] === $before[1] + 1 && $staged_counts[2] === $before[2] + 1 && $staged_counts[3] === $before[3] + 1 && $staged_counts[6] === $before[6] + 1 && $staged_counts[7] === $before[7] + 1;
 	$assert( $failed && $create_staged && $before === $count_rows() && null === $registry->find( $create_asset->blob->id ) && $fingerprint( $prior_article ) === $fingerprint( $repo->find( $article->id ) ) && $fingerprint( $prior_notices ) === $fingerprint( $repo->notificationRows( $reviewer_id ) ), 'falha de auditoria em create reverte oito tabelas e estado anterior' );
-	$draft_content    = new Content( 'Outro rascunho', 'Texto', 'nota-interna', $asset( 'featured', 'Novo destaque' ), array(), array() );
+	$draft_content    = new Content( 'Outro rascunho', 'Texto', 'nota-interna', $asset( 'featured', 'Novo destaque' ), array(), array(), Audience::all() );
 	$draft            = $repo->create( $author_id, $scope, new Version( 1, $draft_content, $author_id, time() ), 'Outro rascunho' );
 	$prior_draft      = $repo->find( $draft->id );
 	$before           = $count_rows();
@@ -424,10 +429,11 @@ try {
 		$store       = new PrivateBlobStore( $private_root, array( realpath( ABSPATH ), realpath( WP_CONTENT_DIR ) ), array( 'application/pdf', 'image/png', 'image/jpeg' ), 1048576 );
 		$room        = new LocalNewsroom( $current, static fn(): array => array( $repo, $registry ), static fn(): PrivateBlobStore => $store, static fn(): bool => true );
 		$media       = static fn( string $name, string $description ): MediaInput => new MediaInput( null, $fixture( $name ), $description );
-		$draft_input = new DraftInput( 'Texto de ensaio', 'Corpo', 'nota-interna', $media( 'featured.png', 'Destaque' ), array( $media( 'gallery-a.jpg', 'Galeria A' ), $media( 'gallery-b.png', 'Galeria B' ) ), array( $media( 'attachment.pdf', 'Anexo' ) ) );
+		$draft_input = new DraftInput( 'Texto de ensaio', 'Corpo', 'nota-interna', $media( 'featured.png', 'Destaque' ), array( $media( 'gallery-a.jpg', 'Galeria A' ), $media( 'gallery-b.png', 'Galeria B' ) ), array( $media( 'attachment.pdf', 'Anexo' ) ), Audience::units( array( 'LAB-A' ) ) );
 		$news        = $room->create( $draft_input, 'Rascunho com binários' );
 		$first       = $news->version( 1 )->content;
-		$opened      = $room->file( $first->featured->blob->id );
+		$assert( 'units' === $first->audience->kind && array( 'LAB-A' ) === $repo->find( $news->id )->version( 1 )->content->audience->targets, 'criação runtime conserva audiência explícita' );
+		$opened = $room->file( $first->featured->blob->id );
 		$assert( null !== $opened && hash( 'sha256', stream_get_contents( $opened['handle'] ) ) === $first->featured->blob->sha256, 'binário copiado e entregue pelo handle privado' );
 		fclose( $opened['handle'] );
 		$assert( 1 === count( $room->visible() ) || null !== $room->findVisible( $news->id ), 'rascunho do autor visível' );
@@ -462,9 +468,10 @@ try {
 		}
 		$assert( $rejected, 'limite individual de 1 MiB' );
 		$keep         = static fn( Asset $asset, string $description ): MediaInput => new MediaInput( $asset->blob->id, null, $description );
-		$second_input = new DraftInput( 'Texto final', 'Corpo final', 'nota-interna', $keep( $first->featured, 'Novo destaque' ), array( $keep( $first->gallery[1], 'Agora primeira' ), $keep( $first->gallery[0], 'Agora segunda' ) ), array() );
+		$second_input = new DraftInput( 'Texto final', 'Corpo final', 'nota-interna', $keep( $first->featured, 'Novo destaque' ), array( $keep( $first->gallery[1], 'Agora primeira' ), $keep( $first->gallery[0], 'Agora segunda' ) ), array(), Audience::all() );
 		$news         = $room->revise( $news->id, $second_input, 1, 'Reordenar e remover' );
 		$second       = $news->version( 2 )->content;
+		$assert( 'all' === $second->audience->kind && 'all' === $repo->find( $news->id )->version( 2 )->content->audience->kind, 'revisão runtime conserva nova audiência explícita' );
 		$assert( $second->featured->blob->id !== $first->featured->blob->id && $second->gallery[0]->blob->id !== $first->gallery[1]->blob->id && $second->gallery[0]->blob->sha256 === $first->gallery[1]->blob->sha256 && array() === $second->attachments, 'retenção copia IDs, reordena e remove' );
 		$old_attachment = $room->file( $first->attachments[0]->blob->id );
 		$assert( null !== $old_attachment && count( $room->historyVisible( $news->id ) ) === 2, 'histórico e anexo antigo preservados' );
@@ -575,7 +582,7 @@ try {
 	foreach ( array( 'audit', 'files', 'schema' ) as $name ) {
 		$db->query( $db->prepare( 'DROP TABLE IF EXISTS %i', $files->table( $name ) ) );
 	}
-	foreach ( array( 'notifications', 'audit', 'assets', 'versions', 'news', 'schema' ) as $name ) {
+	foreach ( array( 'notifications', 'audit', 'assets', 'versions', 'news', 'schema', 'schema_history' ) as $name ) {
 		$db->query( $db->prepare( 'DROP TABLE IF EXISTS %i', $schema->table( $name ) ) );
 	}
 	$db->query( $db->prepare( 'DROP TABLE IF EXISTS %i', $schema->table( 'posts' ) ) );
