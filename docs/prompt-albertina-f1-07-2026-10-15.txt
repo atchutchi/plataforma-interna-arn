@@ -1,0 +1,51 @@
+Trabalha no repositório https://github.com/atchutchi/plataforma-interna-arn como Albertina4264. O responsável Atchutchi pediu que continues na tua branch e lhe devolvas o trabalho para ele retomar. Executa a tarefa ALB-F1-07-QA: fechar a aceitação local do directório, perfil e equipa F1-07 e entregar uma PR com evidência e eventuais correcções. Não reinicies a fundação nem reimplementes o módulo. Não comeces F1-12 ou F2 nesta tarefa.
+
+Lê primeiro README.md, sobretudo 15.3.1 e 15.3.2, AGENTS.md e docs/passagem-albertina-f1-07-2026-10-15.md. Este último contém o plano completo, preparação, matriz de testes e entrega. Lê também DESIGN.md, PRODUCT.md, docs/superpowers/specs/2026-10-15-people-design.md, docs/superpowers/plans/2026-10-15-people.md, docs/directorio-perfil-local-f1-07.md e docs/qa-directorio-perfil-local-f1-07.md. Não assumas que um relatório antigo representa o estado actual.
+
+ESTADO E BRANCH
+
+main inclui F1-11 pela PR #24, merge aebf4ced459b4677a163a2d5f95eb3f5c916dbd7. F1-07 está em feat/f1-07-directory-profile, PR #25 em rascunho. O candidato de código 598b8978567dd96ef0ab215871836a82677dce7b passou 11 checks, 759 testes PHP com 3035 asserções no Ubuntu, 55 testes Node, lint e build. Os positivos locais exclusivos passaram 43 verificações People e 41 do instalador. O CI development People testa apenas a recusa fora de local. Falta revisão transversal, activação e aceitação Playwright do módulo num laboratório normal. Não confundas esse código com uma funcionalidade já integrada ou activada em todos os PCs.
+
+Usa a tua branch existente chore/albertina4264-F1-01-fundacao. O nome é histórico. Em 15 de outubro estava 116 commits atrás de main e sem commits exclusivos. Inspecciona git status, remotes, conta autenticada e PRs. Preserva alterações e commits locais. Faz fetch e actualiza a branch por fast-forward a origin/main e depois a origin/feat/f1-07-directory-profile, quando possível. Se houver divergência, inspecciona e faz merge revisto sem reset, force push ou perda de trabalho. Não faças cherry-pick parcial. Regista os SHAs recebidos.
+
+Enquanto #25 estiver aberta, abre a tua PR com base feat/f1-07-directory-profile e head chore/albertina4264-F1-01-fundacao. Se #25 já estiver integrada, confirma main e adapta a base sem duplicar alterações. Não reabras #2. Não faças merge ou deploy. A entrega é para Atchutchi rever e continuar.
+
+LABORATÓRIO E PRESERVAÇÃO
+
+Trabalha só no teu PC e com contas fictícias. Não acedas a .205, .151, AD, DNS, Google Workspace ou produção. Não alteres OAuth/MFA nem envies emails. Não uses pessoas reais do README ou os anexos institucionais como fixtures. Os 22 originais estão reservados à revisão administrativa de Atchutchi, incluindo Comunicação sindical. Não os copies para Git. Se não os tens, regista a comparação física como pendente no PC dele.
+
+Não dependas da pasta .git/tools ou da base de Atchutchi. Caminhos, runtimes, credenciais, cookies, IDs e revisões são locais. Prepara ambiente efectivo local, Node 24.21.0, PHP 8.4, WordPress, WP-CLI e SQL próprios. Respeita a pendência de licença Docker do README. Não inventes resultados de wp-env se Docker não existe. Usa os lockfiles, sem actualizar dependências por rotina.
+
+Na última verificação documental do PC de Atchutchi, os serviços PHP/SQL estavam parados. A configuração conservava o hash inicial e a flag People ausente. O último preflight SQL anterior tinha zero recursos People normais e B inactiva na revisão 5. Não apresentes esse snapshot como leitura actual do teu PC. Não precisas de recuperar o laboratório dele. Ele deve iniciar o runtime existente sem reinicializar dados e repetir o baseline quando receber a tua entrega.
+
+Guarda baseline de tabelas, configuração e ficheiros antes de escrever e conserva-o. Configuração, passwords, dumps, sessões, nonces, logs e screenshots ficam fora do Git e do document root quando aplicável. Não imprimas wp-config.php ou o ambiente inteiro. Antes de cada commit inspecciona os ficheiros concretos e nunca faças git add indiscriminado de artefactos locais.
+
+Segue o guião para preparar explicitamente schemas F1-03 e F1-05 num laboratório novo. Recusa dependências parciais, não as repares por adopção. Unidades existentes são lidas pelo snapshot. Não assumes B inactiva na revisão 5 do outro PC. Se for preciso reactivar B, usa exclusivamente o cenário reactivate-b com revisão corrente e contexto auditado, sem SQL directo e sem repetir initialize. O instalador People normal não cria ou repara esses pré-requisitos.
+
+People exige local e os quatro booleanos true ARN_ALLOW_LOCAL_PEOPLE, ARN_ALLOW_FICTIONAL_LOCAL_ACCESS, ARN_ALLOW_LOCAL_AUTHORIZATION_STORAGE e ARN_ALLOW_LOCAL_ORGANIZATION_STORAGE. ARN_LOCAL_PRIVATE_FILES_DIR deve ser uma raiz privada válida. Só depois da revisão transversal e baseline activa explicitamente e executa LocalPeopleInstaller por CLI administradora. Cria apenas f107.alfa.teste, f107.beta.teste e f107.responsavel.a.teste, com emails terminados em @example.invalid e Subscriber marcado. Não precisas de login Google para estes testes nativos. Não publiques passwords. Repete o instalador e prova idempotência integral, também depois de editar um contacto.
+
+ACEITAÇÃO E CORRECÇÕES
+
+Usa Superpowers, Impeccable, UI UX Pro Max e Playwright disponíveis no teu ambiente. Regista skills indisponíveis em vez de fingir uso. Reutiliza o tema, a marca ARN, Manrope e Source Sans 3 locais e os tokens existentes. Não reinicializes a identidade visual ou instales outro template.
+
+Com Playwright e WordPress real, faz login das três fixtures. Prova directório com três pessoas, equipa A com duas, Beta fora da equipa A e recusa da equipa a Alfa/Beta ou da unidade B ao responsável A. Valida ficha, nome/cargo/unidade/email de leitura e apenas telefone/local/apresentação editáveis no perfil próprio. Sem excepção administrativa/editorial e sem formulário de edição alheia.
+
+Grava um contacto e prova uma revisão/evento novo, sem alterar dados profissionais, funções, âmbitos ou sessões. No-op não escreve. Exercita CAS antigo em duas páginas, nonce inválido, campos profissionais/actor/role/state/extras, HTML literal, CRLF/CR e limites. Erros só conservam campos próprios autorizados. Compara a base antes/depois de recusas.
+
+Prova suspensão e reactivação auditadas com controlos positivos. A sessão antiga continua recusada após reactivar até novo login nativo. Confirma contagens e equipa ajustadas. Não deixes outra causa mascarar o resultado. Desliga só a flag People depois de três acessos positivos, verifica respostas 404 vazias e private/no-store em GET/HEAD/POST, restaura a configuração com hash exacto em finally e repete os positivos com a mesma sessão.
+
+Valida filtros/IDs inválidos antes da fonte, person apenas em Funcionários e transportes nativos sem dados People. Testa REST de páginas e block-renderer com uma fixture autenticada e nonce REST válido, pesquisa e metadados. Não basta verificar só a ausência de endpoint próprio. Preserva os cinco destinos anteriores, notícias, catálogo, contas e ficheiros existentes.
+
+Testa destinos People ausentes ou incompatíveis e permalinks simples. Conserva o conteúdo existente e restaura a configuração usada no ensaio. As três revisões por tarefa estão aprovadas, mas falta a revisão transversal do conjunto antes da activação normal.
+
+Faz QA visual nas larguras de 320, 390, 768 e 1280 px, teclado, menu/Escape, h1, labels/erros, sem overflow, controlos de 44 px, inputs de 16 px, fontes locais, logo, favicon e foco/ampliação. Distingue o token nominal de 3 px do valor efectivo no Windows e CSS a 200% de zoom nativo. Regista erros de consola e limitações sem certificar acessibilidade ou IIS/MySQL.
+
+Corrige apenas falhas demonstradas e acrescenta regressões significativas. Executa testes afectados, integrações exclusivas com limpeza, PHP, PHPCS, testes Node, lint e build adequados. Não repitas suites globais por rotina sem alteração que justifique. Se houver várias falhas finais, reúne uma ronda de fixes e revisão restrita. O CI entregue tem de ser verde no SHA final, não num anterior.
+
+ENTREGA E PARAGEM
+
+Actualiza docs/qa-directorio-perfil-local-f1-07.md com a matriz real de resultados, comandos, ambiente, data, SHA, evidência e limites. Cria docs/entrega-albertina-f1-07.md com a base recebida, commits, ficheiros, revisão, URL da PR, reprodução, migrações/preparação necessárias e próximos passos de Atchutchi. Actualiza README/AGENTS honestamente. Não afirmes que activaste o laboratório dele ou concluíste institucionalmente F1-07.
+
+Faz commits e push só na tua branch, abre a PR para a base indicada e entrega o link, SHA e checks, o que passou, o que ficou pendente e o próximo passo exacto de Atchutchi. Não envies segredos ou dumps na entrega. Não faças merge, deploy ou início de F1-12. Atchutchi deve rever, reproduzir no seu PC, integrar a tua contribuição e depois a PR #25 com CI exacto. A seguir será F1-12 conforme o README.
+
+Avança autonomamente nos passos reversíveis deste âmbito. Pede ajuda apenas se faltarem acesso, ferramenta obrigatória, uma decisão institucional indispensável ou informação que não possas obter do repositório. Se houver um bloqueio, descreve causa, prova e impacto e entrega os avanços independentes já verificados.
