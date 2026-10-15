@@ -59,6 +59,8 @@ jobs:
       - run: npm run test:account-sessions:integration
       - run: npm run test:notifications:integration
       - run: npm run test:units:integration
+      - run: npm run test:people:integration
+      - run: npm run test:people-installer:integration
       - run: npm run test:import-preview:integration
       - run: npm run test:editorial:integration
       - run: npm run test:private-files:integration

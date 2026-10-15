@@ -23,6 +23,8 @@
     "test:oidc:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/federated-session.php --user=admin",
     "test:authorization:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/authorization-persistence.php --user=admin",
     "test:units:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/local-units.php --user=admin",
+    "test:people:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/people.php --user=admin",
+    "test:people-installer:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/people-installer.php --user=admin",
     "test:import-preview:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/import-preview.php --user=admin",
     "test:editorial:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/editorial-preview.php --user=admin",
     "test:private-files:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/private-files.php --user=admin",
