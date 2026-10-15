@@ -2,9 +2,9 @@
 
 Documento de referência para desenvolver e acompanhar a plataforma interna da Autoridade Reguladora Nacional das TIC da Guiné-Bissau.
 
-Versão da documentação: 0.9. Data: 13 de outubro de 2026. A fundação de Albertina4264 está integrada pela [PR #2](https://github.com/atchutchi/plataforma-interna-arn/pull/2). O lockfile PHP de Atchutchi está integrado pela [PR #3](https://github.com/atchutchi/plataforma-interna-arn/pull/3), commit `2e743c16013e698535e2748bb79c4aa417c5f2b3`. Panthera-Onca, 192.168.17.205, foi retirado de arn.local e deve permanecer fora do domínio. Não houve instalação nesta sessão.
+Versão da documentação: 1.0. Data: 14 de outubro de 2026. Estado consolidado após a integração da [PR #22](https://github.com/atchutchi/plataforma-interna-arn/pull/22), merge `8a33c6fc88891838eff7bf8c69869c08143b0da3`. As PRs #4 a #22 estão integradas em `main`. Esta versão passa a ser o ponto de continuidade obrigatório para qualquer agente de desenvolvimento.
 
-Estado do projeto: a fundação local está em curso. Existem wp-env, plugin institucional, tema institucional com logótipo e fontes locais, portal privado e catálogo documental de 37 unidades. Atchutchi confirmou WordPress local em http://localhost:8888, testes separados em http://localhost:8890, verificações Node e PHP aprovadas e bindings apenas em 127.0.0.1. A secção 16.6 regista essa evidência como fornecida pelo responsável, distinguindo-a das verificações desta sessão. F1-01 continua Em curso até homologação Windows/IIS/MySQL 8.4. Login Google OIDC, vínculo auditado e sessão estão implementados e homologados localmente, conforme docs/google-login-local-f1-02.md. Funções institucionais com âmbito, cadastro de funcionários, importação e ficheiros privados continuam pendentes. GitHub é a fonte de verdade. ChatGPT Work/Codex dá continuidade ao desenvolvimento e Cursor é opcional.
+Estado do projeto: a base WordPress local está funcional e o trabalho deixou de ser apenas uma fundação. Estão implementadas e ensaiadas localmente parcelas de autenticação Google OIDC, vínculo e sessão, autorização por função/âmbito/objecto com persistência auditada, notificações internas, unidades e pré-validação de importação, tema e painel ARN, portal editorial, armazenamento privado, catálogo documental com versões e criação/submissão de notícias com media privados. A PR #22 fechou a parcela local de F1-10 e teve a workflow Verificação aprovada no SHA `39b7d0fe349c95e3776e461d211c15a52d76dfe7`. Não estão ainda concluídos o circuito editorial F1-11, directório/perfil F1-07, comunicados/calendário F1-12, tarefas F1-13, dashboard/pesquisa F1-14, administração final F1-15, validação global F1-16, serviços F2 e homologação/implantação Windows/IIS/MySQL. GitHub é a fonte de verdade. O agente deve continuar a implementação por módulos até completar todo o escopo, sem reiniciar a arquitectura nem repetir trabalhos já integrados.
 
 O objetivo é disponibilizar um CMS WordPress privado, organizado pela estrutura da ARN, onde os funcionários consultam informação, colaboram e acompanham os processos autorizados para a sua função.
 
@@ -30,6 +30,7 @@ O objetivo é disponibilizar um CMS WordPress privado, organizado pela estrutura
 13. [Entregas por fases](#fases)
 14. [Organização futura do código](#codigo)
 15. [Responsabilidades e tarefas de desenvolvimento](#tarefas)
+   - [Plano mestre de conclusão para agentes](#plano-conclusao)
 16. [Forma de colaboração no repositório](#colaboracao)
    - [Instalações nos computadores](#instalacao-pcs)
    - [Preparação e comandos Git](#preparacao-git)
@@ -1071,7 +1072,110 @@ A documentação base fica registada nesta versão. As tarefas de implementaçã
 
 Cada tarefa deve referenciar os códigos das histórias aplicáveis e atualizar a evidência quando concluída. A tabela é o backlog inicial. Ainda não representa Issues criadas, pessoas notificadas ou trabalho atribuído automaticamente no GitHub.
 
-A [matriz de auditoria F1 de 13 de outubro](docs/auditoria-f1-2026-10-13.md) distingue código existente, testes, dependências, bloqueios e próxima acção para F1-01 a F1-17. É uma fotografia após a PR #3 e não substitui os estados posteriores deste backlog. O [roteiro de continuação de 14 de outubro](docs/proximas-fases-f1-2026-10-14.md) identifica as parcelas locais e os pré-requisitos pendentes das fases seguintes.
+A [matriz de auditoria F1 de 13 de outubro](docs/auditoria-f1-2026-10-13.md) distingue código existente, testes, dependências, bloqueios e próxima acção para F1-01 a F1-17. É uma fotografia histórica após a PR #3. O [roteiro de continuação de 14 de outubro](docs/proximas-fases-f1-2026-10-14.md) também é anterior à integração das PRs #20, #21 e #22. Para trabalho novo, prevalece o estado consolidado abaixo e, depois, o código actual em `main`.
+
+<a id="plano-conclusao"></a>
+### 15.3.1 Plano mestre de conclusão para agentes
+
+Este bloco é a orientação operacional principal para ChatGPT Work, Codex, Cursor ou outro agente que continue o projeto. O objectivo é concluir a plataforma WordPress completa, mantendo a arquitectura existente e sem recomeçar módulos já integrados.
+
+#### Estado consolidado em 14 de outubro de 2026
+
+| Frente | Estado real em main | O que ainda falta para fechar |
+| --- | --- | --- |
+| F1-01 Ambiente | Parcela local funcional, lockfiles, wp-env, CI e regressões existentes | Segundo PC e homologação representativa Windows Server 2019, IIS, PHP 8.4 e MySQL 8.4 |
+| F1-02 Identidade Google | OIDC local, configuração externa, vínculo persistente auditado, callback e sessão testados | Activação institucional, HTTPS, LAN/VPN, cliente/segredos institucionais e procedimento DCSI |
+| F1-03 Autorização | Motor local, estado, sessões, concessões, auditoria e leitura por objecto implementados | Validar matriz institucional, delegações reais e aplicar os contratos aos módulos finais |
+| F1-04 Auditoria/notificações | Auditoria administrativa e notificações internas locais com recibos | Ligar eventos de todos os módulos, regras institucionais e eventual canal externo |
+| F1-05 Organização/cadastro | Unidades fictícias persistentes, 37 entradas documentais e pré-validação sintética | Cadastro de pessoas, importador executável, validação RH, emails e hierarquia definitiva |
+| F1-06 Tema/CMS | Tema ARN, favicon, fontes, painel, navegação e portal editorial local | Completar navegação funcional à medida que os módulos restantes entram |
+| F1-07 Directório/perfil | Por iniciar | Implementar directório pesquisável, perfil profissional, autosserviço autorizado e visão de equipa |
+| F1-08 Ficheiros privados | Núcleo imutável, entrega privada, auditoria e ensaios locais | Media nativa e derivados, reconciliação, antimalware/política de admissão e homologação IIS |
+| F1-09 Documentos | Catálogo local, versões, CMS, publicação corrente e download autorizado | Classificação/destinatários institucionais, origem oficial, media nativa, antimalware e homologação |
+| F1-10 Notícias, autoria | Rascunho, versões, destaque, galeria, anexos, pré-visualização, submissão, fila e avisos | Homologação institucional e dependências técnicas comuns de ficheiros |
+| F1-11 Notícias, decisão | Por iniciar | Aprovar, rejeitar com motivo, devolver/corrigir, reenviar, publicar versão, manter publicada anterior, retirar/arquivar e auditar |
+| F1-12 Comunicados/calendário | Por iniciar | Comunicados por audiência, eventos, calendário, visibilidade e notificações |
+| F1-13 Tarefas | Por iniciar | Criação, atribuição, prioridades, prazos, estados, reatribuição, histórico e visão de equipa |
+| F1-14 Dashboard/pesquisa | Por iniciar | Agregar módulos activos, pesquisa autorizada, filtros, contagens seguras e estados vazios |
+| F1-15 Administração CMS | Parcial pelo painel e ferramentas locais | Consolidar gestão funcional, parâmetros, capacidades, unidades, contas, conteúdo e auditoria sem editar código |
+| F1-16 QA/segurança/restauro | Parcial por CI, unitários, integrações e Playwright locais | Matriz completa de segurança por objecto, acessibilidade, carga, backup/restauro e homologação representativa |
+| F1-17 Operação/formação | Por iniciar | Manual operacional, formação, aceitação, pacote de release e disponibilização controlada |
+| F2 Pedidos/férias/tickets | Por iniciar | Implementar F2-01 a F2-06 integralmente, incluindo férias e suporte |
+| Infraestrutura | Planeada, não executada neste repositório | INF-01 a INF-10, DNS/HTTPS/VPN, IIS/PHP/MySQL, backups, logs, monitorização e recuperação |
+| F3 Integrações | Por iniciar | Só depois do núcleo completo, por prioridade e fonte oficial aprovada |
+
+#### Ordem obrigatória de continuação
+
+O agente deve seguir esta sequência, salvo impedimento técnico demonstrável. Não voltar a implementar o que já está em `main`.
+
+1. Executar regressões da `main` e confirmar o estado real do ambiente.
+2. F1-11, fechar o ciclo editorial completo das notícias.
+3. F1-07, directório de funcionários, perfil e visão autorizada da equipa.
+4. F1-12, comunicados e calendário.
+5. F1-13, tarefas e acompanhamento de equipa.
+6. F1-14, dashboard integrado e pesquisa com autorização.
+7. F1-15, consolidar administração e parâmetros do CMS.
+8. Completar as lacunas técnicas comuns de F1-08/F1-09/F1-10, sobretudo media nativa, derivados, reconciliação e política de admissão.
+9. Implementar F2-01 e F2-02, motor de pedidos e decisões.
+10. Implementar F2-03, férias e ausências, respeitando as decisões confirmadas e PEN-14.
+11. Implementar F2-04, suporte e tickets.
+12. F2-05 e F2-06, integrar painel/pesquisa/notificações e validar os serviços administrativos.
+13. F1-16, executar a matriz final de segurança, acessibilidade, desempenho e recuperação sobre o conjunto completo.
+14. INF-01 a INF-09, preparar e homologar a infraestrutura Windows/IIS/PHP/MySQL, HTTPS, LAN/VPN, backups, logs e monitorização.
+15. F1-17 e INF-10, formar, criar release identificada por commit, instalar de forma controlada e executar aceitação final.
+16. F3 apenas depois do portal completo, salvo integração externa explicitamente necessária para fechar um requisito já aprovado.
+
+Para o objectivo actual, a primeira disponibilização final deve incluir F1 e F2. Não considerar o site concluído deixando pedidos, férias ou suporte para uma entrega futura.
+
+#### Regra de autonomia, para evitar interrupções desnecessárias
+
+O agente não deve parar para pedir confirmação sobre detalhes já definidos no README, nas user stories ou no código integrado. Quando uma decisão institucional real continuar pendente, deve:
+
+1. Implementar o mecanismo técnico de forma configurável e segura.
+2. Usar apenas fixtures e valores fictícios no laboratório.
+3. Não inventar nomes, emails, hierarquias, saldos, aprovadores, políticas ou dados reais.
+4. Registar claramente a activação institucional pendente.
+5. Continuar imediatamente para a próxima tarefa independente.
+
+Só deve interromper e pedir intervenção do responsável quando for indispensável um segredo, acesso externo, alteração de produção, decisão institucional que muda o comportamento de negócio, dado real que não pode ser substituído por fixture, aquisição/licença, ou acção irreversível.
+
+#### Definição de concluído para cada módulo
+
+Uma tarefa só passa a Concluída quando, no mínimo:
+
+- Os critérios das user stories aplicáveis estão implementados.
+- A autorização é validada no servidor por função, âmbito, objecto e estado.
+- Operações relevantes geram auditoria coerente.
+- Notificações são transaccionais quando o módulo as exige.
+- Inputs, uploads, nonces, concorrência e erros têm tratamento explícito.
+- A interface funciona em português, teclado e ecrãs pequenos.
+- Existem testes unitários para regras, integração para persistência e browser para o fluxo crítico.
+- `npm test`, `npm run lint`, `npm run build`, PHPUnit e PHPCS passam.
+- A CI passa no SHA exacto da branch.
+- A documentação do módulo e o estado no README são actualizados.
+- A alteração entra por PR revista. Nunca usar push directo em `main`.
+- Limites locais versus homologação institucional ficam explícitos.
+
+#### Protocolo de sessão do agente
+
+No início de cada sessão:
+
+~~~bash
+git fetch origin --prune
+git switch main
+git pull --ff-only origin main
+npm ci
+~~~
+
+Ler `AGENTS.md`, este plano e a documentação específica do módulo. Escolher a primeira tarefa incompleta da ordem obrigatória que não esteja activa noutra branch ou PR.
+
+Para cada avanço: criar branch por tarefa, implementar uma unidade coerente, testar, rever diff, fazer commit, push, abrir/actualizar PR e pedir/verificar revisão. Integrar apenas com CI verde no SHA exacto. Após o merge, actualizar `main` e continuar automaticamente para a tarefa seguinte.
+
+Não fazer force push, não apagar branches ou dados de outro colaborador para resolver divergências, não alterar a stack WordPress/PHP, não introduzir frontend separado e não fazer deploy durante desenvolvimento local.
+
+#### Critério de conclusão global do site
+
+O portal só deve ser declarado concluído quando todas as histórias F1 e F2 estiverem cobertas, os módulos estiverem integrados no mesmo WordPress, a matriz de segurança e privacidade tiver passado, o restauro tiver sido testado, a autenticação Google institucional estiver homologada, a infraestrutura Windows/IIS/MySQL estiver validada, os dados reais tiverem sido importados por procedimento aprovado, os utilizadores piloto tiverem aceite os fluxos principais e existir release/rollback documentados.
 
 <a id="plano-infraestrutura"></a>
 ### 15.4 Plano técnico de preparação no Windows
@@ -1739,5 +1843,6 @@ Os registos de 8 e 9 de outubro conservam a rastreabilidade. Todas as referênci
 | 2026-10-13 | Continuidade através de ChatGPT Work/Codex e GitHub | DEC-18. Cursor opcional. Branch, testes, revisão, PR, main, release e homologação antes da produção. |
 | 2026-10-13 | composer.lock regularizado | PR #3 integrada. SHA da branch `a230ffd4e4eee55a9ec67fba8493d50f39f072fe`, merge `2e743c16013e698535e2748bb79c4aa417c5f2b3`. CI Node e PHP aprovada no SHA. |
 | 2026-10-13 | Férias anuais repartíveis | DEC-19: 22 dias úteis por ano civil, solicitação prévia e decisão final RH. F2 ainda por iniciar. Pendências funcionais explicitadas em PEN-14. |
+| 2026-10-14 | Consolidação após PRs #20 a #22 | F1-08, F1-09 e a parcela local de F1-10 estão integradas em main. PR #22 teve workflow Verificação aprovada no SHA `39b7d0fe349c95e3776e461d211c15a52d76dfe7`. README 1.0 passa a definir a sequência obrigatória para concluir F1, F2, homologação e release. |
 
 Após cada integração, ambos os colaboradores actualizam main e usam o fluxo da secção 16.6. A validação local de Atchutchi está registada e o lockfile já está em main. Falta repetição no segundo PC e homologação Windows/IIS/MySQL 8.4. O inventário e a validação de .205 continuam em INF-01/02, sem acesso nesta sessão. Panthera-Onca deve permanecer fora de arn.local. Esta sessão não instalou o portal na ARN nem alterou servidores, AD ou DNS. Criou apenas o cliente OAuth local autorizado, sem criar contas Workspace ou alterar MFA.
