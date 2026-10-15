@@ -46,7 +46,7 @@ final readonly class ProfessionalDetails {
 	private static function singleLine( string $value, int $limit ): bool {
 		$length = preg_match_all( '/./us', $value );
 		return false !== $length && $length >= 1 && $length <= $limit
-			&& 0 === preg_match( '/[\p{C}<>]/u', $value )
+			&& 0 === preg_match( '/[\p{C}\p{Zl}\p{Zp}<>]/u', $value )
 			&& 0 === preg_match( '/\A(?:\s|\p{Z})|(?:\s|\p{Z})\z/u', $value );
 	}
 }

@@ -48,6 +48,9 @@ final readonly class Profile {
 		if ( array() === $this->changedFields( $self_service ) ) {
 			return $this;
 		}
+		if ( PHP_INT_MAX === $this->revision ) {
+			throw new InvalidArgumentException( 'Revisão do perfil excede o limite.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Pure domain exception.
+		}
 		return new self( $this->user_id, $this->professional, $self_service, $this->revision + 1, $now );
 	}
 

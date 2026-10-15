@@ -26,11 +26,15 @@ final class PeopleModelTest extends TestCase {
 			array( 'A', '', 'x@example.invalid', 'Cargo', 'LAB-A' ),
 			array( 'A', str_repeat( 'Á', 121 ), 'x@example.invalid', 'Cargo', 'LAB-A' ),
 			array( 'A', "Nome\nOutro", 'x@example.invalid', 'Cargo', 'LAB-A' ),
+			array( 'A', "Nome\u{2028}Outro", 'x@example.invalid', 'Cargo', 'LAB-A' ),
+			array( 'A', "Nome\u{2029}Outro", 'x@example.invalid', 'Cargo', 'LAB-A' ),
 			array( 'A', ' Nome', 'x@example.invalid', 'Cargo', 'LAB-A' ),
 			array( 'A', "\xFF", 'x@example.invalid', 'Cargo', 'LAB-A' ),
 			array( 'A', 'Nome', ' x@example.invalid', 'Cargo', 'LAB-A' ),
 			array( 'A', 'Nome', 'inválido', 'Cargo', 'LAB-A' ),
 			array( 'A', 'Nome', 'x@example.invalid', str_repeat( 'É', 101 ), 'LAB-A' ),
+			array( 'A', 'Nome', 'x@example.invalid', "Cargo\u{2028}Outro", 'LAB-A' ),
+			array( 'A', 'Nome', 'x@example.invalid', "Cargo\u{2029}Outro", 'LAB-A' ),
 			array( 'A', 'Nome', 'x@example.invalid', 'Cargo', 'LAB A' ),
 		) as $fields ) {
 			try {
@@ -54,6 +58,8 @@ final class PeopleModelTest extends TestCase {
 			array( '1 ext', '', '' ),
 			array( '1', str_repeat( 'Á', 101 ), '' ),
 			array( '1', "Sala\n2", '' ),
+			array( '1', "Sala\u{2028}2", '' ),
+			array( '1', "Sala\u{2029}2", '' ),
 			array( '1', '', str_repeat( 'É', 501 ) ),
 			array( '1', '', "Linha\r\nOutra" ),
 			array( '1', '', "\x00" ),
@@ -99,5 +105,15 @@ final class PeopleModelTest extends TestCase {
 				self::assertTrue( true );
 			}
 		}
+	}
+
+	/** A no-op remains valid at the maximum revision, but a real edit cannot overflow. */
+	public function test_real_revision_at_integer_limit_raises_domain_exception(): void {
+		$professional = new ProfessionalDetails( 'A', 'Alfa', 'a@example.invalid', 'Cargo', 'LAB-A' );
+		$initial      = new SelfService( '123', '', '' );
+		$profile      = new Profile( 7, $professional, $initial, PHP_INT_MAX, 10 );
+		self::assertSame( $profile, $profile->revise( $initial, PHP_INT_MAX, 7, 10 ) );
+		$this->expectException( InvalidArgumentException::class );
+		$profile->revise( new SelfService( '456', '', '' ), PHP_INT_MAX, 7, 11 );
 	}
 }

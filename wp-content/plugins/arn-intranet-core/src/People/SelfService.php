@@ -25,7 +25,7 @@ final readonly class SelfService {
 		$bio_length    = preg_match_all( '/./us', $bio );
 		if ( false === $phone_length || $phone_length > 32
 			|| ( '' !== $phone && ( 1 !== preg_match( '/\A[0-9 +()-]+\z/D', $phone ) || 1 !== preg_match( '/[0-9]/', $phone ) ) )
-			|| false === $office_length || $office_length > 100 || 1 === preg_match( '/[\p{C}<>]/u', $office )
+			|| false === $office_length || $office_length > 100 || 1 === preg_match( '/[\p{C}\p{Zl}\p{Zp}<>]/u', $office )
 			|| false === $bio_length || $bio_length > 500 || 1 === preg_match( '/[\p{C}<>]/u', str_replace( "\n", '', $bio ) ) ) {
 			throw new InvalidArgumentException( 'Campos de autosserviço inválidos.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Pure domain exception.
 		}
