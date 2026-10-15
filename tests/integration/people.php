@@ -46,6 +46,7 @@ $db->set_prefix( $prefix );
 $db->suppress_errors( true );
 $other   = null;
 $failure = null;
+$workers = array();
 $checks  = 0;
 $assert  = static function ( bool $value, string $name ) use ( &$checks ): void {
 	if ( ! $value ) {
@@ -83,11 +84,18 @@ try {
 	$units     = new WpdbLocalUnitRepository( $db );
 	$assert( 3 === count( $ids ), 'três perfis próprios' );
 	$deny( static fn() => $units->snapshotInTransaction() );
+	$original_b      = array_column( $units->snapshot()->units, null, 'id' )['LAB-B'];
+	$payload         = $db->get_var( $db->prepare( 'SELECT payload FROM %i WHERE id=%s', $prefix . 'arn_org_units', 'LAB-B' ) );
+	$marked          = json_decode( $payload, true, 32, JSON_THROW_ON_ERROR );
+	$marked['name'] .= ' marcador';
 	$db->query( 'START TRANSACTION' );
+	$db->query( $db->prepare( 'UPDATE %i SET payload=%s WHERE id=%s', $prefix . 'arn_org_units', json_encode( $marked, JSON_THROW_ON_ERROR ), 'LAB-B' ) );
 	$locked    = $units->snapshotInTransaction();
 	$active_tx = $db->get_var( 'SELECT @@session.in_transaction' );
 	$db->query( 'ROLLBACK' );
-	$assert( 1 === $locked->revision && '1' === (string) $active_tx && 1 === $units->snapshot()->revision, 'snapshotInTransaction preserva transacção do chamador' );
+	$rolled_b = array_column( $units->snapshot()->units, null, 'id' )['LAB-B'];
+	$locked_b = array_column( $locked->units, null, 'id' )['LAB-B'];
+	$assert( 1 === $locked->revision && '1' === (string) $active_tx && 1 === $units->snapshot()->revision && $locked_b->name === $marked['name'] && get_object_vars( $rolled_b ) === get_object_vars( $original_b ), 'snapshotInTransaction não confirma marcador e rollback do chamador reverte-o' );
 	$context  = new LocalUnitContext( get_current_user_id(), 'Ensaio exclusivo People', time() );
 	$before_b = array_column( $units->snapshot()->units, null, 'id' )['LAB-B'];
 	$units->apply( 'deactivate-b', 1, $context );
@@ -173,15 +181,84 @@ try {
 	$assert( 2 === $people->find( $ids['alfa'] )->revision && 2 === count( $people->history( $ids['alfa'] ) ), 'falha tardia reverte perfil e auditoria' );
 	$other = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
 	$other->set_prefix( $prefix );
+	$alfa_auth_revision = $auth->find( $ids['alfa'] )->revision;
 	$other->query( 'START TRANSACTION' );
 	$other->get_results( $other->prepare( 'SELECT user_id FROM %i WHERE user_id=%d FOR UPDATE', $prefix . 'arn_authz_accounts', $ids['alfa'] ) );
 	$db->query( 'SET SESSION innodb_lock_wait_timeout=1' );
 	$deny( static fn() => $people->updateOwn( $ids['alfa'], new SelfService( '+245 222', 'Sala Á', '' ), 2 ) );
 	$other->query( 'ROLLBACK' );
 	$assert( 2 === $people->find( $ids['alfa'] )->revision && 2 === count( $people->history( $ids['alfa'] ) ), 'bloqueio concorrente sem escrita' );
-	$winner = $people->updateOwn( $ids['alfa'], new SelfService( '+245 222', 'Sala Á', '' ), 2 );
-	$deny( static fn() => $people->updateOwn( $ids['alfa'], new SelfService( '+245 444', 'Sala Á', '' ), 2 ) );
-	$assert( 3 === $winner->revision && 3 === $people->find( $ids['alfa'] )->revision && 3 === count( $people->history( $ids['alfa'] ) ), 'um escritor confirma e CAS antigo recusa' );
+	$other->query( 'START TRANSACTION' );
+	$other->get_results( $other->prepare( 'SELECT user_id FROM %i WHERE user_id=%d FOR UPDATE', $prefix . 'arn_authz_accounts', $ids['alfa'] ) );
+	$command = array(
+		realpath( '.git/tools/php/php.exe' ),
+		realpath( '.git/tools/wp-cli.phar' ),
+		'--path=' . realpath( '.git/tools/local-wp/wordpress' ),
+		'--user=lab_admin',
+		'eval-file',
+		realpath( 'tests/integration/people-worker.php' ),
+	);
+	foreach ( array( 'a', 'b' ) as $label ) {
+		$environment = array_merge(
+			getenv(),
+			array(
+				'ARN_PEOPLE_TEST_PREFIX'        => $prefix,
+				'ARN_PEOPLE_TEST_ROOT'          => $root,
+				'ARN_PEOPLE_TEST_LABEL'         => $label,
+				'ARN_PEOPLE_TEST_USER_ID'       => (string) $ids['alfa'],
+				'ARN_PEOPLE_TEST_AUTH_REVISION' => (string) $alfa_auth_revision,
+			)
+		);
+		$descriptors = array(
+			0 => array( 'pipe', 'r' ),
+			1 => array( 'pipe', 'w' ),
+			2 => array( 'pipe', 'w' ),
+		);
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Local-only two-process integration test.
+		$process = proc_open( $command, $descriptors, $pipes, dirname( __DIR__, 2 ), $environment );
+		$assert( is_resource( $process ), 'worker PHP exclusivo iniciou' );
+		fclose( $pipes[0] );
+		$workers[] = array( $process, $pipes, $label );
+	}
+	$ready = false;
+	for ( $attempt = 0; $attempt < 200; ++$attempt ) {
+		if ( is_file( $root . DIRECTORY_SEPARATOR . '.people-worker-a.ready' ) && is_file( $root . DIRECTORY_SEPARATOR . '.people-worker-b.ready' ) ) {
+			$ready = true;
+			break;
+		}
+		if ( ! proc_get_status( $workers[0][0] )['running'] || ! proc_get_status( $workers[1][0] )['running'] ) {
+			break;
+		}
+		usleep( 50000 );
+	}
+	$assert( $ready && proc_get_status( $workers[0][0] )['running'] && proc_get_status( $workers[1][0] )['running'], 'dois escritores simultâneos aguardam o mesmo bloqueio' );
+	$other->query( 'ROLLBACK' );
+	$finished = false;
+	for ( $attempt = 0; $attempt < 200; ++$attempt ) {
+		if ( is_file( $root . DIRECTORY_SEPARATOR . '.people-worker-a.result' ) && is_file( $root . DIRECTORY_SEPARATOR . '.people-worker-b.result' ) ) {
+			$finished = true;
+			break;
+		}
+		usleep( 50000 );
+	}
+	$assert( $finished, 'dois escritores concluíram dentro do limite' );
+	$statuses = array();
+	foreach ( $workers as [$process, $pipes, $label] ) {
+		stream_get_contents( $pipes[1] );
+		stream_get_contents( $pipes[2] );
+		fclose( $pipes[1] );
+		fclose( $pipes[2] );
+		$assert( 0 === proc_close( $process ), 'worker terminou sem falha' );
+		$statuses[] = file_get_contents( $root . DIRECTORY_SEPARATOR . '.people-worker-' . $label . '.result' );
+	}
+	$workers = array();
+	sort( $statuses );
+	$after_race = $people->find( $ids['alfa'] );
+	$assert( array( 'committed', 'rejected' ) === $statuses && 3 === $after_race->revision && 3 === count( $people->history( $ids['alfa'] ) ) && in_array( $after_race->self_service->phone, array( '+245 222', '+245 444' ), true ), 'dois escritores: um commit, um CAS recusado e um evento' );
+	foreach ( array( 'a', 'b' ) as $label ) {
+		unlink( $root . DIRECTORY_SEPARATOR . '.people-worker-' . $label . '.ready' );
+		unlink( $root . DIRECTORY_SEPARATOR . '.people-worker-' . $label . '.result' );
+	}
 	$service       = new AuthorizationStorageService( $auth, new LocalAuthorizationStorageAuthority() );
 	$beta_snapshot = $auth->find( $ids['beta'] );
 	$service->changeState( $ids['beta'], AccountState::Suspended, $beta_snapshot->revision, new ChangeContext( get_current_user_id(), 'Suspensão fictícia de Beta', 'LAB-PEOPLE', time() ) );
@@ -217,6 +294,25 @@ try {
 	if ( null !== $other ) {
 		$other->query( 'ROLLBACK' );
 		$other->close();
+	}
+	foreach ( $workers as [$process, $pipes] ) {
+		if ( proc_get_status( $process )['running'] ) {
+			proc_terminate( $process );
+		}
+		foreach ( $pipes as $pipe ) {
+			if ( is_resource( $pipe ) ) {
+				fclose( $pipe );
+			}
+		}
+		proc_close( $process );
+	}
+	foreach ( array( 'a', 'b' ) as $label ) {
+		foreach ( array( 'ready', 'result' ) as $kind ) {
+			$file = $root . DIRECTORY_SEPARATOR . '.people-worker-' . $label . '.' . $kind;
+			if ( is_file( $file ) && ! is_link( $file ) ) {
+				unlink( $file );
+			}
+		}
 	}
 	remove_action( 'user_register', $capture, PHP_INT_MIN );
 	require_once ABSPATH . 'wp-admin/includes/user.php';

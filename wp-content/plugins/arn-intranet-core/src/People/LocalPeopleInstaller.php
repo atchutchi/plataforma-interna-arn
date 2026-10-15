@@ -98,8 +98,8 @@ final class LocalPeopleInstaller {
 				throw new RuntimeException( self::ERROR );
 			}
 		} else {
-			$people_existing = $this->tableCount( $db, $people_schema );
-			if ( $none && 0 !== $people_existing ) {
+			$exclusive_tables = $this->exclusiveTables( $db, $prefix );
+			if ( ( $none && array() !== $exclusive_tables ) || ( $all && $exclusive_tables !== $this->expectedExclusiveTables( $prefix ) ) ) {
 				throw new RuntimeException( self::ERROR );
 			}
 			if ( $all ) {
@@ -226,6 +226,20 @@ final class LocalPeopleInstaller {
 			$count += (int) $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', $name ) );
 		}
 		return $count;
+	}
+
+	private function exclusiveTables( IdentityWpdb $db, string $prefix ): array {
+		$names = $db->get_col( $db->prepare( 'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME LIKE %s ORDER BY TABLE_NAME', $db->esc_like( $prefix ) . '%' ) );
+		if ( ! is_array( $names ) || '' !== $db->last_error ) {
+			throw new RuntimeException( self::ERROR );
+		}
+		return $names;
+	}
+
+	private function expectedExclusiveTables( string $prefix ): array {
+		$names = array_map( static fn( string $suffix ): string => $prefix . $suffix, array( 'arn_authz_accounts', 'arn_authz_audit', 'arn_authz_grants', 'arn_authz_schema', 'arn_org_audit', 'arn_org_header', 'arn_org_units', 'arn_people', 'arn_people_audit', 'arn_people_schema' ) );
+		sort( $names );
+		return $names;
 	}
 
 	private function createUser( string $login, string $email, string $file ): WP_User {

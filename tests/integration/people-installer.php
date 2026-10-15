@@ -11,9 +11,12 @@
 use Arn\Intranet\Authorization\AccountState;
 use Arn\Intranet\Authorization\Storage\ChangeContext;
 use Arn\Intranet\Authorization\Storage\AuthorizationStorageService;
+use Arn\Intranet\Authorization\Storage\AuthorizationSchema;
 use Arn\Intranet\Authorization\Storage\LocalAuthorizationStorageAuthority;
 use Arn\Intranet\Authorization\Storage\WpdbAuthorizationRepository;
 use Arn\Intranet\Identity\IdentityWpdb;
+use Arn\Intranet\Organization\Storage\LocalUnitContext;
+use Arn\Intranet\Organization\Storage\WpdbLocalUnitRepository;
 use Arn\Intranet\People\LocalPeopleInstaller;
 use Arn\Intranet\People\LocalPeopleRoster;
 use Arn\Intranet\People\PeopleSchema;
@@ -99,6 +102,28 @@ try {
 	$deny( static fn() => $installer->install() );
 	$assert( 0 === $count_tables() && array() === $owned, 'colisão de ficheiro sem adopção' );
 	unlink( $collision_file );
+	( new AuthorizationSchema( $db ) )->install();
+	$preexisting_units = new WpdbLocalUnitRepository( $db );
+	$preexisting_units->installSchema();
+	$dependency_state = static function () use ( $db, $prefix, $root, $count_tables ): array {
+		$rows = array();
+		foreach ( array( 'arn_authz_accounts', 'arn_authz_audit', 'arn_authz_grants', 'arn_authz_schema', 'arn_org_audit', 'arn_org_header', 'arn_org_units' ) as $suffix ) {
+			$rows[ $suffix ] = $db->get_results( $db->prepare( 'SELECT * FROM %i', $prefix . $suffix ), ARRAY_A );
+		}
+		return array( $count_tables(), $rows, (int) $GLOBALS['wpdb']->get_var( 'SELECT COUNT(*) FROM ' . $GLOBALS['wpdb']->users ), scandir( $root ) );
+	};
+	foreach ( array( 0, 1 ) as $revision ) {
+		if ( 1 === $revision ) {
+			$preexisting_units->apply( 'initialize', 0, new LocalUnitContext( get_current_user_id(), 'Pré-requisito fictício pré-existente', time() ) );
+		}
+		$state = $dependency_state();
+		$deny( static fn() => $installer->install() );
+		$assert( $state === $dependency_state() && array() === $owned && $revision === $preexisting_units->snapshot()->revision, 'dependências pré-existentes recusadas sem efeitos' );
+	}
+	foreach ( array( 'arn_authz_audit', 'arn_authz_grants', 'arn_authz_accounts', 'arn_authz_schema', 'arn_org_audit', 'arn_org_units', 'arn_org_header' ) as $suffix ) {
+		$db->query( $db->prepare( 'DROP TABLE %i', $prefix . $suffix ) );
+	}
+	$assert( 0 === $count_tables(), 'pré-requisitos exclusivos removidos pelo ensaio' );
 	$result = $installer->install();
 	$assert(
 		array( 'user_ids', 'created' ) === array_keys( $result ) && 3 === count( $result['user_ids'] ) && array(
