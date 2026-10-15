@@ -6,6 +6,8 @@ Versão da documentação: 1.0. Data: 14 de outubro de 2026. Estado consolidado 
 
 Estado do projeto: a base WordPress local está funcional e o trabalho deixou de ser apenas uma fundação. Estão implementadas e ensaiadas localmente parcelas de autenticação Google OIDC, vínculo e sessão, autorização por função/âmbito/objecto com persistência auditada, notificações internas, unidades e pré-validação de importação, tema e painel ARN, portal editorial, armazenamento privado, catálogo documental com versões e criação/submissão de notícias com media privados. A PR #22 fechou a parcela local de F1-10 e teve a workflow Verificação aprovada no SHA `39b7d0fe349c95e3776e461d211c15a52d76dfe7`. Não estão ainda concluídos o circuito editorial F1-11, directório/perfil F1-07, comunicados/calendário F1-12, tarefas F1-13, dashboard/pesquisa F1-14, administração final F1-15, validação global F1-16, serviços F2 e homologação/implantação Windows/IIS/MySQL. GitHub é a fonte de verdade. O agente deve continuar a implementação por módulos até completar todo o escopo, sem reiniciar a arquitectura nem repetir trabalhos já integrados.
 
+Continuação local de 15 de outubro de 2026: F1-11 está Em curso nesta branch. A decisão editorial, a migração explícita para esquema 2, os dois editores fictícios, os avisos e a consulta da versão aprovada por audiência estão implementados para ensaio local. A revisão independente precede a activação normal controlada pelo controlador, seguida da aceitação integrada em browser. Essas verificações ainda estão pendentes nesta parcela. A homologação editorial e da infraestrutura continua pendente. Seguir [operação F1-11](docs/publicacao-editorial-local-f1-11.md) e [QA F1-11](docs/qa-publicacao-editorial-local-f1-11.md). Depois de fechar a revisão local de F1-11, a próxima implementação é F1-07. Mantém-se toda a sequência obrigatória abaixo, incluindo F1 e F2 na disponibilização final.
+
 O objetivo é disponibilizar um CMS WordPress privado, organizado pela estrutura da ARN, onde os funcionários consultam informação, colaboram e acompanham os processos autorizados para a sua função.
 
 ## Índice
@@ -1054,7 +1056,7 @@ A documentação base fica registada nesta versão. As tarefas de implementaçã
 | F1-08 | Implementar armazenamento e entrega privada | Backend + DCSI + QA | F0-03/06, F1-03/04 | Em curso | Núcleo local de binários imutáveis, referências por objecto/versão/variante e registo auditado atómico. Entrega local sintética verificada com sessão, âmbito e Playwright, sem migração dos anexos reais. Evidência e limites em docs/ficheiros-privados-locais-f1-08.md. Verificação integral de US-ARN-05, media nativa, política de admissão e homologação IIS/MySQL continuam pendentes. |
 | F1-09 | Implementar catálogo documental e versões | Backend + frontend + RH | F1-08, F0-05 | Em curso | Parcela local fictícia em docs/catalogo-documental-local-f1-09.md. Classificação, destinatários e homologação institucional pendentes. |
 | F1-10 | Implementar criação, galeria e submissão de notícias | Backend + frontend | F1-04/06/08 | Em curso | Parcela local fictícia: rascunhos, versões, destaque, galeria, anexos privados, pré-visualização, envio, fila, avisos e recibos. Seguir docs/noticias-locais-f1-10.md e [evidência de QA local](docs/qa-noticias-local-f1-10.md). Homologação institucional, antimalware, media nativa e IIS/MySQL pendentes. |
-| F1-11 | Implementar revisão, publicação e auditoria editorial | Backend + editorial + QA | F1-10, F0-05 | Por iniciar | Concluir US-NOT-06 e verificar US-NOT-07 a US-NOT-14 e US-ARN-04, incluindo rejeição, correção e reenvio. |
+| F1-11 | Implementar revisão, publicação e auditoria editorial | Backend + editorial + QA | F1-10, F0-05 | Em curso | Parcela local fictícia de decisão, audiência, publicação corrente e arquivo implementada. Fechar revisão e QA integrada de US-NOT-06 a US-NOT-14 e US-ARN-04. Homologação institucional pendente. |
 | F1-12 | Implementar comunicados e gestão de eventos | Backend + frontend + responsáveis | F1-04/06, F0-05 | Por iniciar | US-M05, US-F07 e criação de eventos autorizada. |
 | F1-13 | Implementar tarefas e acompanhamento de equipa | Backend + frontend + responsáveis | F1-04/05/06 | Por iniciar | US-F04/05, US-M02/03 e continuidade básica. |
 | F1-14 | Integrar painel e pesquisa básica | Backend + frontend | F1-07/09/11/12/13 | Por iniciar | US-F02, US-S02 e acessos por objeto. |
@@ -1093,7 +1095,7 @@ Este bloco é a orientação operacional principal para ChatGPT Work, Codex, Cur
 | F1-08 Ficheiros privados | Núcleo imutável, entrega privada, auditoria e ensaios locais | Media nativa e derivados, reconciliação, antimalware/política de admissão e homologação IIS |
 | F1-09 Documentos | Catálogo local, versões, CMS, publicação corrente e download autorizado | Classificação/destinatários institucionais, origem oficial, media nativa, antimalware e homologação |
 | F1-10 Notícias, autoria | Rascunho, versões, destaque, galeria, anexos, pré-visualização, submissão, fila e avisos | Homologação institucional e dependências técnicas comuns de ficheiros |
-| F1-11 Notícias, decisão | Por iniciar | Aprovar, rejeitar com motivo, devolver/corrigir, reenviar, publicar versão, manter publicada anterior, retirar/arquivar e auditar |
+| F1-11 Notícias, decisão | Em curso. Decisão, versões aprovadas por audiência, avisos, portal e arquivo locais implementados | Fechar revisão independente e QA integrada. Validar competências/audiências institucionais, conservação, antimalware, media nativa e homologação IIS/MySQL |
 | F1-12 Comunicados/calendário | Por iniciar | Comunicados por audiência, eventos, calendário, visibilidade e notificações |
 | F1-13 Tarefas | Por iniciar | Criação, atribuição, prioridades, prazos, estados, reatribuição, histórico e visão de equipa |
 | F1-14 Dashboard/pesquisa | Por iniciar | Agregar módulos activos, pesquisa autorizada, filtros, contagens seguras e estados vazios |
@@ -1109,7 +1111,7 @@ Este bloco é a orientação operacional principal para ChatGPT Work, Codex, Cur
 O agente deve seguir esta sequência, salvo impedimento técnico demonstrável. Não voltar a implementar o que já está em `main`.
 
 1. Executar regressões da `main` e confirmar o estado real do ambiente.
-2. F1-11, fechar o ciclo editorial completo das notícias.
+2. F1-11, fechar a revisão independente e a QA integrada do ciclo editorial local implementado. Conservar a homologação institucional como pendente.
 3. F1-07, directório de funcionários, perfil e visão autorizada da equipa.
 4. F1-12, comunicados e calendário.
 5. F1-13, tarefas e acompanhamento de equipa.

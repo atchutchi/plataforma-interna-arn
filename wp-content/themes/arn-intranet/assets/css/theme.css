@@ -159,3 +159,9 @@ a:hover { text-decoration-thickness: 0.12em; }
 .arn-news-preview-attachments { max-width: 65ch; padding-left: 1.5rem; }
 .arn-news-preview-attachments li { padding: .5rem 0; border-bottom: 1px solid #d8e1e7; overflow-wrap: anywhere; }
 .arn-news-preview-attachments span { color: #526373; }
+.arn-news-item-image { display: block; width: 100%; max-height: 24rem; aspect-ratio: 16 / 9; object-fit: contain; background: var(--wp--preset--color--base); margin-bottom: var(--arn-space-3); }
+.arn-news-published :where(h1, p, a, figcaption), .arn-news-item { overflow-wrap: anywhere; }
+.arn-news-published .arn-news-preview-gallery figure { min-width: 0; max-width: min(100%, 25rem); }
+.arn-news-published .arn-news-preview-attachments a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+.arn-news-source-review { border-top: 1px solid var(--wp--preset--color--border); padding-top: var(--arn-space-4); margin-top: var(--arn-space-6); }
+.arn-news-list .arn-portal-filters :where(input, select, button) { font-size: 1rem; }

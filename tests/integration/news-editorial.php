@@ -19,6 +19,8 @@ use Arn\Intranet\News\Asset;
 use Arn\Intranet\News\Audience;
 use Arn\Intranet\News\Content;
 use Arn\Intranet\News\CurrentNewsActor;
+use Arn\Intranet\News\LocalNewsroom;
+use Arn\Intranet\News\NewsPublishedPortal;
 use Arn\Intranet\News\NewsSchema;
 use Arn\Intranet\News\NewsState;
 use Arn\Intranet\News\Version;
@@ -127,6 +129,7 @@ try {
 		}
 	);
 	$repo                   = new WpdbNewsRepository( $db, $authority );
+	$room                   = new LocalNewsroom( $current, static fn(): array => array( $repo, new WpdbFileRegistry( $db ) ), null, static fn(): bool => true );
 	// Historical DDL and rows never depend on today's installer or aggregate writes.
 	foreach ( array(
 		1 => false,
@@ -261,6 +264,14 @@ try {
 	$assert( 1 === count( $author_notices ) && 'approved' === $author_notices[0]->kind && 3 === (int) $author_notices[0]->revision, 'autor recebe um único approved' );
 	$reader_notice = $repo->notificationRows( $users['reader'] )[0];
 	$assert( 'publication' === $reader_notice->kind && array() === $repo->notificationRows( $users['outside'] ), 'audiência filtra entrega actual' );
+	$active    = $users['reader'];
+	$published = NewsPublishedPortal::model( array(), $room );
+	$assert( 1 === $published['total'] && 'Editorial exclusivo' === $published['items'][0]['title'] && 1 === $published['counts']['nota-interna'], 'portal conta apenas publicações aprovadas autorizadas' );
+	$assert( 'Editorial exclusivo' === NewsPublishedPortal::detail( $article->id, $room )['title'], 'detalhe publicado usa runtime autorizado' );
+	$active = $users['outside'];
+	$assert( 0 === NewsPublishedPortal::model( array(), $room )['total'] && null === NewsPublishedPortal::detail( $article->id, $room ), 'fora da audiência não recebe lista nem detalhe' );
+	$active = $editor;
+	$assert( 0 === NewsPublishedPortal::model( array(), $room )['total'] && null === NewsPublishedPortal::detail( $article->id, $room ), 'editor não tem excepção na leitura publicada' );
 	$active = $users['reader'];
 	$repo->markRead( (int) $reader_notice->id, time() );
 	$read_at = $repo->notificationRows( $active )[0]->read_at;
@@ -270,8 +281,14 @@ try {
 	$refuses( static fn() => $repo->markRead( (int) $reader_notice->id, time() ) );
 	$participants[ $active ] = array( 'LAB-A' );
 	$active                  = $author;
-	$article                 = $repo->revise( $article->id, new Version( 2, $content(), $author, time() ), 3, 'Nova versão privada' );
+	$private_content         = new Content( 'Versão reservada', 'Corpo reservado', 'circular', $asset(), array(), array(), Audience::units( array( 'LAB-B' ) ) );
+	$article                 = $repo->revise( $article->id, new Version( 2, $private_content, $author, time() ), 3, 'Nova versão privada' );
 	$assert( 1 === $article->published_version && 1 === $article->submitted_version && wp_json_encode( $article ) === wp_json_encode( $repo->find( $article->id ) ), 'revisão conserva publicação e submissão anteriores' );
+	$active = $users['reader'];
+	$assert( 'Editorial exclusivo' === NewsPublishedPortal::detail( $article->id, $room )['title'] && 0 === NewsPublishedPortal::model( array( 'q' => 'reservada' ), $room )['total'], 'rascunho e audiência posterior não alteram publicação nem pesquisa' );
+	$active = $users['outside'];
+	$assert( null === NewsPublishedPortal::detail( $article->id, $room ), 'audiência privada posterior não concede leitura antecipada' );
+	$active  = $author;
 	$article = $repo->submit( $article->id, 4, 'Submeter versão dois' );
 	$active  = $editor;
 	$article = $repo->decide( $article->id, 'reject', 2, 5, 'Corrigir texto' );
@@ -288,6 +305,8 @@ try {
 	$article        = $repo->decide( $article->id, 'archive', 3, 9, 'Retirar publicação' );
 	$author_notices = $repo->notificationRows( $author );
 	$assert( NewsState::Archived === $article->state && 'archived' === $author_notices[0]->kind && 3 === count( $repo->find( $article->id )->versions ), 'arquivo conserva versões e entrega aviso ao autor suspenso' );
+	$active = $users['reader'];
+	$assert( null === NewsPublishedPortal::detail( $article->id, $room ) && 0 === NewsPublishedPortal::model( array(), $room )['total'], 'arquivo retira lista e detalhe sem apagar versões' );
 	$active = $author;
 	$refuses( static fn() => $repo->markRead( (int) $author_notices[0]->id, time() ) );
 	$authz->changeState( $author, AccountState::Active, 4, $context() );

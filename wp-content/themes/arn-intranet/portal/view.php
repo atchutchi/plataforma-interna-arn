@@ -17,6 +17,14 @@ if ( 'news_preview' === $portal['view'] && is_array( $portal['news'] ?? null ) )
 	get_template_part( 'portal/news-preview', null, array( 'news' => $portal['news'] ) );
 	return;
 }
+if ( 'news_published' === $portal['view'] && is_array( $portal['news'] ?? null ) ) {
+	get_template_part( 'portal/news-published', null, array( 'news' => $portal['news'] ) );
+	return;
+}
+if ( 'news' === $portal['view'] && ! empty( $portal['published_news'] ) ) {
+	get_template_part( 'portal/news-list', null, array( 'portal' => $portal ) );
+	return;
+}
 if ( in_array( $portal['view'], array( 'documents', 'regulations' ), true ) && ! empty( $portal['catalog'] ) ) {
 	get_template_part( 'portal/document-catalog', null, array( 'portal' => $portal ) );
 	return;
@@ -85,14 +93,17 @@ $intro        = array(
 				<p>Pesquisa por assunto, palavra ou referência.</p>
 			</form>
 		</section>
-		<?php get_template_part( 'portal/notice', null, array( 'available' => $available ) ); ?>
+		<?php
+		if ( empty( $portal['published_news'] ) ) {
+			get_template_part( 'portal/notice', null, array( 'available' => $available ) ); }
+		?>
 		<div class="arn-portal-columns">
 			<section aria-labelledby="arn-news-title">
 				<div class="arn-portal-section-heading"><h2 id="arn-news-title">Comunicações recentes</h2><a href="<?php echo esc_url( arn_intranet_portal_url( 'noticias' ) ); ?>">Todas as notícias <span aria-hidden="true">↗</span></a></div>
 				<?php if ( ! empty( $portal['featured'] ) ) : ?>
 					<?php
 					get_template_part(
-						'portal/item',
+						! empty( $portal['published_news'] ) ? 'portal/news-item' : 'portal/item',
 						null,
 						array(
 							'item'       => $portal['featured'],
@@ -105,7 +116,7 @@ $intro        = array(
 						<?php
 						if ( $item['id'] !== $portal['featured']['id'] ) {
 							get_template_part(
-								'portal/item',
+								! empty( $portal['published_news'] ) ? 'portal/news-item' : 'portal/item',
 								null,
 								array(
 									'item'       => $item,

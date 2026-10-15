@@ -1,6 +1,6 @@
 # Próximas parcelas locais de F1
 
-14 de outubro de 2026. Leitura do backlog README15.3, dos limites de AGENTS e da implementação local. Este roteiro actualiza a orientação de trabalho, sem substituir a auditoria histórica de 13 de outubro ou validar decisões institucionais.
+14 de outubro de 2026, actualizado em 15 de outubro para F1-11. Leitura do backlog README15.3, dos limites de AGENTS e da implementação local. Este roteiro não substitui o estado consolidado e a ordem obrigatória do README 1.0 nem valida decisões institucionais. Depois da revisão e QA local de F1-11, seguir F1-07, F1-12/13/14/15, lacunas técnicas, F2, QA global e infraestrutura/release. A disponibilização final inclui F1 e F2.
 
 | Fase | Situação e parcela autónoma | Dependência que permanece |
 | --- | --- | --- |
@@ -13,9 +13,10 @@
 | F1-08 | Núcleo de armazenamento imutável, registo auditado e entrega por sessão/objecto implementados e ensaiados com fixtures. Prosseguir contratos documentais e integração com media. Seguir ficheiros-privados-locais-f1-08.md. | F0-03/06, política de admissão, media nativa e homologação do armazenamento/IIS/MySQL. |
 | F1-09 | Catálogo local fictício com versões, gestão CMS, colecções publicadas e download autorizado. Seguir catalogo-documental-local-f1-09.md. Estado Em curso. | Classificação e destinatários institucionais, origem oficial, antimalware, media nativa e homologação IIS/MySQL. |
 | F1-10 | Parcela local fictícia de autoria, versões, media privados, pré-visualização, submissão, fila e recibos. Estado Em curso. Seguir noticias-locais-f1-10.md. | Homologação editorial e da infraestrutura, antimalware, media nativa e política institucional. |
-| F1-11 a F1-15 | Implementar por módulo após resolver os respectivos contratos e dependências. F1-11 Por iniciar. | Decisão e publicação editorial dependem de F1-10 e F0-05. Tarefas dependem de unidades e autorização. Painel agregado só após fontes funcionais. |
+| F1-11 | Em curso. Decisão, migração explícita, dois editores fictícios, avisos e publicação corrente por audiência implementados localmente. Fechar revisão e QA integrada conforme publicacao-editorial-local-f1-11.md e qa-publicacao-editorial-local-f1-11.md. | Competências e audiências institucionais F0-05, conservação, antimalware, media nativa e homologação IIS/MySQL. |
+| F1-12 a F1-15 | Implementar por módulo na ordem do README, depois de F1-07. | Tarefas dependem de unidades e autorização. Painel agregado só após fontes funcionais. |
 | F1-16/17 | Conservar evidência de testes e preparar critérios de aceitação ao longo do desenvolvimento. | Segurança completa, restauro, ambiente representativo, utilizadores piloto, responsáveis e formação. |
-| F2/F3 | Mantêm-se fora desta entrega. | Pré-requisitos funcionais e decisões indicadas no README, incluindo regras RH pendentes. |
+| F2/F3 | F2 é obrigatório na disponibilização final e segue o fecho dos módulos e lacunas comuns de F1. F3 só depois do portal completo, salvo integração necessária já aprovada. | Pré-requisitos funcionais e decisões indicadas no README, incluindo regras RH pendentes. |
 
 A parcela F1-04 evita enviar comunicações externas. A fonte é a auditoria confirmada na mesma transacção das alterações de acesso. A projecção interna usa a identidade do evento para não duplicar avisos. Um recibo de leitura não representa aprovação, aceitação formal ou alteração de permissões.
 

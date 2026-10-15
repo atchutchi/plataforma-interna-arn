@@ -42,6 +42,7 @@ use Arn\Intranet\Documents\Catalog\DocumentFileController;
 use Arn\Intranet\News\NewsroomPage;
 use Arn\Intranet\News\NewsFileController;
 use Arn\Intranet\News\NewsPreviewController;
+use Arn\Intranet\News\NewsPublishedController;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -165,6 +166,7 @@ DocumentFileController::register();
 NewsroomPage::register();
 NewsFileController::register();
 NewsPreviewController::register();
+NewsPublishedController::register();
 
 ( new LocalFixtureAccess(
 	arn_intranet_core_environment_type(),
