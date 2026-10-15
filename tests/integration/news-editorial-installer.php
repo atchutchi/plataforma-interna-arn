@@ -41,39 +41,85 @@ $capture = static function ( int $id ) use ( &$owned, $logins ): void {
 	}
 };
 add_action( 'user_register', $capture, PHP_INT_MIN, 1 );
-$checks = 0;
-$assert = static function ( bool $ok, string $label ) use ( &$checks ): void {
+$checks        = 0;
+$assert        = static function ( bool $ok, string $label ) use ( &$checks ): void {
 	if ( ! $ok ) {
 		throw new RuntimeException( 'Falhou: ' . $label );
 	}
 	++$checks;
 };
+$prefix_tables = static fn(): int => (int) $GLOBALS['wpdb']->get_var(
+	$GLOBALS['wpdb']->prepare(
+		'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE %s',
+		$GLOBALS['wpdb']->esc_like( $prefix ) . '%'
+	)
+);
 try {
+	if ( 'local' !== wp_get_environment_type() ) {
+		foreach ( array( 'ARN_ALLOW_LOCAL_NEWSROOM', 'ARN_ALLOW_LOCAL_PRIVATE_FILES', 'ARN_ALLOW_FICTIONAL_LOCAL_ACCESS', 'ARN_ALLOW_LOCAL_AUTHORIZATION_STORAGE', 'ARN_ALLOW_LOCAL_EDITORIAL_WORKFLOW' ) as $flag ) {
+			if ( ! defined( $flag ) ) {
+				define( $flag, true );
+			}
+			$assert( true === constant( $flag ), 'flag isolada disponível: ' . $flag );
+		}
+		global $wpdb;
+		$identity_and_grants = static function () use ( $wpdb ): array {
+			$tables = array(
+				$wpdb->users                         => 'ID',
+				$wpdb->usermeta                      => 'umeta_id',
+				$wpdb->prefix . 'arn_authz_accounts' => 'user_id',
+				$wpdb->prefix . 'arn_authz_grants'   => 'id',
+			);
+			$result = array();
+			foreach ( $tables as $table => $key ) {
+				$exists           = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s', $table ) );
+				$result[ $table ] = 1 === $exists ? $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i ORDER BY %i', $table, $key ), ARRAY_A ) : null;
+			}
+			return $result;
+		};
+		$before              = $identity_and_grants();
+		$assert( 0 === $prefix_tables() && array() === $owned, 'prefixo exclusivo vazio antes do gate' );
+		$rejected = false;
+		try {
+			( new LocalEditorialInstaller( $prefix, $root ) )->install();
+		} catch ( RuntimeException ) {
+			$rejected = true;
+		}
+		$absent = true;
+		foreach ( $logins as $login ) {
+			$absent = $absent && false === get_user_by( 'login', $login );
+		}
+		$assert( $rejected && $absent && array() === $owned, 'entrada nova recusa desenvolvimento sem criar contas' );
+		$assert( $before === $identity_and_grants(), 'identidades e concessões sem alterações' );
+		$assert( 0 === $prefix_tables(), 'nenhuma tabela do prefixo criada' );
+		echo esc_html( 'Instalador editorial: gate de desenvolvimento, ' . $checks . ' verificações.' . PHP_EOL );
+		return;
+	}
 	$rejected = false;
 	try {
 		( new LocalEditorialInstaller( $prefix, ABSPATH ) )->install();
 	} catch ( RuntimeException ) {
 		$rejected = true;
 	}
-	$assert( $rejected && array() === $owned, 'raiz pública recusada antes das contas' );
+	$assert( $rejected && array() === $owned && 0 === $prefix_tables(), 'raiz pública recusada antes das contas e tabelas' );
 	$rejected = false;
 	try {
 		( new LocalEditorialInstaller( 'arn_news_', $root ) )->install();
 	} catch ( RuntimeException ) {
 		$rejected = true;
 	}
-	$assert( $rejected && array() === $owned, 'prefixo não exclusivo recusado' );
+	$assert( $rejected && array() === $owned && 0 === $prefix_tables(), 'prefixo não exclusivo recusado antes das contas e tabelas' );
 	$rejected = false;
 	try {
 		( new LocalNewsInstaller( $prefix, $root ) )->install();
 	} catch ( RuntimeException ) {
 		$rejected = true;
 	}
-	$assert( $rejected && array() === $owned, 'instalador legado fechado' );
+	$assert( $rejected && array() === $owned && 0 === $prefix_tables(), 'instalador legado fechado sem tabelas do prefixo' );
 	if ( ! defined( 'ARN_ALLOW_LOCAL_EDITORIAL_WORKFLOW' ) ) {
 		define( 'ARN_ALLOW_LOCAL_EDITORIAL_WORKFLOW', true );
 	}
-	if ( 'local' !== wp_get_environment_type() || true !== ARN_ALLOW_LOCAL_EDITORIAL_WORKFLOW ) {
+	if ( true !== ARN_ALLOW_LOCAL_EDITORIAL_WORKFLOW ) {
 		$assert( array() === $owned, 'ambiente não autorizado não cria contas' );
 		echo 'Instalador editorial: gates verificados.' . PHP_EOL;
 		return;
