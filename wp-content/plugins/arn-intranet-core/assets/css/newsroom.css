@@ -40,4 +40,11 @@
 .arn-newsroom-history { max-width: 65ch; padding-top: 1rem; }
 .arn-newsroom-history li { margin-bottom: .5rem; }
 .arn-newsroom-notice { border: 1px solid #d8e1e7; border-radius: 4px; box-shadow: none; }
+.arn-newsroom-filters { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem 1rem; margin: 1.25rem 0; }
+.arn-newsroom-filters label { display: flex; flex-direction: column; gap: .25rem; font-weight: 600; }
+.arn-newsroom-filters input, .arn-newsroom-filters select { box-sizing: border-box; min-height: 44px; min-width: 9rem; padding: .5rem .75rem; border: 1px solid #8fa6b4; border-radius: 4px; background: #fff; color: #1b242c; font: 1rem "ARN Source Sans 3", sans-serif; }
+.arn-newsroom-filters .button, .arn-newsroom-notices .button { box-sizing: border-box; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: .5rem 1rem; font-size: 1rem; }
+.arn-newsroom-filters :is(input, select, button):focus-visible, .arn-newsroom-decision-form :is(input, button):focus-visible, .arn-newsroom-notices button:focus-visible { outline: 3px solid #1f6b4a; outline-offset: 2px; box-shadow: none; }
+.arn-newsroom-decision { max-width: 65ch; padding: 1rem; border: 1px solid #d8e1e7; border-radius: 4px; background: #f4f7f8; }
+.arn-newsroom-decision-form { padding-top: 1rem; border-top: 1px solid #d8e1e7; }
 @media (max-width: 600px) { .arn-newsroom-list, .arn-newsroom-section { padding: 1rem; } .arn-newsroom-media-row-head > div { width: 100%; } }

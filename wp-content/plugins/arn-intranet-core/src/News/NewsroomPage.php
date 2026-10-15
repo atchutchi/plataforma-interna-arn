@@ -98,7 +98,7 @@ final class NewsroomPage {
 	public static function postGate( array $post, string $method, string $page, callable $verify ): bool {
 		$operation = $post['operation'] ?? null;
 		$id        = $post['article_id'] ?? null;
-		if ( 'POST' !== $method || self::SLUG !== $page || ! is_string( $operation ) || ! in_array( $operation, array( 'create', 'revise', 'submit', 'receipt' ), true ) ) {
+		if ( 'POST' !== $method || self::SLUG !== $page || ! is_string( $operation ) || ! in_array( $operation, array( 'create', 'revise', 'submit', 'receipt', 'approve', 'reject', 'return', 'archive' ), true ) ) {
 			return false;
 		}
 		if ( 'create' === $operation ) {
@@ -138,7 +138,7 @@ final class NewsroomPage {
 		$id        = 'create' === $operation ? 0 : (int) $post['article_id'];
 		$news      = new LocalNewsroom();
 		if ( 'receipt' === $operation ) {
-			if ( ! $access[2] || array_diff( array_keys( $post ), array( 'action', 'operation', 'article_id', '_wpnonce', '_wp_http_referer' ) ) ) {
+			if ( array_diff( array_keys( $post ), array( 'action', 'operation', 'article_id', '_wpnonce', '_wp_http_referer' ) ) ) {
 				self::deny();
 			}
 			try {
@@ -146,6 +146,40 @@ final class NewsroomPage {
 				self::redirect( 0, 'read' );
 			} catch ( Throwable ) {
 				self::deny();
+			}
+		}
+		if ( in_array( $operation, array( 'approve', 'reject', 'return', 'archive' ), true ) ) {
+			if ( ! $access[2] || array() !== $_FILES || array_diff( array_keys( $post ), array( 'action', 'operation', 'article_id', 'version', 'cas_token', 'reason', '_wpnonce', '_wp_http_referer' ) ) ) {
+				self::deny();
+			}
+			$version = $post['version'] ?? null;
+			$reason  = $post['reason'] ?? null;
+			if ( ! is_string( $version ) || 1 !== preg_match( '/^[1-9][0-9]{0,9}$/D', $version ) ) {
+				self::deny();
+			}
+			$article = $news->findVisible( $id );
+			if ( null === $article || $article->author_id === $access[0][1] || ! NewsPolicy::canDecide( $article, $operation, (int) $version, $access[0][0], $access[0][2], time() )
+				|| ! NewsDecisionForm::verify( $post['cas_token'] ?? null, $article, $access[0][1], $operation, (int) $version, NewsDecisionForm::serverKey() ) ) {
+				self::deny();
+			}
+			if ( ! self::validReason( $reason ) ) {
+				self::$recovery = array(
+					'operation' => $operation,
+					'post'      => $post,
+					'errors'    => array( 'reason' => 'Escreve uma justificação breve numa linha, até 500 bytes.' ),
+				);
+				return;
+			}
+			try {
+				$news->decide( $id, $operation, (int) $version, $article->revision, $reason );
+				self::redirect( $id, 'saved' );
+			} catch ( Throwable ) {
+				self::$recovery = array(
+					'operation' => $operation,
+					'post'      => $post,
+					'errors'    => array( 'form' => 'A decisão não foi guardada. Reabre a notícia e confirma o estado actual.' ),
+				);
+				return;
 			}
 		}
 		if ( ! $access[1] ) {
@@ -161,7 +195,7 @@ final class NewsroomPage {
 		}
 		$errors = array();
 		$reason = $post['reason'] ?? null;
-		if ( ! is_string( $reason ) || '' === trim( $reason ) || strlen( $reason ) > 500 || 1 !== preg_match( '/\A[^\p{C}<>]+\z/u', $reason ) || trim( $reason ) !== $reason ) {
+		if ( ! self::validReason( $reason ) ) {
 			$errors['reason'] = 'Escreve uma justificação breve numa linha, até 500 bytes.';
 		}
 		$draft = null;
@@ -192,6 +226,11 @@ final class NewsroomPage {
 		}
 	}
 
+	private static function validReason( mixed $reason ): bool {
+		return is_string( $reason ) && '' !== trim( $reason ) && strlen( $reason ) <= 500
+			&& 1 === preg_match( '/\A[^\p{C}<>]+\z/u', $reason ) && trim( $reason ) === $reason;
+	}
+
 	private static function redirect( int $id, string $notice ): never {
 		$url = add_query_arg(
 			array_filter(
@@ -211,13 +250,16 @@ final class NewsroomPage {
 		wp_die( esc_html__( 'Pedido de notícias indisponível.', 'arn-intranet-core' ), '', array( 'response' => 404 ) );
 	}
 
-	private static function url( int $id = 0, int $page = 1 ): string {
+	private static function url( int $id = 0, int $page = 1, array $filters = array() ): string {
 		return add_query_arg(
 			array_filter(
-				array(
-					'page'       => self::SLUG,
-					'article_id' => $id,
-					'arn_paged'  => $page > 1 ? $page : null,
+				array_merge(
+					$filters,
+					array(
+						'page'       => self::SLUG,
+						'article_id' => $id,
+						'arn_paged'  => $page > 1 ? $page : null,
+					)
 				)
 			),
 			admin_url( 'admin.php' )
@@ -234,6 +276,10 @@ final class NewsroomPage {
 		if ( null === $list ) {
 			self::deny();
 		}
+		$filters = NewsroomFilters::parse( $_GET );
+		if ( null === $filters ) {
+			self::deny();
+		}
 		$id_raw = $_GET['article_id'] ?? null;
 		if ( null !== $id_raw && ( ! is_string( $id_raw ) || 1 !== preg_match( '/^[1-9][0-9]{0,9}$/D', $id_raw ) ) ) {
 			self::deny();
@@ -242,15 +288,25 @@ final class NewsroomPage {
 		if ( null !== $id_raw && null === $chosen ) {
 			self::deny();
 		}
-		$page_raw = $_GET['arn_paged'] ?? '1';
-		$page     = is_string( $page_raw ) && preg_match( '/^[1-9][0-9]{0,5}$/D', $page_raw ) ? (int) $page_raw : 1;
-		$total    = count( $list );
-		$pages    = max( 1, (int) ceil( $total / self::PAGE_SIZE ) );
-		$page     = min( $page, $pages );
-		$rows     = array_slice( $list, ( $page - 1 ) * self::PAGE_SIZE, self::PAGE_SIZE );
-		$notices  = $access[2] ? ( $news->notifications() ?? array() ) : array();
+		$models = array();
+		foreach ( $list as $article ) {
+			$model = NewsroomProjection::article( $article, $article->author_id === $access[0][1] );
+			if ( null !== $model ) {
+				$models[] = $model;
+			}
+		}
+		$models  = NewsroomFilters::apply( $models, $filters );
+		$page    = '' === $filters['arn_paged'] ? 1 : (int) $filters['arn_paged'];
+		$total   = count( $models );
+		$pages   = max( 1, (int) ceil( $total / self::PAGE_SIZE ) );
+		$page    = min( $page, $pages );
+		$rows    = array_slice( $models, ( $page - 1 ) * self::PAGE_SIZE, self::PAGE_SIZE );
+		$notices = $news->notifications();
+		if ( null === $notices ) {
+			self::deny();
+		}
 		?>
-		<div class="wrap arn-newsroom-admin"><div class="arn-newsroom-heading"><div><h1>Notícias locais</h1><p>Redacção e revisão em ambiente fictício. As notícias nesta área não estão publicadas.</p></div>
+		<div class="wrap arn-newsroom-admin"><div class="arn-newsroom-heading"><div><h1>Notícias locais</h1><p>Redacção e revisão em ambiente fictício. A publicação é interna e depende da audiência autorizada.</p></div>
 		<?php
 		if ( $access[1] ) :
 			?>
@@ -268,11 +324,10 @@ final class NewsroomPage {
 				?>
 			<p><?php echo esc_html( self::$recovery['errors']['form'] ); ?></p><?php endif; ?></div><?php endif; ?>
 		<?php
-		if ( $access[2] ) :
-			self::noticeList( $notices );
-endif;
+		self::noticeList( $notices );
 		?>
-		<section class="arn-newsroom-list" aria-labelledby="arn-newsroom-list-title"><div class="arn-newsroom-section-heading"><h2 id="arn-newsroom-list-title"><?php echo esc_html( $access[1] ? 'As minhas notícias' : 'Pendentes de revisão' ); ?></h2><p><?php echo esc_html( (string) $total ); ?> notícia<?php echo 1 === $total ? '' : 's'; ?></p></div>
+		<section class="arn-newsroom-list" aria-labelledby="arn-newsroom-list-title"><div class="arn-newsroom-section-heading"><h2 id="arn-newsroom-list-title"><?php echo esc_html( $access[1] ? 'As minhas notícias' : 'Fila editorial' ); ?></h2><p><?php echo esc_html( (string) $total ); ?> notícia<?php echo 1 === $total ? '' : 's'; ?></p></div>
+		<?php self::filterForm( $filters, $access[2] ); ?>
 		<?php
 		if ( array() === $rows ) :
 			?>
@@ -282,11 +337,9 @@ else :
 	?>
 			<ul>
 			<?php
-			foreach ( $rows as $article ) :
-				$own     = $article->author_id === $access[0][1];
-				$version = $article->version( $own ? count( $article->versions ) : (int) $article->submitted_version );
+			foreach ( $rows as $row ) :
 				?>
-	<li><a href="<?php echo esc_url( self::url( $article->id ) ); ?>"><?php echo esc_html( $version->content->title ); ?></a><span><?php echo esc_html( $article->pending() ? 'Pendente' : 'Rascunho' ); ?> · versão <?php echo esc_html( (string) $version->number ); ?></span></li><?php endforeach; ?></ul><?php endif; ?>
+	<li><a href="<?php echo esc_url( self::url( $row['id'] ) ); ?>"><?php echo esc_html( $row['title'] ); ?></a><span><?php echo esc_html( NewsroomProjection::stateLabel( $row['state'] ) ); ?> · versão <?php echo esc_html( (string) $row['version'] ); ?></span></li><?php endforeach; ?></ul><?php endif; ?>
 		<?php
 		if ( $pages > 1 ) :
 			?>
@@ -294,10 +347,10 @@ else :
 			<?php
 			for ( $number = 1; $number <= $pages; $number++ ) :
 				?>
-			<a href="<?php echo esc_url( self::url( 0, $number ) ); ?>" <?php echo $number === $page ? 'aria-current="page"' : ''; ?>><?php echo esc_html( (string) $number ); ?></a><?php endfor; ?></nav><?php endif; ?></section>
+			<a href="<?php echo esc_url( self::url( 0, $number, $filters ) ); ?>" <?php echo $number === $page ? 'aria-current="page"' : ''; ?>><?php echo esc_html( (string) $number ); ?></a><?php endfor; ?></nav><?php endif; ?></section>
 		<?php
 		if ( null !== $chosen ) :
-			self::detail( $chosen, $access[0][1], $news );
+			self::detail( $chosen, $access[0], $news );
 endif;
 		?>
 		<?php
@@ -308,16 +361,40 @@ endif;
 		<?php
 	}
 
-	private static function detail( Article $article, int $actor_id, LocalNewsroom $news ): void {
-		$own     = $article->author_id === $actor_id;
-		$version = $article->version( $own ? count( $article->versions ) : (int) $article->submitted_version );
+	private static function filterForm( array $filters, bool $editor ): void {
+		if ( ! $editor ) {
+			return;
+		}
+		?>
+		<form class="arn-newsroom-filters" method="get" action="<?php echo esc_url( admin_url( 'admin.php' ) ); ?>"><input type="hidden" name="page" value="arn-newsroom">
+		<label>Autor <input name="arn_author" inputmode="numeric" pattern="[1-9][0-9]*" value="<?php echo esc_attr( $filters['arn_author'] ); ?>"></label>
+		<label>De <input name="arn_from" type="date" value="<?php echo esc_attr( $filters['arn_from'] ); ?>"></label>
+		<label>Até <input name="arn_to" type="date" value="<?php echo esc_attr( $filters['arn_to'] ); ?>"></label>
+		<label>Estado <select name="arn_state"><option value="">Todos</option>
+		<?php
+		foreach ( array( 'draft', 'pending', 'rejected', 'published', 'archived' ) as $state ) :
+			?>
+			<option value="<?php echo esc_attr( $state ); ?>" <?php selected( $filters['arn_state'], $state ); ?>><?php echo esc_html( NewsroomProjection::stateLabel( $state ) ); ?></option><?php endforeach; ?></select></label>
+		<button class="button" type="submit">Filtrar</button><a href="<?php echo esc_url( self::url() ); ?>">Limpar</a></form>
+		<?php
+	}
+
+	private static function detail( Article $article, array $actor, LocalNewsroom $news ): void {
+		$own   = $article->author_id === $actor[1];
+		$model = NewsroomProjection::article( $article, $own );
+		if ( null === $model ) {
+			return;
+		}
 		$preview = NewsPortal::url( $article->id );
 		?>
-		<section class="arn-newsroom-section" aria-labelledby="arn-news-detail-title"><div class="arn-newsroom-section-heading"><div><h2 id="arn-news-detail-title"><?php echo esc_html( $version->content->title ); ?></h2><p><?php echo esc_html( $article->pending() ? 'Pendente' : 'Rascunho' ); ?> · versão <?php echo esc_html( (string) $version->number ); ?> · revisão <?php echo esc_html( (string) $article->revision ); ?></p></div><a class="button" href="<?php echo esc_url( $preview ); ?>" target="_blank" rel="noopener">Pré-visualizar</a></div>
+		<section class="arn-newsroom-section" aria-labelledby="arn-news-detail-title"><div class="arn-newsroom-section-heading"><div><h2 id="arn-news-detail-title"><?php echo esc_html( $model['title'] ); ?></h2><p><?php echo esc_html( NewsroomProjection::stateLabel( $model['state'] ) ); ?> · versão <?php echo esc_html( (string) $model['version'] ); ?>
 		<?php
 		if ( $own ) :
-			$history = $news->historyVisible( $article->id ); if ( is_array( $history ) ) :
-				?>
+			?>
+			· revisão <?php echo esc_html( (string) $article->revision ); ?><?php endif; ?></p><p>Audiência: <?php echo esc_html( NewsAudiencePresets::label( $model['audience'] ) ); ?></p></div><a class="button" href="<?php echo esc_url( $preview ); ?>" target="_blank" rel="noopener">Pré-visualizar</a></div>
+		<?php
+		$history = $news->historyVisible( $article->id ); if ( is_array( $history ) ) :
+			?>
 			<div class="arn-newsroom-history"><h3>Histórico e auditoria</h3><ol>
 				<?php
 				foreach ( $history as $event ) :
@@ -331,24 +408,77 @@ endif;
 </ol></div>
 				<?php
 endif;
+		?>
+		<?php
+		if ( $own && null !== $article->lastDecision() ) :
+			$decision = $article->lastDecision();
+			?>
+			<p class="arn-newsroom-decision">Última decisão sobre a versão <?php echo esc_html( (string) $decision->version ); ?>:
+			<?php
+			echo esc_html(
+				self::auditLine(
+					(object) array(
+						'version'     => $decision->version,
+						'event'       => $decision->event,
+						'actor_id'    => $decision->actor_id,
+						'occurred_at' => $decision->occurred_at,
+						'reason'      => $decision->reason,
+					)
+				)
+			);
+			?>
+																			</p>
+			<?php
 endif;
 		?>
 		<?php
-		if ( $own && ! $article->pending() ) :
+		if ( $own && in_array( $article->state, array( NewsState::Draft, NewsState::Rejected, NewsState::Published ), true ) ) :
 			?>
-			<h3>Guardar nova versão</h3><?php self::form( 'revise', $article ); ?><h3>Enviar para aprovação</h3><p>O envio bloqueia a edição nesta fase e cria um aviso para a fila editorial.</p><?php self::form( 'submit', $article ); ?><?php endif; ?></section>
+			<h3>Guardar nova versão</h3><?php self::form( 'revise', $article ); ?>
+			<?php
+			if ( NewsState::Draft === $article->state && count( $article->versions ) > ( $article->submitted_version ?? 0 ) ) :
+				?>
+				<h3>Enviar para aprovação</h3><p>O envio bloqueia a edição nesta fase e cria um aviso para a fila editorial.</p><?php self::form( 'submit', $article ); ?><?php endif; ?><?php endif; ?>
 		<?php
+		if ( ! $own ) :
+			self::decisionForms( $article, $actor );
+endif;
+		?>
+		</section>
+		<?php
+	}
+
+	private static function decisionForms( Article $article, array $actor ): void {
+		$operations = array(
+			'approve' => 'Aprovar e publicar',
+			'reject'  => 'Rejeitar',
+			'return'  => 'Devolver para correcção',
+			'archive' => 'Retirar publicação',
+		);
+		foreach ( $operations as $operation => $label ) {
+			$version = 'archive' === $operation ? $article->published_version : $article->submitted_version;
+			if ( null === $version || ! NewsPolicy::canDecide( $article, $operation, $version, $actor[0], $actor[2], time() ) ) {
+				continue;
+			}
+			$recover = null !== self::$recovery && self::$recovery['operation'] === $operation && (string) $article->id === (string) ( self::$recovery['post']['article_id'] ?? '' ); // phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Strict variable comparison.
+			$reason  = $recover && is_string( self::$recovery['post']['reason'] ?? null ) ? self::$recovery['post']['reason'] : '';
+			?>
+			<form class="arn-newsroom-form arn-newsroom-decision-form" method="post" action="<?php echo esc_url( self::url( $article->id ) ); ?>"><input type="hidden" name="action" value="arn_newsroom"><input type="hidden" name="operation" value="<?php echo esc_attr( $operation ); ?>"><input type="hidden" name="article_id" value="<?php echo esc_attr( (string) $article->id ); ?>"><input type="hidden" name="version" value="<?php echo esc_attr( (string) $version ); ?>"><input type="hidden" name="cas_token" value="<?php echo esc_attr( NewsDecisionForm::token( $article, $actor[1], $operation, $version, NewsDecisionForm::serverKey() ) ); ?>"><?php wp_nonce_field( self::nonceAction( $operation, $article->id ) ); ?>
+			<p><?php echo esc_html( $label ); ?>: versão <?php echo esc_html( (string) $version ); ?>. Audiência: <?php echo esc_html( NewsAudiencePresets::label( $article->version( $version )->content->audience ) ); ?>.</p><div class="arn-newsroom-field"><label for="arn-news-reason-<?php echo esc_attr( $operation ); ?>">Justificação</label><input id="arn-news-reason-<?php echo esc_attr( $operation ); ?>" name="reason" value="<?php echo esc_attr( $reason ); ?>" maxlength="500" required <?php self::described( $recover ? self::$recovery['errors'] : array(), 'reason', $operation ); ?>><small id="arn-news-reason-help-<?php echo esc_attr( $operation ); ?>">Uma linha breve para a auditoria.</small><?php self::error( $recover ? self::$recovery['errors'] : array(), 'reason', $operation ); ?></div><button class="button button-primary" type="submit"><?php echo esc_html( $label ); ?></button></form>
+			<?php
+		}
 	}
 
 	public static function auditLine( stdClass $event ): string {
 		$action = match ( $event->event ?? '' ) {
-			'created' => 'Rascunho criado', 'revised' => 'Nova versão', 'submitted' => 'Enviada para aprovação', default => 'Operação de notícias' };
-		return 'Revisão ' . (int) ( $event->revision ?? 0 ) . ': ' . $action . '. Conta #' . (int) ( $event->actor_id ?? 0 ) . '. ' . gmdate( 'd/m/Y H:i', (int) ( $event->occurred_at ?? 0 ) ) . ' UTC. Justificação: ' . (string) ( $event->reason ?? '' );
+			'created' => 'Rascunho criado', 'revised' => 'Nova versão', 'submitted' => 'Enviada para aprovação',
+			'approved' => 'Aprovada e publicada', 'rejected' => 'Rejeitada', 'returned' => 'Devolvida', 'archived' => 'Arquivada', default => 'Operação de notícias' };
+		return 'Versão ' . (int) ( $event->version ?? 0 ) . ': ' . $action . '. Conta #' . (int) ( $event->actor_id ?? 0 ) . '. ' . gmdate( 'd/m/Y H:i', (int) ( $event->occurred_at ?? 0 ) ) . ' UTC. Justificação: ' . (string) ( $event->reason ?? '' );
 	}
 
 	private static function noticeList( array $notices ): void {
 		?>
-		<section class="arn-newsroom-section" aria-labelledby="arn-news-notices-title"><div class="arn-newsroom-section-heading"><h2 id="arn-news-notices-title">Avisos da fila editorial</h2><p><?php echo esc_html( (string) count( $notices ) ); ?> aviso<?php echo 1 === count( $notices ) ? '' : 's'; ?></p></div>
+		<section class="arn-newsroom-section" aria-labelledby="arn-news-notices-title"><div class="arn-newsroom-section-heading"><h2 id="arn-news-notices-title">Avisos de notícias</h2><p><?php echo esc_html( (string) count( $notices ) ); ?> aviso<?php echo 1 === count( $notices ) ? '' : 's'; ?></p></div>
 		<?php
 		if ( array() === $notices ) :
 			?>
@@ -360,12 +490,20 @@ else :
 			<?php
 			foreach ( $notices as $notice ) :
 				?>
-	<li><div><a href="<?php echo esc_url( self::url( (int) $notice->article_id ) ); ?>">Notícia #<?php echo esc_html( (string) $notice->article_id ); ?>, versão <?php echo esc_html( (string) $notice->version ); ?></a><span><?php echo esc_html( gmdate( 'd/m/Y H:i', (int) $notice->created_at ) ); ?> UTC · <?php echo null === $notice->read_at ? 'Por ler' : 'Lido'; ?></span></div>
+	<li><div><a href="<?php echo esc_url( self::url( (int) $notice->article_id ) ); ?>">Notícia #<?php echo esc_html( (string) $notice->article_id ); ?>, versão <?php echo esc_html( (string) $notice->version ); ?></a><span><?php echo esc_html( self::noticeLabel( (string) $notice->kind ) ); ?> · <?php echo esc_html( gmdate( 'd/m/Y H:i', (int) $notice->created_at ) ); ?> UTC · <?php echo null === $notice->read_at ? 'Por ler' : 'Lido'; ?></span></div>
 				<?php
 				if ( null === $notice->read_at ) :
 					?>
 	<form method="post" action="<?php echo esc_url( self::url() ); ?>"><input type="hidden" name="action" value="arn_newsroom"><input type="hidden" name="operation" value="receipt"><input type="hidden" name="article_id" value="<?php echo esc_attr( (string) $notice->id ); ?>"><?php wp_nonce_field( self::nonceAction( 'receipt', (int) $notice->id ) ); ?><button class="button" type="submit">Marcar como lido</button></form><?php endif; ?></li><?php endforeach; ?></ul><?php endif; ?></section>
 		<?php
+	}
+
+	private static function noticeLabel( string $kind ): string {
+		return match ( $kind ) {
+			'submitted' => 'Submissão', 'approved' => 'Aprovação', 'rejected' => 'Rejeição',
+			'returned' => 'Devolução', 'archived' => 'Retirada', 'publication' => 'Publicação',
+			default => 'Aviso',
+		};
 	}
 
 	private static function form( string $operation, ?Article $article ): void {
@@ -389,6 +527,11 @@ else :
 			foreach ( NewsPortal::categories() as $key => $label ) :
 				?>
 			<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $value( 'category', $content?->category ?? '' ), $key ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select><small id="arn-news-category-help-<?php echo esc_attr( $operation ); ?>">Categoria da comunicação.</small><?php self::error( $errors, 'category', $operation ); ?></div>
+		<div class="arn-newsroom-field"><label for="arn-news-audience-<?php echo esc_attr( $operation ); ?>">Audiência</label><select id="arn-news-audience-<?php echo esc_attr( $operation ); ?>" name="audience_preset" <?php self::described( $errors, 'audience_preset', $operation ); ?>>
+			<?php
+			foreach ( NewsAudiencePresets::labels() as $preset => $label ) :
+				?>
+			<option value="<?php echo esc_attr( $preset ); ?>" <?php selected( $value( 'audience_preset', NewsAudiencePresets::selected( $content?->audience ) ), $preset ); ?>><?php echo esc_html( $label ); ?></option><?php endforeach; ?></select><small id="arn-news-audience_preset-help-<?php echo esc_attr( $operation ); ?>">O rascunho pode ficar sem audiência. Escolhe os destinatários antes do envio.</small><?php self::error( $errors, 'audience_preset', $operation ); ?></div>
 			<?php self::mediaFields( $operation, $post, $errors, $content, $recover ); ?>
 		<?php endif; ?>
 		<div class="arn-newsroom-field"><label for="arn-news-reason-<?php echo esc_attr( $operation ); ?>">Justificação</label><input id="arn-news-reason-<?php echo esc_attr( $operation ); ?>" name="reason" maxlength="500" required value="<?php echo esc_attr( $value( 'reason', '' ) ); ?>" <?php self::described( $errors, 'reason', $operation ); ?>><small id="arn-news-reason-help-<?php echo esc_attr( $operation ); ?>">Uma linha breve para a auditoria.</small><?php self::error( $errors, 'reason', $operation ); ?></div>

@@ -170,8 +170,13 @@ final class LocalNewsroom {
 			$actor        = $this->actor();
 			[$repository] = ( $this->repository_factory )();
 			$article      = $repository->find( $id );
-			return null !== $article && $article->author_id === $actor[1]
-				&& NewsPolicy::canRead( $article, count( $article->versions ), $actor[0], $actor[2], time() ) ? $repository->history( $id ) : null;
+			if ( null === $article ) {
+				return null;
+			}
+			$own    = $article->author_id === $actor[1];
+			$number = $own ? count( $article->versions ) : $article->submitted_version;
+			return null !== $number && NewsPolicy::canRead( $article, $number, $actor[0], $actor[2], time() )
+				? NewsroomProjection::history( $repository->history( $id ), $article, $own ) : null;
 		} catch ( Throwable ) {
 			return null;
 		}

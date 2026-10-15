@@ -12,13 +12,13 @@ use Throwable;
 // phpcs:disable Squiz.Commenting.FunctionComment, Squiz.Commenting.VariableComment
 /** Validates browser fields without accepting actor or scope claims. */
 final class NewsFormInput {
-	private const POST_KEYS = array( 'action', 'operation', '_wpnonce', '_wp_http_referer', 'article_id', 'expected_revision', 'title', 'body', 'category', 'reason', 'featured', 'gallery', 'attachments' );
+	private const POST_KEYS = array( 'action', 'operation', '_wpnonce', '_wp_http_referer', 'article_id', 'expected_revision', 'title', 'body', 'category', 'audience_preset', 'reason', 'featured', 'gallery', 'attachments' );
 
 	/** Return the draft and field errors. No upload path is accepted from POST.
 	 *
 	 * @throws \InvalidArgumentException If a temporary upload is invalid.
 	 */
-	public static function validate( array $post, array $files ): array {
+	public static function validate( array $post, array $files, ?callable $resolve_preset = null ): array {
 		$errors = array();
 		foreach ( array_keys( $post ) as $key ) {
 			if ( ! is_string( $key ) || ! in_array( $key, self::POST_KEYS, true ) ) {
@@ -32,10 +32,19 @@ final class NewsFormInput {
 				break;
 			}
 		}
-		$title    = $post['title'] ?? null;
-		$body     = $post['body'] ?? null;
-		$category = $post['category'] ?? null;
-		$reason   = $post['reason'] ?? null;
+		$title          = $post['title'] ?? null;
+		$body           = $post['body'] ?? null;
+		$category       = $post['category'] ?? null;
+		$reason         = $post['reason'] ?? null;
+		$preset         = $post['audience_preset'] ?? '';
+		$resolve_preset = $resolve_preset ?? array( NewsAudiencePresets::class, 'resolve' );
+		$audience       = null;
+		if ( is_string( $preset ) && '' !== $preset ) {
+			$audience = $resolve_preset( $preset );
+		}
+		if ( ! is_string( $preset ) || ( '' !== $preset && null === $audience ) || ( null !== $audience && ! $audience instanceof Audience ) ) {
+			$errors['audience_preset'] = 'Selecciona uma audiência válida.';
+		}
 		if ( ! is_string( $title ) || ! Content::plainText( $title, 1, 200 ) ) {
 			$errors['title'] = 'Indica um título de texto simples até 200 caracteres.';
 		}
@@ -69,7 +78,7 @@ final class NewsFormInput {
 		}
 		try {
 			return array(
-				'draft'  => new DraftInput( $title, $body, $category, $featured, $gallery, $attachments ),
+				'draft'  => new DraftInput( $title, $body, $category, $featured, $gallery, $attachments, $audience ),
 				'errors' => array(),
 			);
 		} catch ( Throwable ) {

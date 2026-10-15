@@ -72,7 +72,7 @@ Interfaces: CurrentNewsActor::participantUnits():array<int,array<string>> e unit
 
 Files: evoluir NewsroomPage.php, NewsFormInput.php, NewsPortal.php e assets newsroom. Extrair NewsDecisionForm/NewsroomProjection/NewsroomFilters se necessário para evitar um monólito. Tests PHPUnit de validação, projecção e rendering reais.
 
-Interfaces: formulário aceita preset audience (resolvido no servidor), operações approve/reject/return/archive com version e expected_revision. Nonce arn_news_<operation>_<id>, motivo obrigatório. Projecção de gestão distingue latest author e last-submitted editor, sem nova versão privada. Não criar listas de pessoas/unidades arbitrárias recebidas do browser.
+Interfaces: formulário aceita preset audience (resolvido no servidor), operações approve/reject/return/archive com version e token CAS HMAC opaco nas decisões editoriais. A revisão inteira é resolvida pelo servidor após verificação do token, mantendo expected_revision inteiro no serviço. Nonce arn_news_<operation>_<id>, motivo obrigatório. Projecção de gestão distingue latest author e last-submitted editor, sem nova versão privada. Não criar listas de pessoas/unidades arbitrárias recebidas do browser.
 
 Filtros GET CMS: arn_author, arn_from, arn_to, arn_state, arn_paged. NewsFormInput pode receber uma terceira callable de resolução de presets, exclusivamente do servidor, para testar os inputs sem WordPress. A implementação por defeito resolve LocalNewsRoster. Preset vazio mantém Draft sem audiência. Preset desconhecido é erro de campo.
 

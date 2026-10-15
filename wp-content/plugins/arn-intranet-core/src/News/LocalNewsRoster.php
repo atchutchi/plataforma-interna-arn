@@ -74,4 +74,19 @@ final class LocalNewsRoster {
 		}
 		return $ids;
 	}
+
+	/** Resolve the one named person preset from the complete marked server roster. */
+	public function personAId(): ?int {
+		$people = $this->participantUnits();
+		if ( 5 !== count( $people ) ) {
+			return null;
+		}
+		try {
+			$row = ( $this->lookup )( 'colaborador.noticias.a.teste' );
+			$id  = $row['id'] ?? null;
+			return is_int( $id ) && ( $row['login'] ?? null ) === 'colaborador.noticias.a.teste' && ( $people[ $id ] ?? null ) === array( 'LAB-A' ) ? $id : null;
+		} catch ( Throwable ) {
+			return null;
+		}
+	}
 }

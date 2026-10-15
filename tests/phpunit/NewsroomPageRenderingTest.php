@@ -107,4 +107,47 @@ final class NewsroomPageRenderingTest extends TestCase {
 		self::assertFileExists( $root . '/assets/js/newsroom.js' );
 		self::assertFileExists( $root . '/arn-intranet-core.php' );
 	}
+
+	/** A failed POST preserves the submitted audience, media order and original CAS. */
+	public function testRecoveryKeepsAudienceAndOrderedMedia(): void {
+		$post = array(
+			'article_id'        => '33',
+			'expected_revision' => '1',
+			'audience_preset'   => 'lab-unit-a',
+			'gallery'           => array(
+				array(
+					'id'          => str_repeat( 'e', 32 ),
+					'description' => 'Primeira',
+				),
+				array(
+					'id'          => str_repeat( 'b', 32 ),
+					'description' => 'Segunda',
+				),
+			),
+		);
+		$html = $this->formHtml(
+			array(
+				'operation' => 'revise',
+				'post'      => $post,
+				'errors'    => array( 'reason' => 'Indica o motivo.' ),
+			)
+		);
+		self::assertStringContainsString( 'name="expected_revision" value="1"', $html );
+		self::assertStringContainsString( 'value="lab-unit-a" selected="selected"', $html );
+		self::assertLessThan( strpos( $html, 'value="' . str_repeat( 'b', 32 ) . '"' ), strpos( $html, 'value="' . str_repeat( 'e', 32 ) . '"' ) );
+	}
+
+	public function testAuditUsesVersionAndDecisionActionWithoutPrivateRevision(): void {
+		$event = (object) array(
+			'version'     => 1,
+			'event'       => 'approved',
+			'actor_id'    => 8,
+			'occurred_at' => 30,
+			'reason'      => 'Aprovada',
+		);
+		$line  = NewsroomPage::auditLine( $event );
+		self::assertStringContainsString( 'Versão 1', $line );
+		self::assertStringContainsString( 'Aprovada', $line );
+		self::assertStringNotContainsString( 'Revisão', $line );
+	}
 }
