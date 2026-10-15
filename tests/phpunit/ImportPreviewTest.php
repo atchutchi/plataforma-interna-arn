@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 use Arn\Intranet\Organization\ImportPreview\{StrictCsv, SyntheticScenarios, PreviewValidator, LocalImportPreviewPage};
 use Arn\Intranet\Organization\Storage\{LocalUnitSnapshot, LocalUnitScenarios};
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /** Testa a gramática e as decisões sem WordPress ou base. */
@@ -30,8 +31,8 @@ final class ImportPreviewTest extends TestCase {
 	 * Rejeita entradas lexicalmente inválidas.
 	 *
 	 * @param string $csv Lote inválido.
-	 * @dataProvider malformedCsv
 	 */
+	#[DataProvider( 'malformedCsv' )]
 	public function testMalformedCsvIsRejected( string $csv ): void {
 		$this->expectException( RuntimeException::class );
 		StrictCsv::parse( $csv );

@@ -26,6 +26,10 @@ function admin_url( string $path ): string {
 	return 'https://example.test/wp-admin/' . $path; }
 function add_query_arg( array $args, string $url ): string {
 	return $url . '?' . http_build_query( $args ); }
+function get_page_by_path( string $path ): null { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Matches the WordPress function signature.
+	return null; }
+function home_url( string $path ): string {
+	return 'https://example.test' . $path; }
 function wp_nonce_field( string $action ): void {
 	echo '<input type="hidden" name="_wpnonce" value="' . esc_attr( $action ) . '">'; }
 function selected( string $actual, string $expected ): void {
@@ -149,5 +153,45 @@ final class NewsroomPageRenderingTest extends TestCase {
 		self::assertStringContainsString( 'Versão 1', $line );
 		self::assertStringContainsString( 'Aprovada', $line );
 		self::assertStringNotContainsString( 'Revisão', $line );
+	}
+
+	public function testNoticeLinksAndReasonsFollowTheirAudience(): void {
+		$notices = array(
+			(object) array(
+				'id'         => 1,
+				'article_id' => 33,
+				'version'    => 1,
+				'kind'       => 'publication',
+				'created_at' => 30,
+				'read_at'    => 31,
+				'reason'     => 'Motivo editorial privado',
+			),
+			(object) array(
+				'id'         => 2,
+				'article_id' => 33,
+				'version'    => 2,
+				'kind'       => 'rejected',
+				'created_at' => 40,
+				'read_at'    => 41,
+				'reason'     => '<motivo> reservado',
+			),
+		);
+		ob_start();
+		try {
+			( new ReflectionMethod( NewsroomPage::class, 'noticeList' ) )->invoke( null, $notices );
+			$html = (string) ob_get_contents();
+		} finally {
+			ob_end_clean();
+		}
+		self::assertStringContainsString( 'href="https://example.test/noticias/?arn_news=33"', $html );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=arn-newsroom&amp;article_id=33"', $html );
+		self::assertStringNotContainsString( 'Motivo editorial privado', $html );
+		self::assertStringContainsString( 'Motivo: &lt;motivo&gt; reservado', $html );
+		self::assertStringNotContainsString( '<motivo>', $html );
+	}
+
+	public function testConservedFileExplainsRemovalBeforeReplacement(): void {
+		$html = $this->formHtml( null );
+		self::assertStringContainsString( 'Para substituir este ficheiro, usa Retirar e adiciona novamente.', $html );
 	}
 }

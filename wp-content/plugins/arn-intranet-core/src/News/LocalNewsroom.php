@@ -195,7 +195,13 @@ final class LocalNewsroom {
 				$event   = null === $article ? null : ( $article->transitions[ (int) $notice->revision - 1 ] ?? null );
 				if ( null !== $event && $event->version === (int) $notice->version && $event->occurred_at === (int) $notice->created_at
 					&& $this->noticeVisible( $article, $notice, $event, $actor ) ) {
-					$visible[] = $notice;
+					$visible_notice = clone $notice;
+					if ( in_array( $notice->kind, array( 'approved', 'rejected', 'returned', 'archived' ), true ) && $article->author_id === $actor[1] ) {
+						$visible_notice->reason = $event->reason;
+					} else {
+						unset( $visible_notice->reason );
+					}
+					$visible[] = $visible_notice;
 				}
 			}
 			return $visible;

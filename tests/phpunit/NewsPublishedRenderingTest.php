@@ -15,6 +15,47 @@ use PHPUnit\Framework\TestCase;
 final class NewsPublishedRenderingTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
+	public function testEditorialPreviewUsesNeutralStatusForPublishedAndDraftVersions(): void {
+		define( 'ABSPATH', dirname( __DIR__, 2 ) );
+		function esc_html( string $text ): string {
+			return htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' ); }
+		function esc_attr( string $text ): string {
+			return esc_html( $text ); }
+		function esc_url( string $text ): string {
+			return esc_html( $text ); }
+		function arn_intranet_portal_url( string $slug ): string {
+			return '/' . $slug . '/'; }
+		$file = dirname( __DIR__, 2 ) . '/wp-content/themes/arn-intranet/portal/news-preview.php';
+		foreach ( array( 'Publicada', 'Rascunho' ) as $state ) {
+			$args = array(
+				'news' => array(
+					'state'       => $state,
+					'version'     => 1,
+					'title'       => 'Versão pública',
+					'body'        => 'Corpo autorizado',
+					'category'    => 'Circular',
+					'featured'    => null,
+					'gallery'     => array(),
+					'attachments' => array(),
+					'cms_url'     => '/wp-admin/admin.php?page=arn-newsroom',
+					'reason'      => 'Motivo privado',
+					'revision'    => 9,
+				),
+			);
+			ob_start();
+			include $file;
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'Pré-visualização: ' . $state, $html );
+			self::assertStringContainsString( 'Versão 1. Vista editorial da versão indicada.', $html );
+			self::assertStringContainsString( 'Corpo autorizado', $html );
+			self::assertStringNotContainsString( 'Esta notícia ainda não foi publicada', $html );
+			self::assertStringNotContainsString( 'Motivo privado', $html );
+			self::assertStringNotContainsString( 'revision', $html );
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function testDetailEscapesApprovedTextAndShowsBylineAudienceAndPrivateMedia(): void {
 		define( 'ABSPATH', dirname( __DIR__, 2 ) );
 		function esc_html( string $text ): string {

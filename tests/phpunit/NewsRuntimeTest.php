@@ -251,4 +251,98 @@ final class NewsRuntimeTest extends TestCase {
 		$editor = $room( 12, Role::Editorial, Scope::queues( array( 'editorial-ficticia' ) ) );
 		self::assertCount( 1, $editor->historyVisible( 7 ) );
 	}
+
+	public function testDecisionNoticeProjectsMatchingReasonOnlyForAuthorAndKeepsReceipts(): void {
+		$first          = new Version( 1, new Content( 'Publicado', 'Corpo', 'circular', new Asset( 'featured', new BlobDescriptor( str_repeat( 'a', 32 ), str_repeat( 'b', 64 ), 1, 'image/png' ), 'Imagem' ), array(), array(), Audience::units( array( 'LAB-A' ) ) ), 11, 10 );
+		$second         = new Version( 2, new Content( 'Privado', 'Corpo privado', 'circular', new Asset( 'featured', new BlobDescriptor( str_repeat( 'c', 32 ), str_repeat( 'd', 64 ), 1, 'image/png' ), 'Outra imagem' ), array(), array(), Audience::units( array( 'LAB-B' ) ) ), 11, 13 );
+		$article        = Article::create( 7, 11, Scope::queues( array( 'editorial-ficticia' ) ), $first )->submit( 1, 11 )->approve( 2, 1, 12, 12, 'Aprovação reservada' )->revise( $second, 3 )->submit( 4, 14 )->reject( 5, 2, 12, 15, 'Corrigir o texto' );
+		$rows           = array(
+			(object) array(
+				'id'           => 1,
+				'recipient_id' => 11,
+				'article_id'   => 7,
+				'revision'     => 3,
+				'version'      => 1,
+				'kind'         => 'approved',
+				'created_at'   => 12,
+				'read_at'      => null,
+			),
+			(object) array(
+				'id'           => 2,
+				'recipient_id' => 11,
+				'article_id'   => 7,
+				'revision'     => 6,
+				'version'      => 2,
+				'kind'         => 'rejected',
+				'created_at'   => 15,
+				'read_at'      => null,
+			),
+			(object) array(
+				'id'           => 3,
+				'recipient_id' => 14,
+				'article_id'   => 7,
+				'revision'     => 3,
+				'version'      => 1,
+				'kind'         => 'publication',
+				'created_at'   => 12,
+				'read_at'      => null,
+			),
+			(object) array(
+				'id'           => 4,
+				'recipient_id' => 14,
+				'article_id'   => 7,
+				'revision'     => 3,
+				'version'      => 1,
+				'kind'         => 'approved',
+				'created_at'   => 12,
+				'read_at'      => null,
+			),
+		);
+		$repo           = new class( $article, $rows ) {
+			/** Receipt IDs recorded by the test repository.
+			 *
+			 * @var array<int>
+			 */
+			public array $receipts = array();
+			public function __construct( private Article $article, private array $rows ) {}
+			public function notificationRows( int $recipient ): array {
+				return array_values( array_filter( $this->rows, static fn( object $row ): bool => $row->recipient_id === $recipient ) ); }
+			public function find( int $id ): ?Article {
+				return 7 === $id ? $this->article : null; }
+			public function markRead( int $id, int $at ): void {
+				$this->receipts[] = $id; }
+		};
+		$room           = static function ( int $id ) use ( $repo ): LocalNewsroom {
+			$snapshot = new AuthorizationSnapshot( $id, AccountState::Active, 4, array( new StoredGrant( 1, new Grant( $id, Role::Employee, Scope::own(), 0, null ) ) ) );
+			$session  = array(
+				'arn_authz_local'    => true,
+				'arn_authz_user_id'  => $id,
+				'arn_authz_revision' => 4,
+			);
+			$actor    = new CurrentNewsActor(
+				static fn() => new class( $snapshot ) {
+					public function __construct( private AuthorizationSnapshot $snapshot ) {}
+					public function find( int $requested ): ?AuthorizationSnapshot {
+						return $requested === $this->snapshot->user_id ? $this->snapshot : null; }
+				},
+				static fn(): int => $id,
+				static fn(): array => $session,
+				static fn(): array => array(),
+				static fn(): array => array(
+					11 => array( 'LAB-A' ),
+					14 => array( 'LAB-A' ),
+				)
+			);
+			return new LocalNewsroom( $actor, static fn(): array => array( $repo, null ), null, static fn(): bool => true );
+		};
+		$author_notices = $room( 11 )->notifications();
+		self::assertSame( array( 'Aprovação reservada', 'Corrigir o texto' ), array_map( static fn( object $notice ): string => $notice->reason, $author_notices ) );
+		$reader = $room( 14 );
+		self::assertCount( 1, $reader->notifications() );
+		self::assertSame( 'publication', $reader->notifications()[0]->kind );
+		self::assertObjectNotHasProperty( 'reason', $reader->notifications()[0] );
+		$reader->markRead( 3 );
+		$room( 11 )->markRead( 2 );
+		self::assertSame( array( 3, 2 ), $repo->receipts );
+	}
 }
