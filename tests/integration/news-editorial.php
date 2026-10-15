@@ -96,6 +96,12 @@ try {
 	$active                 = $author;
 	$generations            = array_fill_keys( array_values( $users ), 3 );
 	$generations[ $editor ] = 4;
+	$participants           = array(
+		$author           => array( 'LAB-A' ),
+		$editor           => array(),
+		$users['reader']  => array( 'LAB-A' ),
+		$users['outside'] => array( 'LAB-B' ),
+	);
 	$current                = new CurrentNewsActor(
 		static fn() => new WpdbAuthorizationRepository( $reader ),
 		static function () use ( &$active ): int {
@@ -108,13 +114,9 @@ try {
 				'arn_authz_revision' => $generations[ $id ] ?? 0,
 			);
 		},
-		static fn(): array => array( $editor )
-	);
-	$participants           = array(
-		$author           => array( 'LAB-A' ),
-		$editor           => array(),
-		$users['reader']  => array( 'LAB-A' ),
-		$users['outside'] => array( 'LAB-B' ),
+		static fn(): array => array( $editor ),
+		static function () use ( &$participants ): array {
+			return $participants; }
 	);
 	$authority              = new WpdbNewsAuthority(
 		$db,

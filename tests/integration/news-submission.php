@@ -69,7 +69,7 @@ try {
 	$assert( $rejected, 'catálogo de identificadores SQL fechado' );
 	$assert( ! NewsConfiguration::configured() || 'local' === wp_get_environment_type(), 'gate runtime não se abre em development' );
 	$assert( null === ( new CurrentNewsActor() )->read(), 'administrador não é actor editorial' );
-	$assert( NewsConfiguration::enabled( 'local', true, true, true, true ) && ! NewsConfiguration::enabled( 'local', 1, true, true, true ), 'gates booleanos exactos' );
+	$assert( NewsConfiguration::enabled( 'local', true, true, true, true, true ) && ! NewsConfiguration::enabled( 'local', true, true, true, true, false ) && ! NewsConfiguration::enabled( 'local', 1, true, true, true, true ), 'gates booleanos exactos' );
 	$login_seed = bin2hex( random_bytes( 5 ) );
 	foreach ( array( 'author', 'reviewer' ) as $kind ) {
 		$user = wp_insert_user(
@@ -113,7 +113,11 @@ try {
 			return $active_id;
 		},
 		static fn( int $id ): array => $session( $id ),
-		static fn(): array => array( $reviewer_id )
+		static fn(): array => array( $reviewer_id ),
+		static fn(): array => array(
+			$author_id   => array( 'LAB-A' ),
+			$reviewer_id => array(),
+		)
 	);
 	$authority        = new WpdbNewsAuthority( $db, $current );
 	$repo             = new WpdbNewsRepository( $db, $authority );

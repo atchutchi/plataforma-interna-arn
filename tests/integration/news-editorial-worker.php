@@ -46,7 +46,8 @@ $current   = new CurrentNewsActor(
 		'arn_authz_user_id'  => $user_id,
 		'arn_authz_revision' => $snapshot->revision,
 	),
-	static fn(): array => array( $task_context['editor'] )
+	static fn(): array => array( $task_context['editor'] ),
+	static fn(): array => $task_context['participants']
 );
 $real      = new WpdbNewsAuthority( $db, $current, null, static fn(): array => $task_context['participants'] );
 $authority = new class( $real, $task_context['entered'], $db ) implements NewsAuthority, EditorialAuthority {
