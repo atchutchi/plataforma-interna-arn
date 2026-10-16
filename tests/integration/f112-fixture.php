@@ -36,12 +36,20 @@ function arn_f112_normal_snapshot(): array {
 		$hashes = array_map( static fn( array $row ): string => hash( 'sha256', json_encode( $row, JSON_THROW_ON_ERROR ) ), $rows );
 		sort( $hashes );
 		$protected[ $table ] = $hashes;
+		if ( $table === $wpdb->options ) {
+			$options = array();
+			foreach ( $rows as $row ) {
+				$options[ $row['option_name'] ] = hash( 'sha256', json_encode( $row, JSON_THROW_ON_ERROR ) );
+			}
+			ksort( $options );
+			$protected['__options_by_name'] = $options;
+		}
 	}
 	return $protected;
 }
 
 function arn_f112_storage_test( string $module ): void {
-	if ( ! defined( 'WP_CLI' ) || true !== WP_CLI || ! current_user_can( 'manage_options' ) || ! in_array( wp_get_environment_type(), array( 'local', 'development' ), true ) || ! in_array( $module, array( 'communications', 'calendar' ), true ) ) {
+	if ( ! defined( 'WP_CLI' ) || true !== WP_CLI || ! defined( 'ARN_F112_SQL_HARNESS' ) || true !== ARN_F112_SQL_HARNESS || ! current_user_can( 'manage_options' ) || ! in_array( wp_get_environment_type(), array( 'local', 'development' ), true ) || ! in_array( $module, array( 'communications', 'calendar' ), true ) ) {
 		throw new RuntimeException( 'Ensaio F112 indisponível.' );
 	}
 	if ( 'development' === wp_get_environment_type() ) {
@@ -447,9 +455,13 @@ function arn_f112_storage_test( string $module ): void {
 			}
 			wp_delete_user( $id );
 		}
-		foreach ( array( 'arn_authz_accounts', 'arn_authz_grants', 'arn_authz_audit', 'arn_org_header', 'arn_org_units', 'arn_org_audit', 'arn_comm_objects', 'arn_comm_versions', 'arn_comm_audit', 'arn_comm_notifications', 'arn_comm_schema', 'arn_calendar_objects', 'arn_calendar_versions', 'arn_calendar_audit', 'arn_calendar_notifications', 'arn_calendar_schema' ) as $suffix ) {
-			$db->query( $db->prepare( 'DROP TABLE IF EXISTS %i', $prefix . $suffix ) );
+		$dropped_all = true;
+		foreach ( array( 'arn_authz_grants', 'arn_authz_audit', 'arn_authz_accounts', 'arn_authz_schema', 'arn_org_header', 'arn_org_units', 'arn_org_audit', 'arn_comm_objects', 'arn_comm_versions', 'arn_comm_audit', 'arn_comm_notifications', 'arn_comm_schema', 'arn_calendar_objects', 'arn_calendar_versions', 'arn_calendar_audit', 'arn_calendar_notifications', 'arn_calendar_schema' ) as $suffix ) {
+			$dropped     = $db->query( $db->prepare( 'DROP TABLE IF EXISTS %i', $prefix . $suffix ) );
+			$dropped_all = false !== $dropped && '' === $db->last_error && $dropped_all;
 		}
+		$remaining = $db->get_col( $db->prepare( 'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME LIKE %s', $db->esc_like( $prefix ) . '%' ) );
+		$assert( $dropped_all && array() === $remaining && '' === $db->last_error, 'nenhuma tabela do prefixo exclusivo fica por remover' );
 		$assert( $before_posts === (int) $GLOBALS['wpdb']->get_var( 'SELECT COUNT(*) FROM ' . $GLOBALS['wpdb']->posts ), 'limpeza conserva posts anteriores' );
 		$normal_after = arn_f112_normal_snapshot();
 		if ( $normal_before !== $normal_after ) {
@@ -460,6 +472,13 @@ function arn_f112_storage_test( string $module ): void {
 				}
 			}
 			WP_CLI::log( 'Tabelas normais divergentes: ' . implode( ',', $deltas ) );
+			$option_names = array();
+			foreach ( array_unique( array_merge( array_keys( $normal_before['__options_by_name'] ?? array() ), array_keys( $normal_after['__options_by_name'] ?? array() ) ) ) as $name ) {
+				if ( ( $normal_before['__options_by_name'][ $name ] ?? null ) !== ( $normal_after['__options_by_name'][ $name ] ?? null ) ) {
+					$option_names[] = $name;
+				}
+			}
+			WP_CLI::log( 'Opções divergentes, sem valores: ' . implode( ',', $option_names ) );
 		}
 		$assert( $normal_before === $normal_after, 'todas as linhas normais preservadas, incluindo cron e sessões' );
 		$db->close();

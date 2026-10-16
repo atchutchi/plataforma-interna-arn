@@ -63,7 +63,7 @@ function arn_f112_concurrency( IdentityWpdb $db, string $module, int $id, array 
 				$assert( is_file( $override ), 'override CLI local explícito' );
 				$command[] = '--require=' . $override;
 			}
-			array_push( $command, '--path=' . ABSPATH, '--user=' . $admin, 'eval-file', __DIR__ . '/f112-worker.php', $payload, $ready, $result );
+			array_push( $command, '--require=' . __DIR__ . '/f112-cli-bootstrap.php', '--path=' . ABSPATH, '--user=' . $admin, 'eval-file', __DIR__ . '/f112-worker.php', $payload, $ready, $result );
 			$descriptors = array(
 				0 => array( 'pipe', 'r' ),
 				1 => array( 'file', $stdout, 'a' ),

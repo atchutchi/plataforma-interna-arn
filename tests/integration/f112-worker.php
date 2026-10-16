@@ -10,7 +10,7 @@ use Arn\Intranet\Communications\{NoticeContent, NoticeRepository};
 use Arn\Intranet\F112\CurrentActor;
 use Arn\Intranet\Identity\IdentityWpdb;
 
-if ( ! defined( 'WP_CLI' ) || true !== WP_CLI || 'local' !== wp_get_environment_type() || ! current_user_can( 'manage_options' ) || 3 !== count( $args ) ) {
+if ( ! defined( 'WP_CLI' ) || true !== WP_CLI || ! defined( 'ARN_F112_SQL_HARNESS' ) || true !== ARN_F112_SQL_HARNESS || 'local' !== wp_get_environment_type() || ! current_user_can( 'manage_options' ) || 3 !== count( $args ) ) {
 	throw new RuntimeException( 'Worker F112 recusado.' );
 }
 [$payload_path, $ready_path, $result_path] = $args;
