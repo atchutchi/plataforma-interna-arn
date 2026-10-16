@@ -223,6 +223,51 @@ final class WpdbPreRegistrationRepository {
 		);
 	}
 
+	public function renew( string $id, WorkspaceBatch $batch, int $expected_revision, int $actor_id, string $reason, int $now ): PreRegistration {
+		return $this->silently(
+			function () use ( $id, $batch, $expected_revision, $actor_id, $reason, $now ): PreRegistration {
+				$this->schema->assertReady();
+				if ( 1 !== preg_match( '/\A[a-f0-9]{32}\z/D', $id ) || $expected_revision < 1 || $actor_id < 1 || $now < $batch->observed_at || $now >= $batch->expires_at || '' === trim( $reason ) ) {
+					throw new RuntimeException();}
+				$this->execute( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED' );
+				$this->execute( 'START TRANSACTION' );
+				try {
+					$previous = $this->record( $this->database->prepare( 'SELECT * FROM %i WHERE id=%s FOR UPDATE', $this->schema->table( 'accounts' ), $id ) );
+					if ( null === $previous || $previous->revision !== $expected_revision || PreRegistrationState::AwaitingGoogle !== $previous->state || 1 !== count( array_filter( $batch->entries, static fn( WorkspaceEntry $entry ): bool=>$entry->primary_email === $previous->primary_email && $entry->display_name === $previous->display_name ) ) ) {
+						throw new RuntimeException();}
+					if ( $previous->source_sha256 === $batch->source_sha256 && $previous->inventory_sha256 === $batch->inventory_sha256 && $previous->observed_at === $batch->observed_at ) {
+						$this->execute( 'COMMIT' );
+						return $previous;}
+					if ( $batch->observed_at <= $previous->observed_at || PHP_INT_MAX === $previous->revision ) {
+						throw new RuntimeException();}
+					$changes = array(
+						'source_sha256'    => $batch->source_sha256,
+						'inventory_sha256' => $batch->inventory_sha256,
+						'observed_at'      => $batch->observed_at,
+						'expires_at'       => $batch->expires_at,
+						'revision'         => $previous->revision + 1,
+						'authorized_by'    => $actor_id,
+					);
+					$next    = PreRegistration::fromRow( array_replace( $previous->toRow(), $changes ) );
+					if ( 1 !== $this->database->update(
+						$this->schema->table( 'accounts' ),
+						$changes,
+						array(
+							'id'       => $id,
+							'revision' => $expected_revision,
+						)
+					) || '' !== $this->database->last_error ) {
+						throw new RuntimeException();}
+					$this->audit( $next, $actor_id, 'renewed', $previous->state, $reason, $now );
+					$this->execute( 'COMMIT' );
+					return $next;
+				} catch ( Throwable ) {
+					$this->database->query( 'ROLLBACK' );
+					throw new RuntimeException();}
+			}
+		);
+	}
+
 	public function assertNative( PreRegistration $record ): void {
 		$users = $this->rows( $this->database->prepare( 'SELECT ID,user_login,user_email,display_name,user_activation_key FROM %i WHERE ID=%d OR user_email=%s', $this->schema->nativeTable( 'users' ), $record->user_id, $record->primary_email ) );
 		if ( 1 !== count( $users ) || PreRegistration::positive( $users[0]['ID'] ) !== $record->user_id || $users[0]['user_email'] !== $record->primary_email || $users[0]['display_name'] !== $record->display_name || '' !== $users[0]['user_activation_key'] ) {

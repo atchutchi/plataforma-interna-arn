@@ -22,6 +22,31 @@ final class WorkspacePreRegistrationCommand {
 		$this->changeState( $args, $options, false );}
 	public function enable( array $args, array $options ): void {
 		$this->changeState( $args, $options, true );}
+	public function ready( array $args, array $options ): void {
+		$this->run(
+			function () use ( $args, $options ): void {
+				if ( $args ) {
+					throw new RuntimeException();
+				}( new LocalWorkspaceReadiness( $this->batch( $options ) ) )->complete( get_current_user_id() );
+				\WP_CLI::success( 'Preparação Workspace verificada. Nenhuma conta criada.' );
+			}
+		);
+	}
+	public function renew( array $args, array $options ): void {
+		$this->run(
+			function () use ( $args, $options ): void {
+				if ( ! self::permitted( true ) || 1 !== count( $args ) || ! is_string( $args[0] ) || ! is_string( $options['reason'] ?? null ) ) {
+					throw new RuntimeException();
+				}$revision = PreRegistration::positive( $options['revision'] ?? null );
+				$reason    = $options['reason'];
+				unset( $options['revision'], $options['reason'] );
+				$batch = $this->batch( $options );
+				self::assertRuntime();
+				$this->repository()->renew( $args[0], $batch, $revision, get_current_user_id(), $reason, time() );
+				\WP_CLI::success( 'Origem do pré-cadastro revalidada, sem alterar conta ou permissões.' );
+			}
+		);
+	}
 	private function changeState( array $args, array $options, bool $enabled ): void {
 		$this->run(
 			function () use ( $args, $options, $enabled ): void {
@@ -59,7 +84,7 @@ final class WorkspacePreRegistrationCommand {
 					throw new RuntimeException();
 				}unset( $options['apply'] );
 				$batch = $this->batch( $options );
-				$this->assertRuntime();
+				self::assertRuntime();
 				$repository = $this->repository();
 				foreach ( $batch->entries as$entry ) {
 					$repository->provision( $entry, $batch, get_current_user_id(), time() );
@@ -85,7 +110,7 @@ final class WorkspacePreRegistrationCommand {
 		$database = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
 		$database->set_prefix( $wpdb->prefix );
 		return new WpdbPreRegistrationRepository( $database );}
-	private function assertRuntime(): void {
+	public static function assertRuntime(): void {
 		if ( wp_using_ext_object_cache() || wp_get_mu_plugins() || get_option( 'active_plugins' ) !== array( 'arn-intranet-core/arn-intranet-core.php' ) || has_filter( 'query' ) ) {
 			throw new RuntimeException();}}
 	private function run( callable $operation ): void {

@@ -61,6 +61,7 @@ unset( $arn_vendor );
 
 // As guardas persistentes não dependem da activação do cliente Google.
 ( new \Arn\Intranet\Identity\PreRegistration\WordPressPreRegistrationAccess() )->register();
+\Arn\Intranet\Identity\PreRegistration\PreRegistrationPortal::register();
 if ( defined( 'WP_CLI' ) && true === WP_CLI ) {
 	$arn_workspace_command = new \Arn\Intranet\Identity\PreRegistration\WorkspacePreRegistrationCommand();
 	foreach ( array(
@@ -69,6 +70,8 @@ if ( defined( 'WP_CLI' ) && true === WP_CLI ) {
 		'provision'      => 'provision',
 		'disable'        => 'disable',
 		'enable'         => 'enable',
+		'ready'          => 'ready',
+		'renew'          => 'renew',
 	) as $arn_workspace_action => $arn_workspace_method ) {
 		\WP_CLI::add_command( 'arn workspace ' . $arn_workspace_action, array( $arn_workspace_command, $arn_workspace_method ) );
 	}
