@@ -87,7 +87,7 @@ try {
 	}
 	$assert( $denied, 'administrador técnico sem competência documental' );
 	$registry->registerInTransaction( $record );
-	$assert( '1' === (string) $db->get_var( 'SELECT @@session.in_transaction' ), 'registo preserva transacção exterior' );
+	$assert( $db->inTransaction(), 'registo preserva transacção exterior' );
 	$db->query( 'ROLLBACK' );
 	$assert( '0' === (string) $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM %i', $files->table( 'files' ) ) ), 'rollback exterior reverte registo' );
 	$authority  = new class() implements DocumentAuthority {
