@@ -74,7 +74,10 @@ final class WorkspacePreRegistrationCommand {
 				}$batch = $this->batch( $options );
 				if ( time() >= $batch->expires_at ) {
 					throw new RuntimeException();
-				}\WP_CLI::success( 'Fonte íntegra: 73 contas seleccionadas e quatro excluídas. Sem escrita.' );
+				}
+				self::assertRuntime();
+				$this->inspect( $this->repository(), $batch );
+				\WP_CLI::success( 'Fonte e lote íntegros: 73 contas seleccionadas e quatro excluídas. Sem escrita SQL.' );
 			}
 		); }
 	public function provision( array $args, array $options ): void {
@@ -86,12 +89,21 @@ final class WorkspacePreRegistrationCommand {
 				$batch = $this->batch( $options );
 				self::assertRuntime();
 				$repository = $this->repository();
+				$this->inspect( $repository, $batch );
 				foreach ( $batch->entries as$entry ) {
 					$repository->provision( $entry, $batch, get_current_user_id(), time() );
 				}\WP_CLI::success( 'Lote local preparado: 73 registos, sem funções ou permissões de negócio.' );
 			}
 		); }
 
+	private function inspect( WpdbPreRegistrationRepository $repository, WorkspaceBatch $batch ): void {
+		$report = $repository->preflight( $batch, time() );
+		PrivateWorkspacePreflightReport::configured()->save( $report );
+		\WP_CLI::log( sprintf( 'Pré-validação: create=%d resume=%d conflict=%d. Relatório privado guardado.', $report['totals']['create'], $report['totals']['resume'], $report['totals']['conflict'] ) );
+		if ( 0 !== $report['totals']['conflict'] ) {
+			throw new RuntimeException();
+		}
+	}
 	private function batch( array $options ): WorkspaceBatch {
 		$keys = array( 'inventory', 'source', 'inventory-sha256', 'source-sha256' );
 		if ( count( $options ) !== count( $keys ) || array_diff( array_keys( $options ), $keys ) ) {

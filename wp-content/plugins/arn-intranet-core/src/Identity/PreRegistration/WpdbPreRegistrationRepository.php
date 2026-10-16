@@ -27,6 +27,23 @@ final class WpdbPreRegistrationRepository {
 		return $this->silently( fn() => $this->schema->hasSchema() ); }
 	public function schema(): PreRegistrationSchema {
 		return $this->schema; }
+	/** Pertença negativa sem depender da auditoria ou da versão do módulo. */
+	public function containsUser( int $user_id ): bool {
+		return $this->silently(
+			function () use ( $user_id ): bool {
+				if ( $user_id < 1 ) {
+					throw new RuntimeException();
+				}
+				$native  = $this->rows( $this->database->prepare( 'SELECT user_login FROM %i WHERE ID=%d', $this->schema->nativeTable( 'users' ), $user_id ) );
+				$markers = $this->rows( $this->database->prepare( 'SELECT meta_value FROM %i WHERE user_id=%d AND meta_key=%s', $this->schema->nativeTable( 'usermeta' ), $user_id, self::MARKER ) );
+				if ( $markers || ( 1 === count( $native ) && 1 === preg_match( '/\Aarn\.pre\.[a-f0-9]{24}\z/D', $native[0]['user_login'] ) ) ) {
+					return true;
+				}
+				$exists = $this->rows( $this->database->prepare( 'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', $this->schema->table( 'accounts' ) ) );
+				return $exists && (bool) $this->rows( $this->database->prepare( 'SELECT user_id FROM %i WHERE user_id=%d', $this->schema->table( 'accounts' ), $user_id ) );
+			}
+		);
+	}
 
 	public function findForUser( int $user_id ): ?PreRegistration {
 		if ( $user_id < 1 ) {
@@ -48,6 +65,48 @@ final class WpdbPreRegistrationRepository {
 		);
 	}
 
+	/** Relatório apenas em memória. O chamador guarda-o exclusivamente na raiz privada. */
+	public function preflight( WorkspaceBatch $batch, int $now ): array {
+		return $this->silently(
+			function () use ( $batch, $now ): array {
+				$this->schema->assertReady();
+				if ( $now < $batch->observed_at || $now >= $batch->expires_at ) {
+					throw new RuntimeException();
+				}
+				$report = array(
+					'source_sha256'    => $batch->source_sha256,
+					'inventory_sha256' => $batch->inventory_sha256,
+					'checked_at'       => $now,
+					'totals'           => array(
+						'create'   => 0,
+						'resume'   => 0,
+						'conflict' => 0,
+					),
+					'entries'          => array(),
+				);
+				foreach ( $batch->entries as $entry ) {
+					$code = 'create';
+					try {
+						$previous = $this->findForEmail( $entry->primary_email );
+						if ( null !== $previous ) {
+							$code = $previous->display_name === $entry->display_name && $previous->source_sha256 === $batch->source_sha256 && $previous->inventory_sha256 === $batch->inventory_sha256 && $previous->observed_at === $batch->observed_at && $previous->expires_at === $batch->expires_at ? 'resume' : 'batch_conflict';
+						} elseif ( $this->rows( $this->database->prepare( 'SELECT ID FROM %i WHERE user_email=%s', $this->schema->nativeTable( 'users' ), $entry->primary_email ) ) ) {
+							$code = 'native_collision';
+						}
+					} catch ( Throwable ) {
+						$code = 'incompatible_registration';
+					}
+					++$report['totals'][ in_array( $code, array( 'create', 'resume' ), true ) ? $code : 'conflict' ];
+					$report['entries'][] = array(
+						'primary_email' => $entry->primary_email,
+						'display_name'  => $entry->display_name,
+						'code'          => $code,
+					);
+				}
+				return $report;
+			}
+		);
+	}
 	public function provision( WorkspaceEntry $entry, WorkspaceBatch $batch, int $actor_id, int $now ): PreRegistration {
 		return $this->silently(
 			function () use ( $entry, $batch, $actor_id, $now ): PreRegistration {

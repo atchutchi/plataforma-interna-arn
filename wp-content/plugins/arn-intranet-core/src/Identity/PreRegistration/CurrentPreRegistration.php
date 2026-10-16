@@ -25,8 +25,11 @@ final class CurrentPreRegistration {
 		try {
 			$database->set_prefix( $wpdb->prefix );
 			$repository = new WpdbPreRegistrationRepository( $database );
-			$marker     = get_user_meta( $user_id, WpdbPreRegistrationRepository::MARKER, true );
-			$record     = $repository->hasSchema() ? $repository->findForUser( $user_id ) : null;
+			if ( ! $repository->containsUser( $user_id ) ) {
+				return null;
+			}
+			$marker = get_user_meta( $user_id, WpdbPreRegistrationRepository::MARKER, true );
+			$record = $repository->hasSchema() ? $repository->findForUser( $user_id ) : null;
 			if ( null === $record ) {
 				if ( '' !== $marker ) {
 					throw new RuntimeException( 'Pré-cadastro indisponível.' );

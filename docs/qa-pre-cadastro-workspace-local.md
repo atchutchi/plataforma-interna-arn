@@ -43,3 +43,13 @@ Na comparação privada entre as duas primeiras provas de implementação, houve
 Mantém PRODUCT.md e DESIGN.md. Aplicam-se os princípios Impeccable do registo product e as orientações de acessibilidade de UI UX Pro Max. O auxiliar search.py desta instalação está indisponível: scripts/data são ficheiros com referências relativas para um destino ausente. Não se alega uma pesquisa de design executada. A vista será validada no browser com os recursos institucionais existentes.
 
 Nenhuma destas verificações constitui homologação de produção, de IIS/MySQL ou aprovação institucional de permissões.
+
+## Revisão independente antes da aplicação
+
+A revisão do conjunto identificou três achados importantes. A consulta corrente passa a determinar primeiro a pertença pelo marcador nativo, pelo login opaco reservado ou pelo registo persistente, sem depender da auditoria para reconhecer uma conta anterior. Só depois exige o esquema completo. A perda da auditoria e a versão incompatível preservam a autenticação e a sessão da conta anterior mas recusam o pré-cadastro, incluindo quando o marcador foi removido.
+
+A emissão de sessão de pré-cadastro relê o vínculo persistido antes de criar o token e depois da criação, antes do cookie. Confirma issuer, sub, alvo, active e authorized. Uma revogação detectada no segundo controlo elimina o token criado e não emite cookie nem wp_login. As guardas por pedido continuam a cobrir alterações posteriores.
+
+A pré-validação agora consulta todas as entradas sem DML. Distingue create, resume e conflict e guarda um relatório novo e privado em cada execução. Os detalhes identificáveis não entram na consola. Uma colisão conhecida impede a aplicação de qualquer entrada do lote. A aplicação repete a análise antes do primeiro INSERT e mantém as verificações transaccionais por conta. A concorrência posterior pode ainda interromper a aplicação. Nesse caso, uma nova pré-validação revela as entradas exactas já confirmadas e o conflito, sem adoptar contas anteriores ou renovar prazos.
+
+Regressão SQL exclusiva: 17 verificações, incluindo colisão no fim sem escrita, esquema parcial e preservação da sessão anterior, revogação antes e durante a criação do token. Suite PHP completa: 847 testes e 3738 asserções, com quatro omissões Windows anteriores. Integrações existentes de identidade, sessão federada e sessões locais: 21, 24 e 78 verificações. Os ensaios usam contas fictícias. A aplicação real continua pendente da CI do commit corrigido.

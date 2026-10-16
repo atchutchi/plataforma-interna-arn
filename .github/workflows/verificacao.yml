@@ -160,11 +160,13 @@ jobs:
           npm run test:workspace-access:integration
           npm run test:workspace-claim:integration
           npm run test:workspace-readiness:integration
+          npm run test:workspace-review:integration
       - name: Activar local apenas no contentor efémero desta job
         run: node scripts/wp-env.mjs --tests run cli wp config set WP_ENVIRONMENT_TYPE local --type=constant
       - run: npm run test:workspace-provisioning:integration
       - run: npm run test:workspace-access:integration
       - run: npm run test:workspace-claim:integration
       - run: npm run test:workspace-readiness:integration
+      - run: npm run test:workspace-review:integration
       - if: always()
         run: npm run env:stop:tests
