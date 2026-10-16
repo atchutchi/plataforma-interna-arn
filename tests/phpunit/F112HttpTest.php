@@ -14,6 +14,28 @@ use Arn\Intranet\F112\ManagementPage;
 use PHPUnit\Framework\TestCase;
 
 final class F112HttpTest extends TestCase {
+	public function test_review_decisions_return_to_the_queue_after_the_frozen_submission_disappears(): void {
+		$source = new class() {
+			public function manageable(): bool {
+				return true; }
+			public function creationOptions(): array {
+				return array(); }
+			public function mutate( array $input ): int {
+				return (int) $input['id']; }
+		};
+		foreach ( array( 'approve', 'reject', 'return' ) as $operation ) {
+			$post   = array(
+				'operation' => $operation,
+				'id'        => '7',
+				'version'   => '1',
+				'token'     => 'opaque',
+				'reason'    => 'Decisão fictícia',
+				'nonce'     => 'valid',
+			);
+			$result = ManagementPage::decide( 'POST', 'communications', array( 'entry' => '7' ), $post, $source, 7, static fn(): bool => true );
+			self::assertTrue( $result['queue'] ?? false );
+		}
+	}
 	public function test_cms_refuses_forbidden_fields_or_nonce_before_its_content_source(): void {
 		$source = new class() {
 			public int $writes = 0;

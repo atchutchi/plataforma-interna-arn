@@ -28,6 +28,7 @@
     "test:communications:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp --require=tests/integration/f112-cli-bootstrap.php eval-file tests/integration/communications.php --user=admin",
     "test:calendar:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp --require=tests/integration/f112-cli-bootstrap.php eval-file tests/integration/calendar.php --user=admin",
     "test:f112-installer:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp --require=tests/integration/f112-cli-bootstrap.php eval-file tests/integration/f112-installer.php --user=admin",
+    "test:f112-readiness:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp --require=tests/integration/f112-cli-bootstrap.php eval-file tests/integration/f112-readiness.php --user=admin",
     "test:import-preview:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/import-preview.php --user=admin",
     "test:editorial:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/editorial-preview.php --user=admin",
     "test:private-files:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/private-files.php --user=admin",

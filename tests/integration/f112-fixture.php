@@ -231,6 +231,20 @@ function arn_f112_storage_test( string $module ): void {
 		$anchors[] = $first->id;
 		$first     = $repo->publish( $first->id, 1, 'Publicar ensaio A.' );
 		$assert( 2 === $first->revision && 2 === count( $repo->history( $first->id ) ), 'uma revisão e um evento por escrita' );
+		// A resolved request can wait while a publication becomes current in a later second.
+		$portal_reflection = new ReflectionClass( \Arn\Intranet\F112\Portal::class );
+		$resolved_portal   = $portal_reflection->newInstanceWithoutConstructor();
+		foreach ( array(
+			'module'     => $module,
+			'now'        => $now - 1,
+			'context'    => $actors->read(),
+			'repository' => $repo,
+		) as $property => $value ) {
+			$portal_reflection->getProperty( $property )->setValue( $resolved_portal, $value );
+		}
+		$public_query = 'communications' === $module ? NoticeSelection::parse( array() ) : AgendaSelection::parse( array() );
+		$projected    = $resolved_portal->listing( $public_query );
+		$assert( 1 === $projected['total'] && $first->id === $projected['items'][0]['id'] && null !== $resolved_portal->detail( $first->id ), 'lista e detalhe usam o relógio transaccional da publicação' );
 		$employee_grant = null;
 		foreach ( $auth->find( $current_id )->stored_grants as $stored ) {
 			if ( Role::Employee === $stored->grant->role && ! $stored->grant->revoked ) {

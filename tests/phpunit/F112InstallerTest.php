@@ -5,7 +5,7 @@
  * @package ArnIntranet
  */
 
-// phpcs:disable Squiz.Commenting -- Installer contract tests.
+// phpcs:disable Squiz.Commenting, WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Pure installer contract tests without WordPress functions.
 declare(strict_types=1);
 namespace Arn\Intranet\Tests;
 
@@ -13,6 +13,35 @@ use Arn\Intranet\F112\{LocalInstaller, LocalRoster, Pages, PostTypes};
 use PHPUnit\Framework\TestCase;
 
 final class F112InstallerTest extends TestCase {
+	public function test_completion_marker_rejects_partial_or_foreign_resource_maps(): void {
+		$prefix = 'arn_f112_0123456789_';
+		$proof  = array(
+			'version' => 1,
+			'prefix'  => $prefix,
+			'users'   => array(
+				'a'        => 1,
+				'b'        => 2,
+				'manager'  => 3,
+				'author'   => 4,
+				'reviewer' => 5,
+				'events'   => 6,
+			),
+			'pages'   => array(
+				'communications' => 11,
+				'calendar'       => 12,
+			),
+		);
+		self::assertSame( $proof, \Arn\Intranet\F112\InstallationState::decode( json_encode( $proof ), $prefix ) );
+		$partial = $proof;
+		unset( $partial['pages']['calendar'] );
+		self::assertNull( \Arn\Intranet\F112\InstallationState::decode( json_encode( $partial ), $prefix ) );
+		$foreign           = $proof;
+		$foreign['prefix'] = 'wp_';
+		self::assertNull( \Arn\Intranet\F112\InstallationState::decode( json_encode( $foreign ), $prefix ) );
+		$duplicate               = $proof;
+		$duplicate['users']['a'] = 2;
+		self::assertNull( \Arn\Intranet\F112\InstallationState::decode( json_encode( $duplicate ), $prefix ) );
+	}
 	public function test_roster_is_closed_and_institutional_people_have_no_invented_unit(): void {
 		$definitions = LocalRoster::definitions();
 		self::assertCount( 6, $definitions );

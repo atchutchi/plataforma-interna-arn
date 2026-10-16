@@ -8,17 +8,18 @@
 if ( ! defined( 'ABSPATH' ) || ! isset( $args['f112'] ) ) {
 	return;
 }
-$f112       = $args['f112'];
-$calendar   = 'calendar' === $f112['module'];
-$f112_title = $calendar ? 'Calendário' : 'Comunicados';
-$view       = $f112['view'];
-$data       = $f112['data'];
-$query      = $f112['query']['selection'];
-$base       = get_permalink();
-$filters    = array_intersect_key( $f112['query']['get'], array_flip( array( 'q', 'unit', 'state', 'month', 'arn_f112_page' ) ) );
-$back       = add_query_arg( $filters, $base );
-$detail_url = static fn( int $id ): string => add_query_arg( $filters + array( 'entry' => (string) $id ), $base );
-$period     = static function ( array $item ): string {
+$f112         = $args['f112'];
+$calendar     = 'calendar' === $f112['module'];
+$f112_title   = $calendar ? 'Calendário' : 'Comunicados';
+$view         = $f112['view'];
+$data         = $f112['data'];
+$query        = $f112['query']['selection'];
+$base         = get_permalink();
+$filters      = array_intersect_key( $f112['query']['get'], array_flip( array( 'q', 'unit', 'state', 'month', 'arn_f112_page' ) ) );
+$from_notices = 'notices' === ( $f112['query']['get']['from'] ?? null );
+$back         = add_query_arg( $from_notices ? $filters + array( 'notices' => '1' ) : $filters, $base );
+$detail_url   = static fn( int $id ): string => add_query_arg( $filters + array( 'entry' => (string) $id ) + ( 'notices' === $view ? array( 'from' => 'notices' ) : array() ), $base );
+$period       = static function ( array $item ): string {
 	if ( $item['all_day'] ) {
 		$first = gmdate( 'd/m/Y', $item['start'] );
 		$last  = gmdate( 'd/m/Y', $item['end'] - 1 );
@@ -76,7 +77,10 @@ elseif ( null !== $data['valid_until'] ) :
 <?php else : ?>
 	<?php if ( 'list' === $view ) : ?>
 <form class="arn-f112-filters" method="get" action="<?php echo esc_url( $base ); ?>" role="search" aria-label="Filtrar <?php echo esc_attr( strtolower( $f112_title ) ); ?>">
-		<?php arn_intranet_portal_form_route( $base ); ?>
+		<?php
+		if ( isset( $f112['query']['get']['page_id'] ) ) :
+			?>
+			<input type="hidden" name="page_id" value="<?php echo esc_attr( $f112['query']['get']['page_id'] ); ?>"><?php endif; ?>
 <div><label for="f112-q">Pesquisar</label><input type="search" id="f112-q" name="q" maxlength="100" value="<?php echo esc_attr( $query->q ); ?>"></div>
 <div><label for="f112-unit">Unidade</label><select id="f112-unit" name="unit"><option value="">Todas as audiências</option>
 		<?php
@@ -124,6 +128,10 @@ else :
 else :
 	?>
 	<p class="arn-f112-meta"><span><?php echo esc_html( $item['audience'] ); ?></span><span><?php echo esc_html( $calendar ? $period( $item ) : 'Publicado em ' . gmdate( 'd/m/Y', $item['published_at'] ) ); ?></span>
+	<?php
+	if ( ! $calendar ) :
+		?>
+		<span><?php echo esc_html( null === $item['valid_until'] ? 'Sem limite de validade' : 'Disponível até ' . gmdate( 'd/m/Y H:i', $item['valid_until'] ) . ' UTC' ); ?></span><?php endif; ?>
 	<?php
 	if ( $calendar && $item['cancelled'] ) :
 		?>

@@ -56,16 +56,19 @@ final class ManagementPage {
 			Controller::refuse();
 		}
 		if ( isset( $model['saved_id'] ) ) {
-			$next = array_diff_key( $get, array_flip( array( 'new', 'entry' ) ) );
+			$next        = array_diff_key( $get, array_flip( array( 'new', 'entry' ) ) );
+			$destination = array(
+				'page'  => 'arn-' . $module,
+				'saved' => '1',
+			);
+			if ( empty( $model['queue'] ) ) {
+				$destination['entry'] = (string) $model['saved_id'];
+			}
 			wp_safe_redirect(
 				add_query_arg(
 					array_merge(
 						$next,
-						array(
-							'page'  => 'arn-' . $module,
-							'entry' => (string) $model['saved_id'],
-							'saved' => '1',
-						)
+						$destination
 					),
 					admin_url( 'admin.php' )
 				),
@@ -108,7 +111,11 @@ final class ManagementPage {
 					if ( $errors ) {
 						throw new InvalidArgumentException( 'Campos inválidos.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 					}
-					return array( 'saved_id' => $source->mutate( $post ) );
+					$result = array( 'saved_id' => $source->mutate( $post ) );
+					if ( in_array( $post['operation'], array( 'approve', 'reject', 'return' ), true ) ) {
+						$result['queue'] = true;
+					}
+					return $result;
 				} catch ( InvalidArgumentException ) {
 					$errors['form'] = 'Verifica os campos indicados. O título e o texto são obrigatórios. Datas e ligações devem respeitar os formatos apresentados.';
 					$recovery       = array_intersect_key( $post, array_flip( array_merge( Input::NOTICE_FIELDS, Input::EVENT_FIELDS, array( 'reason' ) ) ) );

@@ -64,7 +64,10 @@ final class LocalInstaller {
 		$existing_pages = $pages->preflight( $all );
 		global $wpdb;
 		$prefix = $this->exclusive_prefix ?? $wpdb->prefix;
-		$db     = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+		if ( ( $all && ( ! InstallationState::ready( 'communications', $prefix ) || ! InstallationState::ready( 'calendar', $prefix ) ) ) || ( $none && InstallationState::exists( $prefix ) ) ) {
+			throw new RuntimeException( self::ERROR );
+		}
+		$db = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
 		$db->set_prefix( $prefix );
 		$db->suppress_errors( true );
 		$auth_schema   = new AuthorizationSchema( $db );
@@ -179,6 +182,7 @@ final class LocalInstaller {
 			$result['created'][ $label ]  = true;
 		}
 		$result['pages'] = $pages->install();
+		InstallationState::write( $prefix, $result['user_ids'], $result['pages'] );
 		return $result;
 	}
 

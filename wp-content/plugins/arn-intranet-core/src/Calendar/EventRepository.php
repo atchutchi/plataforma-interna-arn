@@ -120,13 +120,37 @@ final class EventRepository {
 		return $this->listing( $selection, false );
 	}
 
+		/** Publication DTOs use the same locked clock as scope and selection. */
+	public function publishedList( AgendaSelection $selection ): array {
+		return $this->listing( $selection, false, true );
+	}
+
+	public function publishedDetail( int $id ): ?array {
+		if ( $id < 1 ) {
+			return null;
+		}
+		try {
+			return $this->transaction(
+				function ( ActorContext $actor, array $recipients, int $now ) use ( $id ): ?array {
+					if ( ! $actor->allows( Action::ReadContent, Scope::own(), $actor->id(), $now ) ) {
+						return null;
+					}
+					$item = $this->load( $id );
+					return null !== $item && EventPolicy::read( $item, $actor, $now ) ? \Arn\Intranet\F112\View::published( $item, $now ) : null;
+				}
+			);
+		} catch ( DomainException ) {
+			return null;
+		}
+	}
+
 	public function manageable( AgendaSelection $selection ): array {
 		return $this->listing( $selection, true );
 	}
 
-	private function listing( AgendaSelection $selection, bool $management ): array {
+	private function listing( AgendaSelection $selection, bool $management, bool $project = false ): array {
 		return $this->transaction(
-			function ( ActorContext $actor, array $recipients, int $now ) use ( $selection, $management ): array {
+			function ( ActorContext $actor, array $recipients, int $now ) use ( $selection, $management, $project ): array {
 				$authorised = array();
 				$permitted  = $management ? $this->canManage( $actor, $now ) : $actor->allows( Action::ReadContent, Scope::own(), $actor->id(), $now );
 				if ( $permitted ) {
@@ -137,7 +161,11 @@ final class EventRepository {
 						}
 					}
 				}
-				return $selection->apply( $authorised, $now, $management );
+				$result = $selection->apply( $authorised, $now, $management );
+				if ( $project ) {
+					$result['items'] = array_map( static fn( Event $item ): array => \Arn\Intranet\F112\View::published( $item, $now ), $result['items'] );
+				}
+				return $result;
 			}
 		);
 	}

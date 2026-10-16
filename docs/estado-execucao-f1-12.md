@@ -14,11 +14,11 @@ O commit 4f55242 acrescentou repositórios transaccionais separados, cinco tabel
 
 A suite PHP passou 781 testes e 3414 asserções, com quatro omissões anteriores. Cada módulo passou 65 verificações SQL, incluindo comparação integral das linhas normais e ausência de tabelas residuais no seu prefixo. O commit 4404997 reforçou a limpeza, corrigindo a ordem de remoção das tabelas com chave estrangeira e incluindo o marcador de schema. Resíduos sintéticos anteriores foram inspeccionados e removidos com registo privado. Não foram removidos recursos normais. O bootstrap CLI dos ensaios impede o arranque assíncrono de cron apenas nesses processos. Uma execução falhou por alterações em transients nativos do tema e permanece registada como falha, sem excluir opções da comparação. A verificação conjunta final desta parcela continua no ledger.
 
-Ainda não há instalação F1-12 normal, formulários, rotas ou testes Playwright F1-12. A configuração e as junctions do WordPress normal mantêm-se no main. Estas provas não representam aceitação da interface ou activação institucional.
+As cinco tarefas de código estão executadas. O commit a7f298e acrescentou CMS, vistas publicadas, avisos internos, navegação autorizada e guardas HTTP. A revisão independente de toda a branch identificou instalação parcial, redireccionamento após decisão, relógio da projecção e duas omissões de navegação/metadados. A passagem final corrigiu estes pontos com regressões RED/GREEN. As decisões e os seus custos estão no registo próprio.
 
 ## Próximas parcelas
 
-Fechar a verificação conjunta da persistência. Implementar o instalador explícito com seis fixtures e guardas nativas, CMS e vistas do tema. Depois da revisão independente do conjunto, executar a aceitação WordPress/SQL/Playwright e preencher os 32 critérios com resultados reais. Não declarar o módulo aceite enquanto houver critérios de segurança sem prova.
+Fechar a verificação conjunta das correcções, confirmar CI no SHA exacto e executar a activação controlada e aceitação WordPress/SQL/Playwright dos 32 critérios. Ainda não há instalação F1-12 normal ou aceitação Playwright. A configuração e as junctions mantêm-se no main até essa etapa. Não declarar o módulo aceite enquanto houver critérios de segurança sem prova.
 
 ## Inventário Workspace separado
 

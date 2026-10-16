@@ -24,7 +24,7 @@ final class Input {
 	}
 
 	public static function query( string $module, array $get, bool $management = false ): ?array {
-		if ( ! in_array( $module, array( 'communications', 'calendar' ), true ) || array_diff( array_keys( $get ), array( 'entry', 'notices', 'q', 'unit', 'state', 'month', 'arn_f112_page', 'page_id', 'saved' ) ) ) {
+		if ( ! in_array( $module, array( 'communications', 'calendar' ), true ) || array_diff( array_keys( $get ), array( 'entry', 'notices', 'from', 'q', 'unit', 'state', 'month', 'arn_f112_page', 'page_id', 'saved' ) ) ) {
 			return null;
 		}
 		foreach ( $get as $value ) {
@@ -33,6 +33,9 @@ final class Input {
 			}
 		}
 		if ( ( isset( $get['entry'] ) && null === self::id( $get['entry'] ) ) || ( isset( $get['page_id'] ) && null === self::id( $get['page_id'] ) ) || ( isset( $get['notices'] ) && ( $management || '1' !== $get['notices'] || isset( $get['entry'] ) ) ) || ( isset( $get['saved'] ) && '1' !== $get['saved'] ) || ( ! $management && 'communications' === $module && '' !== ( $get['state'] ?? '' ) ) || ( 'communications' === $module && isset( $get['month'] ) ) ) {
+			return null;
+		}
+		if ( isset( $get['from'] ) && ( $management || 'notices' !== $get['from'] || ! isset( $get['entry'] ) || array_diff( array_keys( $get ), array( 'entry', 'from', 'arn_f112_page', 'page_id' ) ) ) ) {
 			return null;
 		}
 		$filters = array_intersect_key( $get, array_flip( array( 'q', 'unit', 'state', 'month' ) ) );

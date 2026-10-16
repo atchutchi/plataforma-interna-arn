@@ -13,6 +13,38 @@ use Arn\Intranet\F112\Input;
 use PHPUnit\Framework\TestCase;
 
 final class F112InputTest extends TestCase {
+	public function test_notice_origin_is_closed_and_only_valid_on_a_public_detail(): void {
+		self::assertNotNull(
+			Input::query(
+				'communications',
+				array(
+					'entry'         => '7',
+					'from'          => 'notices',
+					'arn_f112_page' => '2',
+				)
+			)
+		);
+		self::assertNull(
+			Input::query(
+				'communications',
+				array(
+					'entry' => '7',
+					'from'  => 'other',
+				)
+			)
+		);
+		self::assertNull( Input::query( 'communications', array( 'from' => 'notices' ) ) );
+		self::assertNull(
+			Input::query(
+				'communications',
+				array(
+					'entry' => '7',
+					'from'  => 'notices',
+				),
+				true
+			)
+		);
+	}
 	public function test_form_errors_identify_own_fields_without_rewriting_the_payload(): void {
 		$post   = array(
 			'operation'   => 'create',

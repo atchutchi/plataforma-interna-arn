@@ -16,6 +16,76 @@ use PHPUnit\Framework\TestCase;
 final class F112RenderingTest extends TestCase {
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_communication_rows_show_validity_and_unlimited_state(): void {
+		require __DIR__ . '/fixtures/f112-render-functions.php';
+		define( 'ABSPATH', '/' );
+		$notice    = Notice::draft( 1, 7, new NoticeContent( 'Com validade', 'Texto', Audience::unit( 'LAB-A' ), 'team-direct', 1894791600 ), 10 )->publish( 7, 1, 11, 'Publicar' );
+		$unlimited = Notice::draft( 2, 7, new NoticeContent( 'Sem limite', 'Texto', Audience::unit( 'LAB-A' ), 'team-direct', null ), 10 )->publish( 7, 1, 11, 'Publicar' );
+		$args      = array(
+			'f112' => array(
+				'module' => 'communications',
+				'view'   => 'list',
+				'data'   => array(
+					'items' => array( View::published( $notice, 20 ), View::published( $unlimited, 20 ) ),
+					'total' => 2,
+					'page'  => 1,
+					'pages' => 1,
+				),
+				'query'  => \Arn\Intranet\F112\Input::query( 'communications', array() ),
+			),
+		);
+		ob_start();
+		try {
+			include dirname( __DIR__, 2 ) . '/wp-content/themes/arn-intranet/portal/f112.php';
+			$html = (string) ob_get_contents();
+		} finally {
+			ob_end_clean(); }
+		self::assertStringContainsString( 'Disponível até', $html );
+		self::assertStringContainsString( 'Sem limite de validade', $html );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_detail_returns_to_the_original_notices_page(): void {
+		require __DIR__ . '/fixtures/f112-render-functions.php';
+		define( 'ABSPATH', '/' );
+		$row   = array(
+			'id'           => 7,
+			'title'        => 'Aviso',
+			'body'         => 'Publicado',
+			'audience'     => 'LAB-A',
+			'version'      => 1,
+			'published_at' => 11,
+			'valid_until'  => null,
+		);
+		$query = array(
+			'get'       => array(
+				'entry'         => '7',
+				'from'          => 'notices',
+				'arn_f112_page' => '2',
+			),
+			'selection' => \Arn\Intranet\Communications\NoticeSelection::parse( array( 'page' => '2' ) ),
+		);
+		$args  = array(
+			'f112' => array(
+				'module' => 'communications',
+				'view'   => 'detail',
+				'data'   => $row,
+				'query'  => $query,
+			),
+		);
+		ob_start();
+		try {
+			include dirname( __DIR__, 2 ) . '/wp-content/themes/arn-intranet/portal/f112.php';
+			$html = (string) ob_get_contents();
+		} finally {
+			ob_end_clean(); }
+		self::assertSame( 1, preg_match( '/href="([^"]+)">Voltar aos resultados/', $html, $back ) );
+		self::assertStringContainsString( 'notices=1', html_entity_decode( $back[1] ) );
+		self::assertStringContainsString( 'arn_f112_page=2', html_entity_decode( $back[1] ) );
+	}
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 	public function test_reviewer_cms_renders_frozen_content_and_opaque_proof_without_private_cas(): void {
 		require __DIR__ . '/fixtures/f112-render-functions.php';
 		define( 'ABSPATH', '/' );

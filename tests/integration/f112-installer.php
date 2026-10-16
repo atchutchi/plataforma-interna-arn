@@ -120,6 +120,35 @@ function arn_f112_installer_test(): void {
 		$assert( get_option( 'fresh_site' ) === $fresh_before, 'páginas marcadoras não alteram o estado de site novo' );
 		$assert( 6 === count( $result['user_ids'] ) && 2 === count( $result['pages'] ) && ! in_array( false, $result['created'], true ), 'seis contas e duas páginas' );
 		$assert( 6 === count( LocalRoster::resolve( $prefix ) ), 'marcas e papéis exactos' );
+		$assert( \Arn\Intranet\F112\InstallationState::ready( 'communications', $prefix ) && \Arn\Intranet\F112\InstallationState::ready( 'calendar', $prefix ), 'conclusão explícita dos dois módulos' );
+		$marker_name = \Arn\Intranet\F112\InstallationState::optionName( $prefix );
+		$marker      = get_option( $marker_name );
+		foreach ( array( null, '{"version":1}' ) as $invalid_marker ) {
+			if ( null === $invalid_marker ) {
+				delete_option( $marker_name );
+			} else {
+				add_option( $marker_name, $invalid_marker, '', false );
+			}
+			$partial = $snapshot();
+			$assert( ! \Arn\Intranet\F112\Portal::available( 'communications', $prefix ) && ! \Arn\Intranet\F112\Portal::available( 'calendar', $prefix ), 'marcador ausente ou inválido fecha ambos os módulos' );
+			$deny( static fn() => $installer->install() );
+			$assert( $partial === $snapshot(), 'marcador ausente ou inválido não é reparado' );
+			delete_option( $marker_name );
+		}
+		add_option( $marker_name, $marker, '', false );
+		global $wpdb;
+		foreach ( array( 'communications', 'calendar' ) as $module ) {
+			$page_id = $result['pages'][ $module ];
+			$wpdb->update( $wpdb->posts, array( 'post_content' => '' ), array( 'ID' => $page_id ) );
+			clean_post_cache( $page_id );
+			try {
+				$other = 'communications' === $module ? 'calendar' : 'communications';
+				$assert( ! \Arn\Intranet\F112\Portal::available( $module, $prefix ) && \Arn\Intranet\F112\Portal::available( $other, $prefix ), 'página incompatível fecha apenas o próprio módulo após conclusão' );
+			} finally {
+				$wpdb->update( $wpdb->posts, array( 'post_content' => Pages::content( $module ) ), array( 'ID' => $page_id ) );
+				clean_post_cache( $page_id );
+			}
+		}
 		$initial = $snapshot();
 		$repeat  = $installer->install();
 		$assert( $result['user_ids'] === $repeat['user_ids'] && ! in_array( true, $repeat['created'], true ) && $initial === $snapshot(), 'repetição integralmente idempotente' );
@@ -170,6 +199,7 @@ function arn_f112_installer_test(): void {
 		$deny( static fn() => $installer->install() );
 		$assert( $initial === $snapshot(), 'revogação não reparada' );
 	} finally {
+		delete_option( \Arn\Intranet\F112\InstallationState::optionName( $prefix ) );
 		if ( is_int( $collision ) && $collision > 0 && str_starts_with( (string) get_post_field( 'post_name', $collision ), rtrim( $prefix, '_' ) ) ) {
 			wp_delete_post( $collision, true );
 		}

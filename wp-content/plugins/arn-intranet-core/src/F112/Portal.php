@@ -17,6 +17,9 @@ use Throwable;
 
 // phpcs:disable Squiz.Commenting, WordPress.Security.EscapeOutput.ExceptionNotEscaped -- No factory installs or repairs resources.
 final class Portal {
+	public static function available( string $module, ?string $prefix = null ): bool {
+		return Configuration::current( $module ) && InstallationState::ready( $module, $prefix );
+	}
 	public static function register(): void {
 		Controller::register();
 		ManagementPage::register();
@@ -63,6 +66,9 @@ final class Portal {
 		if ( null !== $this->context ) {
 			return true;
 		}
+		if ( ! self::available( $this->module ) ) {
+			return false;
+		}
 		try {
 			$roster = LocalRoster::resolve();
 			if ( ! isset( $roster[ get_current_user_id() ] ) ) {
@@ -97,20 +103,14 @@ final class Portal {
 		if ( ! $this->readable() ) {
 			return null;
 		}
-		$list          = $this->repository->visible( $selection );
-		$list['items'] = array_map( fn( Notice|Event $aggregate ): array => View::published( $aggregate, $this->now ), $list['items'] );
-		return $list;
+		return $this->repository->publishedList( $selection );
 	}
 
 	public function detail( int $id ): ?array {
 		if ( ! $this->readable() ) {
 			return null;
 		}
-		$aggregate = $this->repository->find( $id, 'read' );
-		if ( null === $aggregate ) {
-			return null;
-		}
-		return View::published( $aggregate, $this->now );
+		return $this->repository->publishedDetail( $id );
 	}
 
 	public function notices( int $page ): ?array {
