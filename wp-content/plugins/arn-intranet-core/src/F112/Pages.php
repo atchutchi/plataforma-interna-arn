@@ -79,25 +79,36 @@ final class Pages {
 
 	/** Called only after all other installer checks and roster creation. */
 	public function install(): array {
-		$pages = array();
-		foreach ( self::TITLES as $view => $title ) {
-			$id = wp_insert_post(
-				array(
-					'post_type'    => 'page',
-					'post_status'  => 'publish',
-					'post_title'   => $title,
-					'post_name'    => $this->slug( $view ),
-					'post_content' => self::content( $view ),
-					'post_parent'  => 0,
-				),
-				true
-			);
-			if ( is_wp_error( $id ) || ! is_int( $id ) || $id <= 0 ) {
-				throw new RuntimeException( 'Criação de página F112 recusada.' );
-			}
-			$pages[ $view ] = $id;
+		if ( ! Configuration::current( 'communications' ) || ! Configuration::current( 'calendar' ) || ! defined( 'WP_CLI' ) || true !== WP_CLI || ! current_user_can( 'manage_options' ) ) {
+			throw new RuntimeException( 'Instalação de páginas F112 recusada.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped
 		}
-		return $pages;
+		// Native infrastructure anchors do not consume the site's first content publication.
+		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- WordPress passes the proposed and previous option values.
+		$preserve_fresh = static fn( mixed $proposed, mixed $previous ): mixed => $previous;
+		add_filter( 'pre_update_option_fresh_site', $preserve_fresh, PHP_INT_MAX, 2 );
+		try {
+			$pages = array();
+			foreach ( self::TITLES as $view => $title ) {
+				$id = wp_insert_post(
+					array(
+						'post_type'    => 'page',
+						'post_status'  => 'publish',
+						'post_title'   => $title,
+						'post_name'    => $this->slug( $view ),
+						'post_content' => self::content( $view ),
+						'post_parent'  => 0,
+					),
+					true
+				);
+				if ( is_wp_error( $id ) || ! is_int( $id ) || $id <= 0 ) {
+					throw new RuntimeException( 'Criação de página F112 recusada.' );
+				}
+				$pages[ $view ] = $id;
+			}
+			return $pages;
+		} finally {
+			remove_filter( 'pre_update_option_fresh_site', $preserve_fresh, PHP_INT_MAX );
+		}
 	}
 
 	public function viewFor( ?WP_Post $post ): ?string {

@@ -114,7 +114,10 @@ function arn_f112_installer_test(): void {
 		$deny( static fn() => $installer->install() );
 		$assert( $initial === $snapshot(), 'schema parcial não reparado' );
 		$db->query( $db->prepare( 'DROP TABLE %i', $table ) );
+		$fresh_before = get_option( 'fresh_site' );
+		WP_CLI::log( 'Cenário de site novo: ' . ( '1' === $fresh_before ? 'sim' : 'não' ) );
 		$result = $installer->install();
+		$assert( get_option( 'fresh_site' ) === $fresh_before, 'páginas marcadoras não alteram o estado de site novo' );
 		$assert( 6 === count( $result['user_ids'] ) && 2 === count( $result['pages'] ) && ! in_array( false, $result['created'], true ), 'seis contas e duas páginas' );
 		$assert( 6 === count( LocalRoster::resolve( $prefix ) ), 'marcas e papéis exactos' );
 		$initial = $snapshot();
