@@ -1,0 +1,23 @@
+Trabalha no repositório https://github.com/atchutchi/plataforma-interna-arn como Albertina4264. Atchutchi atribuiu-te duas tarefas novas, já registadas e atribuídas no GitHub:
+
+https://github.com/atchutchi/plataforma-interna-arn/issues/28
+ALB-F1-16-01: validação do segundo PC, zoom e isolamento local.
+
+https://github.com/atchutchi/plataforma-interna-arn/issues/29
+ALB-F1-13-SPEC: especificação de tarefas e critérios de aceitação.
+
+Lê integralmente as duas Issues, README.md, AGENTS.md e docs/tarefas-albertina-2026-10-16.md. As Issues contêm objectivos, preparação, critérios, ficheiros de entrega e limites. A passagem ALB-F1-07-QA de 15 de outubro é histórica. A F1-07 já foi implementada e ensaiada por Codex/Atchutchi. Não recomeçar a fundação nem duplicar essa implementação.
+
+Antes de mudar o clone, executa git status, confere remotes/branches/PRs e preserva qualquer alteração ou commit ainda não publicado. A consulta remota de 16 de outubro só encontrou a tua branch antiga em 16890af, sem novos commits exclusivos. Isso não informa o estado do teu disco. Se já trabalhaste localmente, identifica os commits/ficheiros ao responsável antes de misturar trabalhos. Não uses reset, force push ou eliminação para limpar o checkout.
+
+Confirma que a PR #25 foi integrada e obtém origin/main actualizado. Cria qa/albertina-f1-16-segundo-pc a partir desse main para a Issue #28. Usa só o teu laboratório com fixtures e segredos próprios. O estado de LAB-B, revisões, IDs, configuração e base do PC de Atchutchi não acompanha Git. Guarda baselines antes de escrever. Não copiar configuração, passwords ou originais reais. Sem runtime autorizado, regista a limitação e avança a tarefa documental independente, sem fingir testes executados.
+
+Entrega docs/qa-segundo-pc-albertina-f1-16.md com matriz Passou/Falhou/Não executado, SHA, ambiente, comandos/resultados, baselines/deltas e limites. Faz testes Playwright nativos, estados/sessões, HTTP/REST, isolamento e idempotência conforme a Issue #28. Mede zoom real do browser separadamente de CSS a 200%. A falta dos 22 originais é Não executada para comparação física no teu PC. Não inventar ficheiros substitutos.
+
+Para a Issue #29, cria docs/albertina-f1-13-tarefas a partir do main actualizado, preservando a branch anterior. Produz somente os três documentos previstos na Issue: especificação proposta, critérios CA-F113 Por executar e entrega. Não criar schema, contas, concessões, páginas, dependências ou código de tarefas. Não editar a proposta F1-12 da PR #26 nem presumir que já está implementada. Propor não equivale a aprovação institucional.
+
+Não editar README.md ou AGENTS.md em nenhuma destas PRs, para evitar conflito com a continuação central. Não alterar as branches/laboratório de Atchutchi, dados de pessoas reais, produção, .205/.151, AD, DNS, Google Workspace ou email. Nunca guardar cookies, nonces, passwords, configuração, baselines, dumps, capturas ou originais no GitHub.
+
+Usa as skills aplicáveis conforme disponíveis, incluindo Superpowers e Playwright para QA e Impeccable/UI UX Pro Max para orientar a especificação visual existente. Não substituir tema, fontes ou marca. Se uma skill/runtime faltar, regista-o.
+
+Faz commits/push na branch própria de cada tarefa e entrega uma PR contra main ligada à respectiva Issue. Inclui SHA recebido/entregue, ficheiros, evidência real, limitações e próximos passos. Não fazer merge ou deploy. Só o responsável revê e integra. Não avançar para implementação F1-13 nesta atribuição.
