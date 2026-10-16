@@ -8,7 +8,7 @@
 .arn-f112-admin .button { display: inline-flex; align-items: center; justify-content: center; white-space: normal; padding: .5rem 1rem; }
 .arn-f112-admin .button-primary { background: #0b3a5b; border-color: #0b3a5b; }
 .arn-f112-admin .button-primary:hover { background: #1f6b4a; border-color: #1f6b4a; }
-.arn-f112-admin a { color: #0b3a5b; }
+.arn-f112-admin a { color: #0b3a5b; display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; max-width: 100%; }
 .arn-f112-admin :is(a, input, select, textarea, button):focus-visible { outline: 3px solid #1f6b4a; outline-offset: 3px; box-shadow: none; }
 .arn-f112-admin :is(input, select, textarea) { color: #1b242c; border: 1px solid #526373; border-radius: 4px; padding: .5rem .75rem; min-width: 0; }
 .arn-f112-admin .description { color: #526373; font-size: 1rem; line-height: 1.5; max-width: 65ch; }

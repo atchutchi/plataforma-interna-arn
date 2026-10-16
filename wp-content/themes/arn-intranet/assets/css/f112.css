@@ -19,7 +19,7 @@
 .arn-f112 button.arn-f112-secondary { color: #0b3a5b; background: #fff; border-color: #0b3a5b; }
 .arn-f112 button.arn-f112-secondary:hover { background: #f4f7f8; }
 .arn-f112 :is(a, button, input, select):focus-visible { outline: 3px solid #1f6b4a; outline-offset: 3px; }
-.arn-f112 a { color: #0b3a5b; text-underline-offset: .2em; }
+.arn-f112 a { color: #0b3a5b; text-underline-offset: .2em; display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; max-width: 100%; }
 .arn-f112 a:hover { color: #1f6b4a; }
 .arn-f112-list { list-style: none; padding: 0; margin: 1.5rem 0; }
 .arn-f112-list > li { display: flex; gap: 1.5rem; padding-block: 1.5rem; border-bottom: 1px solid #d8e1e7; align-items: start; }
