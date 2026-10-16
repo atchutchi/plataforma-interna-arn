@@ -12,6 +12,14 @@ use Arn\Intranet\Tests\Doubles\WorkspaceInventoryFixture;
 // phpcs:disable Squiz.Commenting, WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Laboratório SQL exclusivo com nomes preparados e claims fictícias.
 require_once __DIR__ . '/workspace-fixture.php';
 require_once dirname( __DIR__ ) . '/phpunit/doubles/WorkspaceInventoryFixture.php';
+if ( ! defined( 'WP_CLI' ) || true !== WP_CLI || ! current_user_can( 'manage_options' ) ) {
+	throw new RuntimeException( 'Ensaio Workspace recusado.' );}
+if ( 'development' === wp_get_environment_type() ) {
+	if ( \Arn\Intranet\Identity\PreRegistration\WorkspacePreRegistrationCommand::permitted() ) {
+		throw new RuntimeException( 'Gate Workspace inválido.' );}
+	WP_CLI::success( 'Workspace claim: development negativo, sem escrita.' );
+	return;
+}
 require_once __DIR__ . '/workspace-claim-concurrency.php';
 $fixture            = new ArnWorkspaceSqlFixture();
 $db                 = $fixture->database;
@@ -104,6 +112,9 @@ try {
 	$links->changeState( $old->user_id, true, true, get_current_user_id() );
 	$existing = $resolver->resolve( $claims( 4, 'synthetic-old-pair' ), $config, 1894705201 );
 	$assert( $existing->user_id === $old->user_id && 'AwaitingGoogle' === $repository->findForUser( $records[4]->user_id )->state->value && 1 === $conflicts, 'par anterior preservado, destino pendente não adoptado' );
+	// Simula a descoberta do par por outro pedido entre lookup e INSERT.
+	$deny( static fn()=>$links->claimActive( static fn( IdentityWpdb $same )=>( new WpdbPreRegistrationRepository( $same ) )->claim( $claims( 4, 'synthetic-old-pair' ), $config, 1894705201 ) ) );
+	$assert( 1 === $repository->findForUser( $records[4]->user_id )->revision && 'AwaitingGoogle' === $repository->findForUser( $records[4]->user_id )->state->value && $old->user_id === $links->find( $old->issuer, $old->subject )->user_id, 'colisão unique reverte Linked e preserva o par anterior' );
 	arn_workspace_claim_concurrency( $db, $records[5], $assert );
 	$assert( 2 === $repository->findForUser( $records[5]->user_id )->revision && null !== $links->findForUser( $records[5]->user_id ), 'só uma passagem para Linked' );
 	$assert( 2 === (int) $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM %i WHERE user_id=%d', $fixture->prefix . 'arn_identity_audit', $records[5]->user_id ) ), 'concorrência conserva dois eventos da identidade' );

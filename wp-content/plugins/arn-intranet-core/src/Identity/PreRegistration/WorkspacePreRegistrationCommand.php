@@ -111,8 +111,20 @@ final class WorkspacePreRegistrationCommand {
 		$database->set_prefix( $wpdb->prefix );
 		return new WpdbPreRegistrationRepository( $database );}
 	public static function assertRuntime(): void {
-		if ( wp_using_ext_object_cache() || wp_get_mu_plugins() || get_option( 'active_plugins' ) !== array( 'arn-intranet-core/arn-intranet-core.php' ) || has_filter( 'query' ) ) {
-			throw new RuntimeException();}}
+		if ( wp_using_ext_object_cache() || wp_get_mu_plugins() || get_option( 'active_plugins' ) !== array( 'arn-intranet-core/arn-intranet-core.php' ) ) {
+			throw new RuntimeException();}
+		self::assertSqlFilters();
+	}
+	public static function assertSqlFilters(): void {
+		global $wp_filter;
+		foreach ( $wp_filter['query']->callbacks ?? array()as$priority => $callbacks ) {
+			foreach ( $callbacks as$callback ) {
+				$function = $callback['function'] ?? null;
+				if ( 0 !== $priority || 1 !== ( $callback['accepted_args'] ?? null ) || ! is_array( $function ) || 2 !== count( $function ) || ! is_object( $function[0] ) || ! in_array( get_class( $function[0] ), array( 'wpdb', IdentityWpdb::class ), true ) || 'remove_placeholder_escape' !== $function[1] ) {
+					throw new RuntimeException( 'Transformação SQL externa recusada.' );}
+			}
+		}
+	}
 	private function run( callable $operation ): void {
 		try {
 			if ( ! self::permitted() ) {

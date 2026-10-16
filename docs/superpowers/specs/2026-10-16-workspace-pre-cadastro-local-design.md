@@ -74,3 +74,7 @@ As contas novas não recebem acesso ao painel administrativo. A sessão federada
 ## Estado desta entrega documental
 
 Apenas consulta, pré-verificação privada e especificação agora aprovada. Não há importador executável, esquema novo, contas criadas, vínculos novos ou autorização por email activada. O plano está em docs/superpowers/plans/2026-10-16-workspace-pre-cadastro-local.md e aguarda revisão. A implementação e a aplicação das 73 contas ainda ficam por executar. F1-12 e as tarefas da Albertina permanecem preservadas.
+
+## Registo de execução posterior à especificação
+
+O estado documental anterior é o registo da entrega original. Depois da aprovação do plano, a implementação avançou na branch separada, com 73 contas fictícias e ensaios HTTP/SQL. A revisão independente e a CI exacta precedem a activação no laboratório normal e a aplicação das 73 contas nominativas reais. O estado corrente está no README e em docs/qa-pre-cadastro-workspace-local.md.

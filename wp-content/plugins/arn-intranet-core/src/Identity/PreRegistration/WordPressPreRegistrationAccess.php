@@ -77,6 +77,9 @@ final class WordPressPreRegistrationAccess {
 		return false;
 	}
 	public function filterSendAuthCookies( bool $send, int $expire, int $expiration, int $user_id, string $scheme, string $token ): bool {
+		if ( 0 === $expire && 0 === $expiration && 0 === $user_id && '' === $scheme && '' === $token ) {
+			return $send;
+		}
 		if ( false === $send ) {
 			return false;
 		}try {

@@ -22,6 +22,11 @@ function add_action( string $hook, callable $callback, int $priority, int $accep
 
 /** Só o ensaio WordPress/SQL prova o comportamento nativo real. */
 final class WordPressPreRegistrationAccessTest extends TestCase {
+	public function testNativeCookieClearingIsPreservedEvenWithUnavailableStorage(): void {
+		$this->snapshot = new RuntimeException( 'storage unavailable' );
+		self::assertTrue( $this->guard->filterSendAuthCookies( true, 0, 0, 0, '', '' ) );
+		self::assertFalse( $this->guard->filterSendAuthCookies( false, 0, 0, 0, '', '' ) );
+	}
 	public static string $token = 'old';
 	private mixed $snapshot;
 	private bool $enabled = true;

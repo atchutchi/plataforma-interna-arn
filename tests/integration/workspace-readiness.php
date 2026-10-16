@@ -11,6 +11,14 @@ use Arn\Intranet\Tests\Doubles\WorkspaceInventoryFixture;
 // phpcs:disable Squiz.Commenting, WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Harness local com tabelas e fontes só fictícias.
 require_once __DIR__ . '/workspace-fixture.php';
 require_once dirname( __DIR__ ) . '/phpunit/doubles/WorkspaceInventoryFixture.php';
+if ( ! defined( 'WP_CLI' ) || true !== WP_CLI || ! current_user_can( 'manage_options' ) ) {
+	throw new RuntimeException( 'Ensaio Workspace recusado.' );}
+if ( 'development' === wp_get_environment_type() ) {
+	if ( \Arn\Intranet\Identity\PreRegistration\WorkspacePreRegistrationCommand::permitted() ) {
+		throw new RuntimeException( 'Gate Workspace inválido.' );}
+	WP_CLI::success( 'Workspace readiness: development negativo, sem escrita.' );
+	return;
+}
 $fixture            = new ArnWorkspaceSqlFixture();
 $db                 = $fixture->database;
 $checks             = 0;

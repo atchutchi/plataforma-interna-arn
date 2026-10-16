@@ -6,7 +6,7 @@
 .arn-preparation-header img { width: 10rem; max-width: 100%; height: auto; }
 .arn-preparation-header span { color: #526373; }
 .arn-preparation main { flex: 1; width: min(100% - 2.5rem, 44rem); padding-block: 4rem; margin-inline: auto; }
-.arn-preparation h1 { margin: .75rem 0 1rem; max-width: 24ch; font: 700 2.25rem/1.25 Manrope, 'Segoe UI', sans-serif; letter-spacing: -.02em; text-wrap: balance; }
+.arn-preparation h1 { margin: .75rem 0 1rem; max-width: 24ch; font: 700 2.25rem/1.25 Manrope, 'Segoe UI', sans-serif; letter-spacing: -.02em; text-wrap: balance; overflow-wrap: anywhere; }
 .arn-preparation p { max-width: 65ch; overflow-wrap: anywhere; text-wrap: pretty; }
 .arn-preparation-greeting { color: #526373; margin: 0; }
 .arn-preparation-copy { font-size: 1.25rem; }
