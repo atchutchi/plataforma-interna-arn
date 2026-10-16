@@ -231,6 +231,18 @@ function arn_f112_storage_test( string $module ): void {
 		$anchors[] = $first->id;
 		$first     = $repo->publish( $first->id, 1, 'Publicar ensaio A.' );
 		$assert( 2 === $first->revision && 2 === count( $repo->history( $first->id ) ), 'uma revisão e um evento por escrita' );
+		$employee_grant = null;
+		foreach ( $auth->find( $current_id )->stored_grants as $stored ) {
+			if ( Role::Employee === $stored->grant->role && ! $stored->grant->revoked ) {
+				$employee_grant = $stored;
+			}
+		}
+		$assert( null !== $employee_grant, 'leitura Employee separada antes do controlo de detalhe' );
+		$service->revokeGrant( $current_id, $employee_grant->id, $auth->find( $current_id )->revision, $context );
+		$current_session = $session( $current_id );
+		$assert( null === $repo->find( $first->id, 'read' ) && null !== $repo->find( $first->id, 'manage' ), 'gestão não ultrapassa a guarda transaccional de leitura' );
+		$service->createGrant( new Grant( $current_id, Role::Employee, Scope::own(), 0, null ), $auth->find( $current_id )->revision, $context );
+		$current_session = $session( $current_id );
 		$denied( static fn() => $repo->create( $content( 'B indevido', Audience::unit( 'LAB-B' ) ), 'Recusar B.' ) );
 		$denied( static fn() => $repo->create( $content( 'Todos indevido', Audience::all(), true ), 'Recusar âmbito institucional.' ) );
 		$before = $repo->find( $first->id )->toArray();
@@ -241,8 +253,11 @@ function arn_f112_storage_test( string $module ): void {
 		$current_session = $session( $current_id );
 		$selection       = 'communications' === $module ? NoticeSelection::parse( array() ) : AgendaSelection::parse( array() );
 		$assert( 1 === $repo->visible( $selection )['total'], 'A recebe publicação A' );
+		$assert( null !== $repo->find( $first->id, 'read' ) && null === $repo->find( $first->id, 'manage' ), 'leitura não expõe agregado de gestão' );
 		$notices = $repo->notices();
 		$assert( 1 === count( $notices ), 'um aviso por destinatário elegível' );
+		$repo->markRead( $notices[0]['id'] );
+		$assert( $now === $repo->notices()[0]['read_at'], 'recibo usa o relógio transaccional do servidor' );
 		$repo->markRead( $notices[0]['id'], $now );
 		++$now;
 		$repo->markRead( $notices[0]['id'], $now );

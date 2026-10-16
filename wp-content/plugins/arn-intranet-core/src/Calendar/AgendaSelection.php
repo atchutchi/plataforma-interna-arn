@@ -24,15 +24,17 @@ final readonly class AgendaSelection {
 	 * @param string   $month Canonical month or empty.
 	 * @param int|null $window_start UTC month start.
 	 * @param int|null $window_end Exclusive month end.
+	 * @param bool     $cms Server-only workflow filter mode.
 	 */
-	private function __construct( public int $page, public string $q, public string $unit, public string $state, public string $month, public ?int $window_start, public ?int $window_end ) {}
+	private function __construct( public int $page, public string $q, public string $unit, public string $state, public string $month, public ?int $window_start, public ?int $window_end, public bool $cms ) {}
 
 	/** Closed scalar query format with canonical pagination and Gregorian month.
 	 *
 	 * @param array $query Allowlisted query.
+	 * @param bool  $management Server-only CMS filter mode.
 	 * @return self|null
 	 */
-	public static function parse( array $query ): ?self {
+	public static function parse( array $query, bool $management = false ): ?self {
 		if ( array_diff( array_keys( $query ), array( 'page', 'q', 'unit', 'state', 'month' ) ) ) {
 			return null;
 		}
@@ -41,11 +43,13 @@ final readonly class AgendaSelection {
 				return null;
 			}
 		}
-		$page  = $query['page'] ?? '1';
-		$month = $query['month'] ?? '';
-		$start = null;
-		$end   = null;
-		if ( 1 !== preg_match( '/\A[1-9][0-9]*\z/', $page ) || strlen( $page ) > strlen( (string) PHP_INT_MAX ) || ( strlen( $page ) === strlen( (string) PHP_INT_MAX ) && strcmp( $page, (string) PHP_INT_MAX ) > 0 ) || ! in_array( $query['unit'] ?? '', array( '', 'LAB-A', 'LAB-B' ), true ) || ! in_array( $query['state'] ?? 'future', array( 'future', 'history', 'cancelled' ), true ) ) {
+		$page   = $query['page'] ?? '1';
+		$month  = $query['month'] ?? '';
+		$start  = null;
+		$end    = null;
+		$state  = $query['state'] ?? ( $management ? '' : 'future' );
+		$states = $management ? array( '', 'Draft', 'Published', 'Cancelled', 'Archived' ) : array( 'future', 'history', 'cancelled' );
+		if ( 1 !== preg_match( '/\A[1-9][0-9]*\z/', $page ) || strlen( $page ) > strlen( (string) PHP_INT_MAX ) || ( strlen( $page ) === strlen( (string) PHP_INT_MAX ) && strcmp( $page, (string) PHP_INT_MAX ) > 0 ) || ! in_array( $query['unit'] ?? '', array( '', 'LAB-A', 'LAB-B' ), true ) || ! in_array( $state, $states, true ) ) {
 			return null;
 		}
 		if ( '' !== $month ) {
@@ -64,7 +68,7 @@ final readonly class AgendaSelection {
 		} catch ( InvalidArgumentException ) {
 			return null;
 		}
-		return new self( (int) $page, $q, $query['unit'] ?? '', $query['state'] ?? 'future', $month, $start, $end );
+		return new self( (int) $page, $q, $query['unit'] ?? '', $state, $month, $start, $end, $management );
 	}
 
 	/** Half-open intersection, one row per event and no private-version search.
@@ -77,6 +81,9 @@ final readonly class AgendaSelection {
 	public function apply( array $authorised, int $now, bool $management = false ): array {
 		$items = array();
 		foreach ( $authorised as $event ) {
+			if ( ( $this->cms && ! $management ) || ( $this->cms && '' !== $this->state && $event instanceof Event && $event->state->value !== $this->state ) ) {
+				continue;
+			}
 			if ( ! $event instanceof Event ) {
 				continue;
 			}

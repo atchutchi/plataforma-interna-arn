@@ -15,6 +15,16 @@ use PHPUnit\Framework\TestCase;
 
 /** Events spanning multiple days appear once with their original interval. */
 final class AgendaSelectionTest extends TestCase {
+	/** CMS workflow filters are distinct from recipient time filters. */
+	public function test_cms_workflow_is_filtered_without_becoming_a_public_selection(): void {
+		$published = $this->event( 1, '2030-01-31T10:00:00Z', '2030-02-01T11:00:00Z' );
+		$draft     = Event::draft( 2, 7, null, $published->latest()->content, 10 );
+		$query     = AgendaSelection::parse( array( 'state' => 'Draft' ), true );
+		self::assertSame( array( 2 ), $this->ids( $query->apply( array( $published, $draft ), 20, true ) ) );
+		self::assertSame( 0, $query->apply( array( $published, $draft ), 20 )['total'] );
+		self::assertNull( AgendaSelection::parse( array( 'state' => 'Draft' ) ) );
+		self::assertNull( AgendaSelection::parse( array( 'state' => 'future' ), true ) );
+	}
 
 	/** Running/future, historical and cancelled sets are disjoint by default. */
 	public function test_agenda_state_and_month_intersection(): void {

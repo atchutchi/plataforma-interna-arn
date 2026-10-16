@@ -46,18 +46,23 @@ final class NoticeRepository {
 	}
 
 	/** Internal model for an eligible recipient or competent CMS actor, never a public DTO. */
-	public function find( int $id ): ?Notice {
-		if ( $id < 1 ) {
+	public function find( int $id, string $mode = 'either' ): ?Notice {
+		if ( $id < 1 || ! in_array( $mode, array( 'read', 'manage', 'either' ), true ) ) {
 			return null;
 		}
 		try {
 			return $this->transaction(
-				function ( ActorContext $actor, array $recipients, int $now ) use ( $id ): ?Notice {
+				function ( ActorContext $actor, array $recipients, int $now ) use ( $id, $mode ): ?Notice {
 					if ( ! $this->canUse( $actor, $now ) ) {
 						return null;
 					}
 					$notice = $this->load( $id );
-					return null !== $notice && ( NoticePolicy::read( $notice, $actor, $now ) || NoticePolicy::manage( $notice, 'view', $actor, $now ) ) ? $notice : null;
+					if ( null === $notice ) {
+						return null;
+					}
+					$allowed = match ( $mode ) {
+						'read' => NoticePolicy::read( $notice, $actor, $now ), 'manage' => NoticePolicy::manage( $notice, 'view', $actor, $now ), default => NoticePolicy::read( $notice, $actor, $now ) || NoticePolicy::manage( $notice, 'view', $actor, $now ) };
+					return $allowed ? $notice : null;
 				}
 			);
 		} catch ( DomainException ) {
@@ -186,10 +191,10 @@ final class NoticeRepository {
 		);
 	}
 
-	public function markRead( int $notice_id, int $now ): void {
+	public function markRead( int $notice_id, ?int $now = null ): void {
 		$this->transaction(
 			function ( ActorContext $actor, array $recipients, int $clock ) use ( $notice_id, $now ): void {
-				if ( $notice_id < 1 || $now !== $clock || ! $actor->allows( Action::ReadContent, Scope::own(), $actor->id(), $clock ) ) {
+				if ( $notice_id < 1 || ( null !== $now && $now !== $clock ) || ! $actor->allows( Action::ReadContent, Scope::own(), $actor->id(), $clock ) ) {
 					self::denied();
 				}
 				$rows = $this->rows( $this->database->prepare( 'SELECT * FROM %i WHERE id=%d AND recipient_id=%d', $this->schema->table( 'notifications' ), $notice_id, $actor->id() ) );

@@ -44,6 +44,8 @@ final class F112InstallerTest extends TestCase {
 			}
 			self::assertTrue( $args['exclude_from_search'] );
 			self::assertFalse( $args['supports'] );
+			self::assertSame( 'do_not_allow', $args['capabilities']['edit_posts'] ?? null );
+			self::assertSame( 'do_not_allow', $args['capabilities']['read_private_posts'] ?? null );
 		}
 		self::assertSame( 'comunicados', ( new Pages() )->slug( 'communications' ) );
 		self::assertSame( '<!-- wp:arn/f112-view {"module":"calendar"} /-->', Pages::content( 'calendar' ) );
