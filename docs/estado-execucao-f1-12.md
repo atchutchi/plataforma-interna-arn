@@ -28,3 +28,4 @@ O export e o inventário mínimo ficam fora dos repositórios e do document root
 
 As tarefas #28/#29, branches e laboratório da Albertina mantêm-se independentes. Sem alteração de produção, servidores, AD, DNS, originais privados ou fontes institucionais.
 `Task 3` fechou a verificação conjunta no SHA 4404997: suite PHP completa e ambos os ensaios SQL aprovados na mesma execução serial. Seguem instalação e interfaces, ainda pendentes.
+`Task 4` concluída no commit a5f9b76: instalador CLI explícito, seis fixtures Subscriber, duas páginas canónicas, preflight antes dos recursos e tipos privados sem editor/REST. A verificação conjunta passou 785 testes PHP/3486 asserções/quatro omissões anteriores e SQL65/65/42 para comunicados, calendário e instalador. Node55/lint e PHPCS12 ficheiros aprovados. Repetição integral sem alterações após edição auditada, colisões e recusa de suspensão/revogação cobertas. Sem instalação normal, interface ou Playwright F1-12 ainda.
