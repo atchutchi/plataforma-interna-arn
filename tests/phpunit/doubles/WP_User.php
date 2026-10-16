@@ -35,6 +35,13 @@ class WP_User {
 	public string $user_email;
 
 	/**
+	 * Papéis WordPress fictícios.
+	 *
+	 * @var string[]
+	 */
+	public array $roles = array();
+
+	/**
 	 * Cria uma conta em memória.
 	 *
 	 * @param int    $user_id Identificador.

@@ -46,8 +46,7 @@ final class WpdbLocalUnitRepository {
 	public function snapshotInTransaction(): LocalUnitSnapshot {
 		return $this->silently(
 			function (): LocalUnitSnapshot {
-				$row = $this->database->get_row( 'SELECT @@session.in_transaction AS active' );
-				if ( ! is_object( $row ) || '' !== $this->database->last_error || '1' !== (string) $row->active ) {
+				if ( ! $this->database->inTransaction() ) {
 					throw new RuntimeException( 'Transacção de unidades ausente.' );
 				}
 				$this->schema->validate();

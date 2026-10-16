@@ -166,7 +166,7 @@ try {
 	$database->query( 'START TRANSACTION' );
 	$refused( static fn() => $repository->changeState( $user_id, AccountState::Suspended, 10, $context ) );
 	$refused( static fn() => $repository->installSchema() );
-	$assert( '1' === (string) $database->get_var( 'SELECT @@in_transaction' ) );
+	$assert( $database->inTransaction() );
 	$database->query( 'ROLLBACK' );
 	$assert( false === $database->query( $database->prepare( "INSERT INTO %i (user_id, role, scope_type, targets_json, starts_at, revoked) VALUES (%d, 'Employee', 'Own', '[]', 0, 0)", $grants_table, PHP_INT_MAX ) ) );
 	$assert( false === $database->query( $database->prepare( 'INSERT INTO %i (user_id, actor_id, event, revision, new_json, reason, decision_ref, occurred_at) SELECT user_id, actor_id, event, revision, new_json, reason, decision_ref, occurred_at FROM %i LIMIT 1', $audit_table, $audit_table ) ) );
