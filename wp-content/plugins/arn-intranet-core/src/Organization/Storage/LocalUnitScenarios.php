@@ -24,6 +24,7 @@ final class LocalUnitScenarios {
 			'move-b-to-a'    => 'Mover B para A',
 			'move-b-to-root' => 'Devolver B à raiz',
 			'deactivate-b'   => 'Desactivar B conservando o histórico',
+			'reactivate-b'   => 'Reactivar B conservando o histórico',
 		);
 	}
 	/**
@@ -43,6 +44,20 @@ final class LocalUnitScenarios {
 			return array( new Unit( 'LAB-ROOT', 'LAB-ROOT', 'Unidade fictícia raiz', UnitType::Outro, null, ParentStatus::Raiz ), new Unit( 'LAB-A', 'LAB-A', 'Unidade fictícia A', UnitType::Outro, 'LAB-ROOT', ParentStatus::Confirmada ), new Unit( 'LAB-B', 'LAB-B', 'Unidade fictícia B', UnitType::Outro, 'LAB-ROOT', ParentStatus::Confirmada ) );
 		}
 		$tree = UnitHierarchy::fromList( $units );
+		if ( 'reactivate-b' === $scenario ) {
+			$b = $tree->get( 'LAB-B' );
+			if ( $b->active || null === $b->parent_id || ! $tree->get( $b->parent_id )->active ) {
+				throw new RuntimeException( 'Reactivação local recusada.' );
+			}
+			$result = array_map(
+				static fn( Unit $unit ): Unit => 'LAB-B' === $unit->id
+					? new Unit( $unit->id, $unit->acronym, $unit->name, $unit->type, $unit->parent_id, $unit->parent_status, true )
+					: $unit,
+				$units
+			);
+			LocalUnitSnapshot::validate( $result );
+			return $result;
+		}
 		match ( $scenario ) {
 			'rename-a' => $tree->rename( 'LAB-A', 'Unidade fictícia A revista' ),
 			'move-b-to-a' => $tree->reparent( 'LAB-B', 'LAB-A', ParentStatus::Confirmada ),

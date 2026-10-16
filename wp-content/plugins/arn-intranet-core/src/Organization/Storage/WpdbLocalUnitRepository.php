@@ -42,6 +42,19 @@ final class WpdbLocalUnitRepository {
 	public function snapshot(): LocalUnitSnapshot {
 		return $this->silently( fn(): LocalUnitSnapshot => $this->readSnapshot() );
 	}
+	/** Read and lock the same tree inside the caller's transaction. */
+	public function snapshotInTransaction(): LocalUnitSnapshot {
+		return $this->silently(
+			function (): LocalUnitSnapshot {
+				$row = $this->database->get_row( 'SELECT @@session.in_transaction AS active' );
+				if ( ! is_object( $row ) || '' !== $this->database->last_error || '1' !== (string) $row->active ) {
+					throw new RuntimeException( 'Transacção de unidades ausente.' );
+				}
+				$this->schema->validate();
+				return $this->load( true );
+			}
+		);
+	}
 	/**
 	 * Executa a leitura consistente na ligação dedicada.
 	 *
@@ -61,16 +74,17 @@ final class WpdbLocalUnitRepository {
 	/**
 	 * Carrega a revisão e unidades da ligação corrente.
 	 *
+	 * @param bool $locked Bloqueia linhas na transacção do chamador.
 	 * @throws \RuntimeException Quando a operação é recusada.
 	 */
-	private function load(): LocalUnitSnapshot {
-		$header = $this->rows( $this->database->prepare( 'SELECT id, revision FROM %i', $this->schema->table( 'header' ) ) );
+	private function load( bool $locked = false ): LocalUnitSnapshot {
+		$header = $this->rows( $this->database->prepare( 'SELECT id, revision FROM %i', $this->schema->table( 'header' ) ) . ( $locked ? ' FOR UPDATE' : '' ) );
 		if ( 1 !== count( $header ) || '1' !== (string) $header[0]->id ) {
 			throw new RuntimeException( 'Cabeçalho local inválido.' ); }
 		$revision = self::revision( $header[0]->revision );
 		$payloads = array();
 		$ids      = array();
-		foreach ( $this->rows( $this->database->prepare( 'SELECT id, payload FROM %i ORDER BY id', $this->schema->table( 'units' ) ) ) as $row ) {
+		foreach ( $this->rows( $this->database->prepare( 'SELECT id, payload FROM %i ORDER BY id', $this->schema->table( 'units' ) ) . ( $locked ? ' FOR UPDATE' : '' ) ) as $row ) {
 			$payloads[] = $row->payload;
 			$ids[]      = $row->id;
 		}

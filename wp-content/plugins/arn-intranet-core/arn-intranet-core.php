@@ -43,6 +43,7 @@ use Arn\Intranet\News\NewsroomPage;
 use Arn\Intranet\News\NewsFileController;
 use Arn\Intranet\News\NewsPreviewController;
 use Arn\Intranet\News\NewsPublishedController;
+use Arn\Intranet\People\PeoplePortal;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -160,6 +161,7 @@ add_action( 'admin_notices', 'arn_intranet_core_admin_notices' );
 
 ( new LocalPrivateFiles() )->register();
 PrivatePortal::register();
+PeoplePortal::register();
 Portal::register();
 DocumentCatalogPage::register();
 DocumentFileController::register();
