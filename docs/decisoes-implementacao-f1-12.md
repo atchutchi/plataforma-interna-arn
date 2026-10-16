@@ -60,4 +60,6 @@ D28. Deltas nativos de opções não são excluídos ou apagados. Reconciliar ca
 
 D29. Aceitar apenas o âmbito local fictício medido nos 32 critérios. Texto CSS200% não prova zoom nativo ou segundo PC. PEN-07, IIS/MySQL e população real ficam separados. Custo: nenhum resultado de produção ou de contas reais pode ser inferido desta aceitação.
 
+D30. A CI posterior revelou palavras-passe aleatórias com espaços nas extremidades. Gerar novas fixtures com 24 bytes criptográficos codificados em 48 caracteres hexadecimais, preservando 192 bits e o roundtrip nativo exacto. Ignorar o filtro random_password apenas neste gerador fechado. Ficheiros e hashes existentes permanecem intactos. Custo: outro alfabeto futuro terá de conservar entropia e roundtrip. Falha operacional de geração continua a exigir recuperação manual com rotas fechadas.
+
 Não há Minor adiado. As duas omissões iniciais foram tratadas como Important. Zoom nativo, segundo PC, escala real e homologação institucional são limites separados e não testes executados.

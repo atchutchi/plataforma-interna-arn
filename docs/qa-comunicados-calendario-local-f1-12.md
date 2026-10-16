@@ -1,6 +1,6 @@
 # F1-12: aceitação no laboratório local
 
-16 de outubro de 2026. Implementação na branch `feat/f1-12-comunicados-calendario`, a partir de main `fffef58323636d59985a073e6b03bfc8e3c40e69` e da proposta da PR #26. Código PHP revisto e corrigido no SHA `bc60cf5ec6a18df9a834ee7b951110c028cadec1`. A correcção visual descoberta na aceitação está no SHA `65a01e25ecbe12bda9824d691e3739f0af8224a2`. Este relatório distingue prova local de aprovação institucional.
+16 de outubro de 2026. Implementação na branch `feat/f1-12-comunicados-calendario`, a partir de main `fffef58323636d59985a073e6b03bfc8e3c40e69` e da proposta da PR #26. Código PHP inicialmente revisto e corrigido no SHA `bc60cf5ec6a18df9a834ee7b951110c028cadec1`. A correcção visual descoberta na aceitação está no SHA `65a01e25ecbe12bda9824d691e3739f0af8224a2`. A correcção posterior de geração de segredos é descrita abaixo. O SHA final e a respectiva CI constam da PR #32. Este relatório distingue prova local de aprovação institucional.
 
 ## Ambiente e preparação
 
@@ -21,7 +21,7 @@ Os identificadores seguintes correspondem a logs e resultados JSON privados do l
 | P01 | Suite PHP completa: 800 testes, 3612 asserções e quatro omissões Windows preexistentes. PHPCS dos 16 ficheiros PHP da correcção sem erros ou avisos. Node: 55 testes, lint e build aprovados. |
 | P02 | `test:communications:integration`: 70 verificações SQL exclusivas, comparação de todas as linhas normais e limpeza própria. |
 | P03 | `test:calendar:integration`: 70 verificações SQL exclusivas, comparação de todas as linhas normais e limpeza própria. |
-| P04 | `test:f112-installer:integration`: 52 verificações. `test:f112-readiness:integration`: 52 verificações. Colisões, repetição, suspensão/revogação, marcador ausente/inválido e falhas na primeira/segunda página. |
+| P04 | `test:f112-installer:integration`: 58 verificações, incluindo seis segredos com roundtrip nativo exacto após forçar a regressão de espaços. `test:f112-readiness:integration`: 52 verificações. Colisões, repetição, suspensão/revogação, marcador ausente/inválido e falhas na primeira/segunda página. |
 | P05 | Playwright `login-six`: seis logins reais por formulário WordPress e ambas as listas com 200 para cada conta. |
 | P06 | `manager-flow-final`: data impossível recupera campos e foco, quatro pedidos adulterados recusados, criação/publicação com 303 e dois pedidos com o mesmo CAS dão um sucesso e um conflito com recuperação permitida. |
 | P07 | `institutional-flow-native-url`: Pending oculto, ausência de auto-aprovação, devolução, rejeição, aprovação por segundo actor, fila 200 após 303, detalhe decidido 404, continuidade de v3 durante Draft/Pending de v4, troca de audiência e arquivo. |
@@ -95,6 +95,8 @@ As 12 leituras finais P16 passaram também uma comparação integral idêntica d
 Um revisor independente leu o intervalo completo de 77 ficheiros, especificação e critérios. Não encontrou Critical. Foram corrigidos os três Important e as duas omissões reclassificadas Important, com regressões RED/GREEN. Não houve um segundo ciclo de revisão. A aceitação descobriu depois áreas de clique menores que o requisito, corrigidas no CSS e verificadas no browser.
 
 A CI inicial falhou no estado fresh_site de um WordPress novo. O diagnóstico identificou apenas essa opção. As páginas marcadoras preservam-na através de filtro temporário exclusivo, removido em finally. A execução 38905186102 comprovou o cenário novo e passou. A execução 38907064548 passou todas as seis jobs no SHA bc60cf5 e a execução 38910761278 passou no SHA 65a01e2. A CI do SHA final entregue deve constar da PR.
+
+No SHA 0531b54, a execução de push 38911711359 passou e a execução de PR 38911718646 encontrou uma falha real na verificação de password durante a repetição do instalador. O alfabeto extra de wp_generate_password inclui espaço. wp_hash_password remove espaços nas extremidades e wp_check_password compara o valor integral. O diagnóstico nativo de 48 caracteres reproduziu false para os bytes originais e true para o valor aparado. A regressão força esse caso apenas nas fixtures exclusivas e falhou antes da correcção. Novos segredos usam agora 24 bytes criptográficos em 48 caracteres hexadecimais. Não se alteraram passwords, ficheiros, concessões ou sessões das seis contas normais existentes. Não foi usada uma reexecução sem correcção para ocultar esta falha.
 
 Foram retidas as falhas do próprio ensaio: medição de foco antes de terminar o carregamento, expectativa de 404 para uma recusa de negócio recuperável com 200 e expectativa de saved permanecer na URL depois da limpeza nativa do WordPress. O teste de pesquisa global também confundiu o termo devolvido no formulário com um título protegido. O diagnóstico confirmou ausência de títulos numerados e do corpo protegido. A expressão passou a procurar os conteúdos completos das fixtures. Nenhuma política foi alargada para fazer passar estes ensaios.
 

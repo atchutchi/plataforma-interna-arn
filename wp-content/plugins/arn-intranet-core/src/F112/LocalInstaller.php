@@ -142,9 +142,10 @@ final class LocalInstaller {
 			'created'  => array(),
 		);
 		foreach ( $definitions as $label => $person ) {
-			$login    = $person['login'];
-			$path     = $root . DIRECTORY_SEPARATOR . self::passwordFile( $login );
-			$password = wp_generate_password( 48, true, true );
+			$login = $person['login'];
+			$path  = $root . DIRECTORY_SEPARATOR . self::passwordFile( $login );
+			// Keep all 192 random bits canonical across native hashing and verification.
+			$password = bin2hex( random_bytes( 24 ) );
 			$handle   = @fopen( $path, 'xb' );
 			if ( false === $handle ) {
 				throw new RuntimeException( self::ERROR );

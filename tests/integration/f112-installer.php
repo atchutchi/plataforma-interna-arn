@@ -116,7 +116,20 @@ function arn_f112_installer_test(): void {
 		$db->query( $db->prepare( 'DROP TABLE %i', $table ) );
 		$fresh_before = get_option( 'fresh_site' );
 		WP_CLI::log( 'Cenário de site novo: ' . ( '1' === $fresh_before ? 'sim' : 'não' ) );
-		$result = $installer->install();
+		// Core hashes trim boundary whitespace, while wp_check_password does not.
+		// Force the old random_password route to expose that mismatch deterministically.
+		$boundary_password = static fn( string $password, int $length ): string => 48 === $length ? ' ' . str_repeat( 'x', 46 ) . ' ' : $password;
+		add_filter( 'random_password', $boundary_password, PHP_INT_MAX, 2 );
+		try {
+			$result = $installer->install();
+		} finally {
+			remove_filter( 'random_password', $boundary_password, PHP_INT_MAX );
+		}
+		foreach ( LocalRoster::definitions( $prefix ) as $person ) {
+			$secret = file_get_contents( $root . DIRECTORY_SEPARATOR . LocalInstaller::passwordFile( $person['login'] ) );
+			$user   = get_user_by( 'login', $person['login'] );
+			$assert( 48 === strlen( $secret ) && trim( $secret ) === $secret && wp_check_password( $secret, $user->user_pass, $user->ID ), 'segredo privado canónico com roundtrip nativo exacto' );
+		}
 		$assert( get_option( 'fresh_site' ) === $fresh_before, 'páginas marcadoras não alteram o estado de site novo' );
 		$assert( 6 === count( $result['user_ids'] ) && 2 === count( $result['pages'] ) && ! in_array( false, $result['created'], true ), 'seis contas e duas páginas' );
 		$assert( 6 === count( LocalRoster::resolve( $prefix ) ), 'marcas e papéis exactos' );
