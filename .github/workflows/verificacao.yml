@@ -106,3 +106,36 @@ jobs:
       - run: npm run test:news-editorial-upgrade:integration
       - if: always()
         run: npm run env:stop:tests
+
+  f112-integration:
+    name: Comunicados e calendário, SQL sintético
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run env:start:tests
+      - run: npm run env:check:tests
+      - run: npm run composer:install
+      - name: Gates negativos em development
+        run: |
+          npm run test:communications:integration
+          npm run test:calendar:integration
+          npm run test:f112-installer:integration
+          npm run test:f112-readiness:integration
+      - name: Activar local apenas no contentor efémero desta job
+        run: node scripts/wp-env.mjs --tests run cli wp config set WP_ENVIRONMENT_TYPE local --type=constant
+      - name: Comunicações com SQL, sessão nativa e dois escritores
+        run: npm run test:communications:integration
+      - name: Calendário com SQL, sessão nativa e dois escritores
+        run: npm run test:calendar:integration
+      - name: Instalador explícito, colisões e repetição sem alterações
+        run: npm run test:f112-installer:integration
+      - name: Instalação incompleta mantém rotas fechadas
+        run: npm run test:f112-readiness:integration
+      - if: always()
+        run: npm run env:stop:tests

@@ -50,9 +50,9 @@ final class AuthorizationPolicy {
 	 */
 	private function contextAllows( Account $account, Request $request ): bool {
 		return match ( $request->action ) {
-			Action::UpdateOwnProfile, Action::ReadOwnTask, Action::UpdateOwnTask, Action::CreateNewsDraft, Action::SubmitNews => $request->owner_id === $account->user_id,
+			Action::UpdateOwnProfile, Action::ReadOwnTask, Action::UpdateOwnTask, Action::CreateNewsDraft, Action::SubmitNews, Action::ManageInstitutionalNotice => $request->owner_id === $account->user_id,
 			Action::ReadContent, Action::ReadDirectory => $request->audience_allowed,
-			Action::ApproveNews, Action::PublishNews => $request->version_current && $request->author_id > 0 && $request->author_id !== $account->user_id,
+			Action::ApproveNews, Action::PublishNews, Action::DecideInstitutionalNotice => $request->version_current && $request->author_id > 0 && $request->author_id !== $account->user_id,
 			Action::ManageAccount, Action::ManageGrants => $request->owner_id > 0 && $request->owner_id !== $account->user_id,
 			default => true,
 		};
@@ -73,6 +73,10 @@ final class AuthorizationPolicy {
 			Role::Editorial => array( Action::ReviewNews, Action::ApproveNews, Action::PublishNews ),
 			Role::AccessAdministrator => array( Action::ManageAccount, Action::ManageGrants ),
 			Role::TechnicalAdministrator, Role::Leadership, Role::Support => array(),
+			Role::NoticeAuthor => array( Action::ManageInstitutionalNotice ),
+			Role::NoticeReviewer => array( Action::ReviewInstitutionalNotice, Action::DecideInstitutionalNotice ),
+			Role::UnitEventManager => array( Action::ManageUnitEvent ),
+			Role::InstitutionalEventManager => array( Action::ManageInstitutionalEvent ),
 		};
 		return in_array( $action, $actions, true );
 	}

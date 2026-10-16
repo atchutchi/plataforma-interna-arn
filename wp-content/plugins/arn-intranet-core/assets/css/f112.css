@@ -1,0 +1,38 @@
+.arn-f112-admin { max-width: 76rem; color: #1b242c; font-family: 'ARN F112 Body', sans-serif; font-size: 17px; line-height: 1.5; overflow-wrap: anywhere; }
+.arn-f112-admin :is(h1, h2, h3) { font-family: 'ARN F112 Heading', sans-serif; }
+.arn-f112-admin-heading { margin-block: 1.5rem 2rem; max-width: 65ch; }
+.arn-f112-admin h1 { font-size: 2rem; line-height: 1.25; }
+.arn-f112-admin h2 { font-size: 1.5rem; line-height: 1.3; }
+.arn-f112-admin h3 { font-size: 1.25rem; }
+.arn-f112-admin .button, .arn-f112-admin input, .arn-f112-admin select, .arn-f112-admin textarea { font-size: 16px; min-height: 44px; max-width: 100%; box-sizing: border-box; }
+.arn-f112-admin .button { display: inline-flex; align-items: center; justify-content: center; white-space: normal; padding: .5rem 1rem; }
+.arn-f112-admin .button-primary { background: #0b3a5b; border-color: #0b3a5b; }
+.arn-f112-admin .button-primary:hover { background: #1f6b4a; border-color: #1f6b4a; }
+.arn-f112-admin a { color: #0b3a5b; display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; max-width: 100%; }
+.arn-f112-admin :is(a, input, select, textarea, button):focus-visible { outline: 3px solid #1f6b4a; outline-offset: 3px; box-shadow: none; }
+.arn-f112-admin :is(input, select, textarea) { color: #1b242c; border: 1px solid #526373; border-radius: 4px; padding: .5rem .75rem; min-width: 0; }
+.arn-f112-admin .description { color: #526373; font-size: 1rem; line-height: 1.5; max-width: 65ch; }
+.arn-f112-actions, .arn-f112-filters, .arn-f112-pagination { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; }
+.arn-f112-new { margin-block: 2rem; }
+.arn-f112-filters { border-block: 1px solid #d8e1e7; padding-block: 1.5rem; margin-block: 2rem; }
+.arn-f112-filters > div { display: grid; gap: .5rem; }
+.arn-f112-admin-list { list-style: none; margin: 0; }
+.arn-f112-admin-list li { display: flex; justify-content: space-between; gap: 1rem; padding-block: 1.25rem; border-bottom: 1px solid #d8e1e7; }
+.arn-f112-admin-list a { font-weight: 600; }
+.arn-f112-admin-list span { color: #526373; }
+.arn-f112-edit-form, .arn-f112-review { max-width: 65ch; }
+.arn-f112-field { display: grid; gap: .5rem; margin-block: 1.5rem; }
+.arn-f112-field label, .arn-f112-transition label { font-weight: 600; }
+.arn-f112-field :is(input, select, textarea) { width: 100%; }
+.arn-f112-error { border: 1px solid #a73a32; background: #fff; padding: 1rem 1.5rem; margin-block: 1.5rem; max-width: 65ch; }
+.arn-f112-success { border: 1px solid #1f6b4a; background: #fff; padding: 1rem 1.5rem; max-width: 65ch; }
+.arn-f112-transition { display: grid; gap: .75rem; max-width: 65ch; border-top: 1px solid #d8e1e7; padding-block: 1.5rem; margin-top: 1.5rem; }
+.arn-f112-transition button { justify-self: start; }
+.arn-f112-transition h3 { margin-block: 0 .5rem; }
+.arn-f112-review dt { font-weight: 600; margin-top: 1rem; }
+.arn-f112-review dd { margin-left: 0; }
+.arn-f112-audit { max-width: 65ch; padding-block: 2rem; }
+.arn-f112-audit li { padding-block: .5rem; border-bottom: 1px solid #d8e1e7; }
+.arn-f112-pagination { margin-block: 2rem; align-items: center; }
+.arn-f112-pagination a { display: inline-flex; min-height: 44px; align-items: center; }
+@media (max-width: 600px) { .arn-f112-admin-list li { flex-direction: column; } .arn-f112-admin-heading { margin-top: 1rem; } .arn-f112-filters > div { width: 100%; } .arn-f112-filters input { width: 100%; } }

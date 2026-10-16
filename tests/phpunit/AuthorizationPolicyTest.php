@@ -25,14 +25,18 @@ final class AuthorizationPolicyTest extends TestCase {
 	/** Testa todos os pares função/acção contra o catálogo explícito. */
 	public function testClosedRoleCatalogueHasNoImplicitInheritance(): void {
 		$catalogue = array(
-			'Employee'               => array( 'ReadContent', 'ReadDirectory', 'UpdateOwnProfile', 'ReadOwnTask', 'UpdateOwnTask', 'CreateNewsDraft', 'SubmitNews' ),
-			'UnitManager'            => array( 'ReadDirectory', 'AssignUnitTask', 'ReadUnitTask', 'PublishTeamNotice' ),
-			'HumanResources'         => array( 'ReadHrRecord', 'WriteHrRecord', 'ManageDocuments' ),
-			'Editorial'              => array( 'ReviewNews', 'ApproveNews', 'PublishNews' ),
-			'AccessAdministrator'    => array( 'ManageAccount', 'ManageGrants' ),
-			'TechnicalAdministrator' => array(),
-			'Leadership'             => array(),
-			'Support'                => array(),
+			'Employee'                  => array( 'ReadContent', 'ReadDirectory', 'UpdateOwnProfile', 'ReadOwnTask', 'UpdateOwnTask', 'CreateNewsDraft', 'SubmitNews' ),
+			'UnitManager'               => array( 'ReadDirectory', 'AssignUnitTask', 'ReadUnitTask', 'PublishTeamNotice' ),
+			'HumanResources'            => array( 'ReadHrRecord', 'WriteHrRecord', 'ManageDocuments' ),
+			'Editorial'                 => array( 'ReviewNews', 'ApproveNews', 'PublishNews' ),
+			'AccessAdministrator'       => array( 'ManageAccount', 'ManageGrants' ),
+			'TechnicalAdministrator'    => array(),
+			'Leadership'                => array(),
+			'Support'                   => array(),
+			'NoticeAuthor'              => array( 'ManageInstitutionalNotice' ),
+			'NoticeReviewer'            => array( 'ReviewInstitutionalNotice', 'DecideInstitutionalNotice' ),
+			'UnitEventManager'          => array( 'ManageUnitEvent' ),
+			'InstitutionalEventManager' => array( 'ManageInstitutionalEvent' ),
 		);
 		foreach ( Role::cases() as $role ) {
 			foreach ( Action::cases() as $action ) {
