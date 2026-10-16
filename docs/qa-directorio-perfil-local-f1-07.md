@@ -1,6 +1,48 @@
 # QA local do directório e perfil F1-07
 
-Este registo distingue as verificações de implementação da aceitação normal ainda a cargo do controlador. Os ensaios positivos SQL usam apenas prefixos exclusivos `arn_peo_` com dez caracteres hexadecimais e eliminam contas, páginas, tabelas e ficheiros próprios no `finally`. No ambiente normal a flag ARN_ALLOW_LOCAL_PEOPLE continua ausente. O último preflight SQL bem-sucedido confirmou que não foram criadas tabelas ou contas People. A indisponibilidade dos serviços na verificação documental final está registada abaixo.
+Estado actual em 16 de outubro de 2026: a pedido do responsável, Codex/Atchutchi assumiu a tarefa antes preparada para Albertina. A revisão transversal, as correcções verificadas, a activação controlada e a aceitação WordPress/Playwright foram executadas neste PC. People está activo apenas no laboratório local com três perfis fictícios. A integração em main e a aceitação institucional são passos distintos. Ver a [entrega de 16 de outubro](entrega-f1-07-2026-10-16.md).
+
+Os resultados de 15 de outubro abaixo são históricos. Os ensaios SQL exclusivos continuam a usar prefixos `arn_peo_` aleatórios e a limpar apenas os seus recursos. Não repetir os baselines ou a instalação inicial do ambiente normal.
+
+## Aceitação normal de 16 de outubro de 2026
+
+Base recebida: `6f30d76022332c557826b4d4fbd304046df8383b`. Branch de entrega: `feat/f1-07-local-acceptance`. Código validado: `e66a07d6a89b55cf793b2c475ec49576d5844839`, completado pelo ajuste de portabilidade do teste em `be649bf588abd0252c974f26c40887e64edfe85c`. Os commits documentais posteriores não alteram o produto. O CI do SHA final deve ser consultado na PR de entrega.
+
+Ambiente observado: Windows, Node 24.21.0, PHP portátil 8.4.26, WordPress 7.1.3, WP-CLI 2.12.0 e MariaDB 11.8.3. Browser Chromium controlado por Playwright CLI 0.1.22. HTTP e SQL escutam apenas em loopback, nas portas 8888 e 33317. Docker/wp-env, IIS e MySQL 8.4 não foram executados neste percurso. Os comandos npm de integração wp-env não são a evidência deste WordPress portátil.
+
+A revisão independente do conjunto F1-07 identificou duas falhas. I1: destinos People ausentes caíam no redireccionamento genérico para login. M1: o processo concorrente do teste SQL dependia dos caminhos e conta deste PC. O fix reconhece os três caminhos reservados sob a base do próprio site antes do fallback de login. O teste SQL usa PHP_BINARY, o launcher WP-CLI absoluto validado no processo pai, ABSPATH e a conta corrente. Houve reprodução RED/GREEN para o HTTP e para a invocação SQL a partir de outro directório, incluindo launcher relativo. As re-revisões independentes deram ambos os achados como resolvidos, sem novos achados nesse pacote. Não houve alteração de regras institucionais.
+
+Após comparar a configuração e os baselines anteriores, iniciou-se apenas o runtime já existente. LAB-B foi reactivada pelo serviço auditado na revisão global 5 para 6. Só mudaram o estado de B, a revisão global e um novo evento. As linhas e o histórico anteriores ficaram preservados. Depois do backup privado, activou-se exclusivamente ARN_ALLOW_LOCAL_PEOPLE e executou-se o instalador normal por CLI administradora. Foram criadas três contas fictícias, três perfis e três páginas. Os permalinks deste laboratório são simples e devem ser obtidos do retorno do instalador, sem presumir IDs noutro PC.
+
+| Verificação | Resultado observado |
+| --- | --- |
+| Suite PHP local | 759 testes, 3051 asserções e quatro omissões preexistentes de symlinks no Windows em e66a07d. O commit be649bf só altera o launcher do ensaio SQL, revalidado positivamente |
+| SQL e instalador exclusivos | 43 e 41 verificações aprovadas, incluindo dois escritores, recusa CAS, idempotência e limpeza. A invocação com launcher relativo voltou a passar as 43 após be649bf |
+| Node e estilo | 55 testes Node, lint, build e PHPCS dos cinco ficheiros corrigidos aprovados. PHPCS do launcher final também aprovado |
+| Três logins nativos | Alfa, Beta e responsável A autenticaram com passwords fictícias privadas, sem usar Google |
+| Directório e filtros | Três pessoas, nome Beta com um resultado, unidade A com dois e cargo exacto Responsável de teste com um. Ficha comum sem formulário de edição |
+| Perfil próprio | Só telefone, local e apresentação editáveis. Alfa passou de revisão 1 para 2, com um evento self_updated dos três campos. Dados profissionais, outros perfis e auditoria anterior preservados |
+| Escrita e no-op | Sucesso com 303 e recuperação da página. Nova gravação sem mudança não escreveu. Repetir o instalador antes e depois da edição conservou integralmente tabelas, sessões, opções e ficheiros de cada cenário |
+| CAS e validação | Duas páginas abertas na revisão 1: uma gravou e a outra foi recusada como desactualizada. CRLF normalizado a LF. CR isolado, limites e formatos inválidos recusados. HTML literal foi recusado como entrada inválida e recuperado escapado, sem executar script |
+| Pedidos inválidos | 26 casos HTTP de filtros, IDs, parâmetros e métodos e 14 POST inválidos passaram. Nonce errado, actor/unit/job/email/state/role e campos extra não gravaram. A comparação integral do prefixo passou nesse cenário |
+| Equipa | Responsável A viu Alfa e o próprio, sem Beta. Alfa e Beta receberam 404 na equipa. Pedir outra unidade foi recusado |
+| Controlos técnico/editorial | Sessões autenticadas comprovadas por REST users/me. As três páginas recusaram ambos os controlos. O administrador técnico fictício temporário foi removido e só o token editorial criado pelo ensaio foi destruído. Tabelas e sessões anteriores exactas após cada limpeza |
+| Suspensão e reactivação | Alfa Active revisão 3, Suspended 4 e Active 5 pelo serviço auditado. Suspenso saiu das contagens e foi bloqueado. Reactivado reapareceu, mas a sessão antiga continuou recusada. Um novo login nativo recuperou os acessos. Perfis/contactos e concessões não mudaram |
+| Flag People | Positivos nas três páginas, fecho só de People, nove GET/HEAD/POST com 404 vazio privado sem Location e sessão nativa ainda válida. Restauração binária da configuração com hash exacto e os mesmos três positivos. Comparação integral da base aprovada |
+| Destinos ausentes/incompatíveis | Antes da instalação, nove GET/HEAD/POST aos três caminhos estáveis deram 404 vazio privado. Depois, um marcador incompatível na nova página fictícia foi recusado nos três métodos. Restauração por API WordPress e três positivos confirmados. Só esta página nova pode ter revisões/timestamps próprios desse controlo |
+| REST e pesquisa | Com nonce válido e identidade positiva, as três páginas REST responderam 200 sem contactos/formulário. Block-renderer do controlo técnico respondeu 200 com rendered vazio. Subscriber/editorial deram 403, evidência distinta. Pesquisa REST search/pages por Alfa devolveu listas vazias e pesquisa nativa não expôs os contactos |
+| Navegação e marca | Cinco destinos anteriores conservados, ligações People filtradas por autorização, fontes Manrope e Source Sans 3 carregadas localmente, logótipo e favicon de imagem 200 |
+| Visual e teclado | Doze capturas, três vistas a 320/390/768/1280 px, sem transbordo horizontal, um h1 e controlos medidos com pelo menos 44 px. Inputs medidos a 16 px. Menu abriu por Enter, fechou por Escape e devolveu foco. Foco medido a 2,4 px neste Windows, face ao token nominal de 3 px |
+| Ampliação de texto | Seis vistas a 390/1280 px com raiz CSS a 200%, h1 de 30 para 60 px e texto de 17 para 34 px, sem transbordo. Os inputs em px não duplicam com esta técnica. Não equivale a zoom nativo de 200% |
+| Preservação de originais | 22 originais reais com hashes, metadados e categorias exactos. Cinco circulares, quatro notas, onze despachos, um regulamento e uma comunicação sindical. Continuam só na revisão administradora. Ficheiros privados anteriores com tamanho, hash e data preservados |
+
+As capturas e os baselines ficam privados e ignorados pelo Git. Foram inspeccionadas visualmente as capturas de directório desktop, perfil móvel e equipa intermédia. A apresentação segue o sistema existente, sem criar outro tema ou dependências.
+
+Limites explícitos: Control+Equal não alterou viewport ou DPR neste browser automatizado. Zoom nativo real continua não comprovado. Não há certificação integral de acessibilidade, ensaio em dispositivo físico ou nova medição de contraste de todos os estados. As regras puras de paginação têm testes, mas o elenco normal de três pessoas não prova visualmente uma segunda página cheia.
+
+A comparação integral imediatamente após os controlos técnico/editorial passou. Na comparação tardia, depois das vistas e ampliação, só wp_options tinha um digest diferente, com a mesma contagem de 156 linhas. As restantes tabelas, incluindo contas, concessões, sessões e People, continuavam exactas. Não se guardara um baseline por nome de opção nessa etapa. Uma nova comparação por opção não reproduziu a mudança. A causa não foi identificada e não se normalizou o resultado para o apresentar como aprovado. Isto não invalida as comparações integrais próprias de no-op, recusa, gate e repetição já aprovadas. O controlo posterior do marcador tem os deltas intencionais da nova página indicados na tabela.
+
+O CI development mede a recusa fora de local nas integrações People. O positivo de 43/41 e o browser acima pertencem ao laboratório local. Segundo PC, permissões/audiências RH, delegações institucionais, IIS/HTTPS/LAN/VPN/MySQL 8.4 e aceitação institucional continuam pendentes. F1-07 permanece Em curso no plano institucional.
 
 ## Evidência de implementação antes da passagem
 
@@ -14,7 +56,7 @@ O controlador confirmou após a limpeza que a flag normal continuava ausente, n�
 
 Na verificação documental final de 15 de outubro, o WP-CLI não conseguiu ligar à base local. Não havia listeners em 8888/33317 nem processos PHP/MariaDB observados. A comparação do hash de configuração passou, mas não houve nova comparação SQL ou dos originais por esse percurso. Os resultados do parágrafo anterior são os últimos baselines verificados, não uma nova leitura nessa ocasião. Não se iniciaram serviços nem se alteraram dados. Ao retomar neste PC, iniciar apenas o runtime existente, sem reinicializar a base, e repetir o preflight e a comparação dos baselines antes de activar People.
 
-## Aceitação por executar
+## Plano histórico de aceitação, antes da execução de 16 de outubro
 
 Os testes PHPUnit cobrem filtros inválidos antes da fonte, identificador canónico da ficha, campos proibidos, nonce, revisão CAS e recuperação só dos três campos próprios. O teste de apresentação verifica HTML escapado, ausência do formulário na ficha comum e histórico limitado. O ensaio HTTP por servidor PHP de loopback chama a decisão e a recusa reais do controlador. Verifica 404 vazio privado antes de um possível redireccionamento para login, incluindo método errado, objecto ausente, actor inválido e POST malicioso. É uma fronteira mínima com fonte fechada de ensaio. Não equivale ao ciclo completo WordPress.
 
