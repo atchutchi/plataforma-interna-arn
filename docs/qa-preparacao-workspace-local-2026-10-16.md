@@ -23,3 +23,9 @@ Foram comparados snapshots privados antes e depois destas verificações de brow
 Rever a política de associação inicial, preparar o plano e implementar a instalação CLI, persistência auditada, bloqueio nativo anterior ao vínculo e associação concorrente no callback. Depois, executar ensaios fictícios PHP/SQL/Playwright, rever o código, fazer backup e aplicar o lote privado. A existência da especificação não significa que as 73 contas já estejam criadas ou aptas a entrar. Os ensaios actuais não comprovam o novo fluxo nem 73 autenticações Google reais.
 
 Não houve alterações de papéis, concessões, contas, vínculos, sessões, configuração, Workspace, infraestrutura ou tarefas da Albertina.
+
+## Continuação após aprovação da especificação
+
+O responsável aprovou a especificação do commit c5a127b e pediu o plano. Foram preparadas sete tarefas e 41 passos verificáveis em docs/superpowers/plans/2026-10-16-workspace-pre-cadastro-local.md, ainda para revisão e escolha da execução. Voltaram a passar 55 testes Node, lint/build e git diff --check nesta continuação documental. Não se repetiram testes PHP/SQL ou Playwright sem alteração de produto.
+
+Separadamente, o responsável pediu a revisão e integração das entregas da Albertina e novas atribuições. As PRs #34 e #35 foram revistas e integradas com 12 checks aprovados nos respectivos heads. A CI main posterior também passou nos merges b0a85ae e 0e7ffcd. As Issues #36 e #37 foram criadas e a atribuição a Albertina4264 foi confirmada. A primeira criação devolveu um erro GraphQL após criar a #36 sem assignee. A consulta identificou esse resultado parcial e a atribuição foi concluída na mesma Issue, sem duplicar a tarefa. As falhas de QA anteriores permanecem registadas e a proposta F1-13 continua sem aprovação institucional.

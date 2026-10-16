@@ -1,6 +1,6 @@
 # Pré-cadastro Workspace no laboratório local
 
-Data: 16 de outubro de 2026. Estado: proposta para revisão do responsável. Não implementada nem activada.
+Data: 16 de outubro de 2026. Estado: especificação aprovada pelo responsável neste chat, depois do commit c5a127b. O plano de implementação está preparado para revisão. Não implementada nem activada.
 
 ## Pedido e evidência
 
@@ -73,4 +73,4 @@ As contas novas não recebem acesso ao painel administrativo. A sessão federada
 
 ## Estado desta entrega documental
 
-Apenas consulta, pré-verificação privada e proposta. Não há importador executável, esquema novo, contas criadas, vínculos novos ou autorização por email activada. A aprovação desta especificação permitirá preparar o plano de implementação. A implementação e a aplicação das 73 contas ainda ficam por executar. F1-12 e as tarefas da Albertina permanecem preservadas.
+Apenas consulta, pré-verificação privada e especificação agora aprovada. Não há importador executável, esquema novo, contas criadas, vínculos novos ou autorização por email activada. O plano está em docs/superpowers/plans/2026-10-16-workspace-pre-cadastro-local.md e aguarda revisão. A implementação e a aplicação das 73 contas ainda ficam por executar. F1-12 e as tarefas da Albertina permanecem preservadas.

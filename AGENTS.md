@@ -91,3 +91,7 @@ Institucional continua Em curso: PEN-07, escala real e IIS/MySQL pendentes. Sem 
 Entrega F1-12 na PR #32. O estado Git e os checks do SHA entregue constam dessa PR. Não confundir uma branch local de execução com o estado da integração em main.
 
 A CI 0531b54 revelou espaços nas extremidades de passwords novas. O gerador F112 passou a24 bytes criptográficos/48 hex, com regressão determinística e roundtrip nativo. Instalador58 verificações, conclusão52. Não regenerar ficheiros existentes como parte desta correcção.
+
+Continuação de 16 de outubro após revisão: PR34 e PR35 integradas em b0a85ae/0e7ffcd, com 12 checks aprovados nos respectivos heads. São recepção de QA parcial do segundo PC e proposta F1-13, sem correcção MySQL ou aprovação institucional. Novas Issues36/37 atribuídas a Albertina4264. Seguir a actualização inicial de docs/tarefas-albertina-2026-10-16.md e docs/prompt-albertina-apos-revisao-2026-10-16.txt. A correcção transaccional comum fica com a colaboradora, sem tocar no pré-cadastro.
+
+A especificação docs/superpowers/specs/2026-10-16-workspace-pre-cadastro-local-design.md foi aprovada pelo responsável depois de c5a127b. O plano docs/superpowers/plans/2026-10-16-workspace-pre-cadastro-local.md aguarda revisão e escolha de execução. Ainda não há importador ou 73 contas reais criadas. Conservar zero atribuições automáticas e dados/segredos/provas privadas fora do GitHub. Não usar fixtures para representar pessoas reais ou inferir sub a partir dos URLs da consola.
