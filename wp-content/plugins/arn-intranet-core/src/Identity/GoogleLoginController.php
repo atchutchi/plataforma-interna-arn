@@ -13,6 +13,7 @@ use Closure;
 use RuntimeException;
 use Throwable;
 use WP_Session_Tokens;
+use Arn\Intranet\Identity\PreRegistration\CurrentPreRegistration;
 
 /** Mantém o protocolo no cliente mantido e as decisões locais no serviço auditado. */
 final class GoogleLoginController {
@@ -128,6 +129,9 @@ final class GoogleLoginController {
 			$this->fail();
 		}
 		try {
+			if ( null !== CurrentPreRegistration::lookup( $target ) ) {
+				throw new RuntimeException();
+			}
 			self::links()->installSchema( get_current_user_id() );
 			update_option( 'arn_oidc_schema_ready', '1', false );
 			if ( '1' !== get_option( 'arn_oidc_schema_ready' ) ) {
@@ -198,6 +202,9 @@ final class GoogleLoginController {
 			$claims  = $this->client->complete( $config, $params, $context );
 			$service = self::links();
 			if ( 'link' === $context['purpose'] ) {
+				if ( null !== CurrentPreRegistration::lookup( $context['target_user_id'] ) ) {
+					throw new RuntimeException();
+				}
 				$actor = get_current_user_id();
 				if ( $actor !== $context['actor_id'] || ! current_user_can( 'manage_options' ) ||
 					! hash_equals( $context['actor_token_hash'], hash( 'sha256', wp_get_session_token() ) ) ) {
@@ -231,11 +238,9 @@ final class GoogleLoginController {
 				wp_safe_redirect( wp_login_url(), 302 );
 				exit;
 			}
-			$link = $service->find( $claims['iss'], $claims['sub'] );
-			if ( null === $link || GoogleAccountPolicy::localUserId( $claims, $config->workspace_domain, array( $link ) ) !== $link->user_id ) {
-				throw new RuntimeException();
-			}
-			( new WordPressFederatedSession() )->issue( $link );
+			$link         = CurrentPreRegistration::loginResolver()->resolve( $claims, $config, time() );
+			$registration = CurrentPreRegistration::lookup( $link->user_id );
+			( new WordPressFederatedSession() )->issue( $link, $registration?->revision );
 			nocache_headers();
 			header( 'Referrer-Policy: no-referrer' );
 			wp_safe_redirect( home_url( '/' ), 302 );
@@ -276,6 +281,13 @@ final class GoogleLoginController {
 		wp_nonce_field( 'arn_google_link' );
 		echo '<input type="hidden" name="action" value="arn_google_link"><p><label for="arn-target">' . esc_html__( 'Conta local a associar', 'arn-intranet-core' ) . '</label> <select id="arn-target" name="target_user_id">';
 		foreach ( get_users( array( 'fields' => array( 'ID', 'user_login' ) ) ) as $account ) {
+			try {
+				if ( null !== CurrentPreRegistration::lookup( (int) $account->ID ) ) {
+					continue;
+				}
+			} catch ( Throwable ) {
+				continue;
+			}
 			echo '<option value="' . esc_attr( (string) $account->ID ) . '">' . esc_html( $account->user_login ) . '</option>';
 		}
 		echo '</select></p><p><label><input type="checkbox" name="confirm_link" value="1" required> ' . esc_html__( 'Confirmo a conta alvo e a activação da identidade Google que vou autenticar.', 'arn-intranet-core' ) . '</label></p>';

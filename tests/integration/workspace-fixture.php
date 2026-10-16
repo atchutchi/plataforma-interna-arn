@@ -36,6 +36,20 @@ final class ArnWorkspaceSqlFixture {
 		return (int) $this->database->get_var( $this->database->prepare( 'SELECT COUNT(*) FROM %i', $this->prefix . $suffix ) );
 	}
 
+	public static function normalWriteGuard(): Closure {
+		global $wpdb;
+		$normal_tables = $wpdb->tables( 'all', true );
+		return static function ( string $sql ) use ( $normal_tables ): string {
+			if ( preg_match( '/\A\s*(INSERT|UPDATE|DELETE|REPLACE|ALTER|DROP|CREATE|TRUNCATE)\b/i', $sql ) ) {
+				foreach ( $normal_tables as$table ) {
+					if ( preg_match( '/(?<![A-Za-z0-9_])`?' . preg_quote( $table, '/' ) . '`?(?![A-Za-z0-9_])/', $sql ) ) {
+						throw new RuntimeException( 'Escrita normal recusada pelo ensaio exclusivo.' );}
+				}
+			}
+			return $sql;
+		};
+	}
+
 	public function close(): void {
 		if ( 1 !== preg_match( '/\Aarn_ws_[a-f0-9]{12}_\z/D', $this->prefix ) ) {
 			throw new RuntimeException( 'Limpeza de ensaio recusada.' ); }

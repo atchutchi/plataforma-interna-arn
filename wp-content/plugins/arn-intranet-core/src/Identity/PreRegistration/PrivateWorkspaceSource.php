@@ -27,6 +27,34 @@ final class PrivateWorkspaceSource {
 	 */
 	public function __construct( private readonly string $private_root, private readonly string $public_root, private readonly array $repositories ) {}
 	/**
+	 * Valida também os destinos de relatórios privados, sem ler payload.
+	 *
+	 * @param string $path Caminho absoluto existente.
+	 * @param bool   $directory Exigir directório em vez de ficheiro regular.
+	 * @return string Caminho físico validado.
+	 * @throws RuntimeException Quando o destino não é privado.
+	 */
+	public function protectedPath( string $path, bool $directory = false ): string {
+		try {
+			$root   = self::resolved( $this->private_root );
+			$target = self::resolved( $path );
+			if ( ! self::inside( $target, $root ) || ! is_dir( $root ) || ( $directory ? ! is_dir( $target ) : ! is_file( $target ) ) ) {
+				throw new RuntimeException();}
+			foreach ( array_merge( array( $this->public_root ), $this->repositories )as$excluded ) {
+				if ( self::inside( $root, self::resolved( $excluded, false ) ) || self::inside( $target, self::resolved( $excluded, false ) ) ) {
+					throw new RuntimeException();}
+			}
+			self::permissions( $root );
+			if ( $target !== $root ) {
+				self::permissions( $target );}
+			$stat = stat( $target );
+			if ( ! is_array( $stat ) || ( ! $directory && ( $stat['nlink'] > 1 || ( $stat['mode'] & 0170000 ) !== 0100000 ) ) ) {
+				throw new RuntimeException();}
+			return $target;
+		} catch ( Throwable ) {
+			throw new RuntimeException( 'Destino privado Workspace indisponível.' );}
+	}
+	/**
 	 * Valores de entrada e resultado.
 	 *
 	 * @param string $inventory_path Selecção privada.

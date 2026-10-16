@@ -39,4 +39,24 @@ final class CurrentPreRegistration {
 	}
 	public static function enabled(): bool {
 		return 'local' === wp_get_environment_type() && defined( 'ARN_ALLOW_LOCAL_WORKSPACE_PREREGISTRATION' ) && true === ARN_ALLOW_LOCAL_WORKSPACE_PREREGISTRATION && '1' === get_option( 'arn_workspace_prereg_ready' ) && class_exists( \GuzzleHttp\Client::class ) && null !== GoogleLoginController::configuration();}
+	public static function loginResolver(): PreRegistrationLoginResolver {
+		global $wpdb;
+		$database = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+		$database->set_prefix( $wpdb->prefix );
+		$registrations = new WpdbPreRegistrationRepository( $database );
+		return PreRegistrationLoginResolver::forRepositories(
+			new \Arn\Intranet\Identity\WpdbIdentityLinkRepository( $database ),
+			$registrations,
+			array( self::class, 'enabled' ),
+			static function ( $link, array $claims, int $now ) use ( $registrations ): void {
+				if ( ! self::enabled() || ! is_string( $claims['email'] ?? null ) || ! $registrations->hasSchema() ) {
+					return;}
+				$pending = $registrations->findForEmail( $claims['email'] );
+				if ( null !== $pending && PreRegistrationState::AwaitingGoogle === $pending->state && $pending->user_id !== $link->user_id ) {
+					PrivateWorkspaceConflictReporter::configured()->record( $pending->id, $link, $now );
+				}
+			},
+			array( self::class, 'lookup' )
+		);
+	}
 }

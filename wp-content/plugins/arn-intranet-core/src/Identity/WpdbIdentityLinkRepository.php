@@ -135,6 +135,40 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 	}
 
 	/**
+	 * Confirma cadastro, vínculo e ambas as auditorias numa só ligação.
+	 *
+	 * @param callable(IdentityWpdb):AuthorizedIdentityClaim $authorize Decisão sob bloqueio SQL.
+	 * @return LocalIdentityLink Par confirmado antes da emissão de sessão.
+	 * @throws RuntimeException Quando qualquer parte da decisão falha.
+	 */
+	public function claimActive( callable $authorize ): LocalIdentityLink {
+		return $this->silently(
+			function () use ( $authorize ): LocalIdentityLink {
+				$this->assertSchema();
+				$confirmed = null;
+				$this->transaction(
+					function () use ( $authorize, &$confirmed ): void {
+						$decision = $authorize( $this->database );
+						if ( ! $decision instanceof AuthorizedIdentityClaim ) {
+							throw new RuntimeException( 'Decisão inválida.' );
+						}
+						$link = $decision->link;
+						$this->execute( $this->database->prepare( 'INSERT INTO %i (user_id,issuer,subject,authorized,active) VALUES (%d,%s,%s,1,1)', $this->links_table, $link->user_id, $link->issuer, $link->subject ), 1 );
+						$this->audit( $link->user_id, $decision->authorizing_actor_id, 'create', null, false, false );
+						$initial = new LocalIdentityLink( $link->user_id, $link->issuer, $link->subject, false, false );
+						$this->audit( $link->user_id, $decision->authorizing_actor_id, 'activate', $initial, true, true );
+						$confirmed = $link;
+					}
+				);
+				if ( ! $confirmed instanceof LocalIdentityLink ) {
+					throw new RuntimeException( 'Vínculo não confirmado.' );
+				}
+				return $confirmed;
+			}
+		);
+	}
+
+	/**
 	 * Bloqueia o vínculo e regista o estado anterior na mesma transacção.
 	 * Uma decisão repetida com o mesmo estado é idempotente, sem nova auditoria.
 	 *

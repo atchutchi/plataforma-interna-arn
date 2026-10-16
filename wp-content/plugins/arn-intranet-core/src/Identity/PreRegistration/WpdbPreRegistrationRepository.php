@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace Arn\Intranet\Identity\PreRegistration;
 
 use Arn\Intranet\Identity\IdentityWpdb;
+use Arn\Intranet\Identity\{AuthorizedIdentityClaim, LocalIdentityLink, OidcConfiguration};
 use RuntimeException;
 use Throwable;
 
@@ -179,6 +180,45 @@ final class WpdbPreRegistrationRepository {
 				} catch ( Throwable ) {
 					$this->database->query( 'ROLLBACK' );
 					throw new RuntimeException();}
+			}
+		);
+	}
+
+	/** Só é chamado dentro de claimActive, na mesma ligação dedicada. */
+	public function claim( array $validated_claims, OidcConfiguration $configuration, int $now ): AuthorizedIdentityClaim {
+		return $this->silently(
+			function () use ( $validated_claims, $configuration, $now ): AuthorizedIdentityClaim {
+				$started = hrtime( true );
+				// SET TRANSACTION deve falhar: esta operação exige a transacção do vínculo.
+				if ( false !== $this->database->query( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED' ) ) {
+					throw new RuntimeException();}
+				$this->schema->assertReady();
+				$email = $validated_claims['email'] ?? null;
+				if ( ! is_string( $email ) ) {
+					throw new RuntimeException();}
+				$record = $this->record( $this->database->prepare( 'SELECT * FROM %i WHERE primary_email=%s FOR UPDATE', $this->schema->table( 'accounts' ), $email ) );
+				// A espera pelo lock não prolonga a janela inicial de 24 horas.
+				$now += intdiv( hrtime( true ) - $started, 1000000000 );
+				if ( null === $record || PreRegistrationState::AwaitingGoogle !== $record->state || PHP_INT_MAX === $record->revision || ! FirstGoogleClaimPolicy::allows( $validated_claims, $record->primary_email, $configuration->workspace_domain, $record->expires_at, $now ) ) {
+					throw new RuntimeException();}
+				$row          = $record->toRow();
+				$row['state'] = 'Linked';
+				++$row['revision'];
+				$next = PreRegistration::fromRow( $row );
+				if ( 1 !== $this->database->update(
+					$this->schema->table( 'accounts' ),
+					array(
+						'state'    => 'Linked',
+						'revision' => $next->revision,
+					),
+					array(
+						'id'       => $record->id,
+						'revision' => $record->revision,
+					)
+				) || '' !== $this->database->last_error ) {
+					throw new RuntimeException();}
+				$this->audit( $next, $record->authorized_by, 'linked', PreRegistrationState::AwaitingGoogle, 'Primeiro vínculo Google validado', $now );
+				return new AuthorizedIdentityClaim( new LocalIdentityLink( $record->user_id, $validated_claims['iss'], $validated_claims['sub'], true, true ), $record->authorized_by );
 			}
 		);
 	}
