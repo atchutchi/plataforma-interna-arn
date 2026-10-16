@@ -162,6 +162,7 @@ add_action( 'admin_notices', 'arn_intranet_core_admin_notices' );
 ( new LocalPrivateFiles() )->register();
 PrivatePortal::register();
 PeoplePortal::register();
+\Arn\Intranet\F112\PostTypes::register();
 Portal::register();
 DocumentCatalogPage::register();
 DocumentFileController::register();
