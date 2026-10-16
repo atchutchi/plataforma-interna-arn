@@ -1,5 +1,22 @@
 # Coordenação com Albertina4264, 16 de outubro de 2026
 
+## Actualização após recepção das entregas
+
+O responsável pediu a revisão, o merge das entregas adequadas e novas tarefas. Foram recebidos o relatório parcial do segundo PC pela PR #34, merge b0a85aed946a47f1c433b286d9bf041291e2cd78, e a proposta F1-13 pela PR #35, merge 0e7ffcd2d485b3c142660a99c2e6d7dd023fa7a9. Os heads 80c7633579682cfe796b383a40bdfeba24598517 e dd15b085b64498f6b36f6c5e53bcde528f36f377 tiveram 12 checks aprovados cada antes do merge. As branches da autora foram conservadas.
+
+O relatório F1-16 documenta falhas no MySQL 8.0.44 e limites de QA. Receber o relatório não significa aceitar todos os percursos nesse PC ou corrigir o produto. A proposta F1-13 tem 32 IDs distintos e todos Por executar. O texto sobre classes F1-12 inexistentes aplica-se à base histórica fffef583, anterior à PR #32. A próxima proposta deve conciliar o main efectivo. Reabertura, competências, fuso e notificações continuam propostas.
+
+Foram criadas e atribuídas à Albertina4264 duas tarefas novas:
+
+| Prioridade | Issue | Branch sugerida | Entrega |
+| --- | --- | --- | --- |
+| 1 | [#36, ALB-MYSQL-01](https://github.com/atchutchi/plataforma-interna-arn/issues/36) | fix/albertina-mysql-transaction-state | Correcção das fronteiras transaccionais, todos os consumidores afectados, regressão MySQL/MariaDB e PR própria |
+| 2 | [#37, ALB-F113-02](https://github.com/atchutchi/plataforma-interna-arn/issues/37) | docs/albertina-f1-13-conciliacao | Conciliar os três documentos F1-13 com a F1-12 integrada, mantendo critérios Por executar e decisões pendentes |
+
+Depois da correcção, retomar a #28 com os percursos bloqueados, REST com nonce da sessão real e zoom nativo separado de CSS. Não apagar falhas anteriores. Não alterar Identity/PreRegistration, GoogleLoginController, WpdbIdentityLinkRepository ou a branch feat/workspace-pre-cadastro-local. Esse trabalho fica com Atchutchi/Codex. Não editar README/AGENTS nas entregas da colaboradora.
+
+O [prompt de continuação após recepção](prompt-albertina-apos-revisao-2026-10-16.txt) substitui o guião inicial para as novas tarefas. As secções seguintes registam a atribuição e o contexto anteriores e não significam ausência actual das entregas já integradas.
+
 Atchutchi autorizou verificar as branches, atribuir novas tarefas à colaboradora e continuar o trabalho central. A consulta remota encontrou a branch chore/albertina4264-F1-01-fundacao em `16890af68736c39d8f6ee7612e4def9ca187f415`, de 9 de outubro. Tinha zero commits exclusivos e estava 116 commits atrás do main anterior `aebf4ced459b4677a163a2d5f95eb3f5c916dbd7`. Não apareceu nova branch ou PR de entrega da colaboradora no repositório consultado. Isto não verifica trabalho ainda não publicado no seu PC ou noutro repositório.
 
 A conta canónica Albertina4264 foi confirmada na lista de pessoas atribuíveis do GitHub. As duas Issues abaixo foram criadas e atribuídas a essa conta, com instruções completas. Não foi enviado email ou mensagem por outro canal. A branch e o laboratório da colaboradora não foram alterados.

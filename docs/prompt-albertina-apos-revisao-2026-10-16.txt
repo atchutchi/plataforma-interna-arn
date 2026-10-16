@@ -1,0 +1,17 @@
+Albertina, as tuas duas entregas foram revistas e integradas: PR #34, relatório parcial do segundo PC, e PR #35, proposta F1-13. O main depois das duas recepções é 0e7ffcd2d485b3c142660a99c2e6d7dd023fa7a9. Obtém o main efectivo antes de começar. Preserva as branches anteriores, o stash e trabalho por publicar.
+
+Tens duas tarefas novas atribuídas à tua conta no GitHub. As Issues são o guião completo:
+
+https://github.com/atchutchi/plataforma-interna-arn/issues/36
+ALB-MYSQL-01: corrigir fronteiras transaccionais e regressão MySQL.
+Prioridade 1. Branch fix/albertina-mysql-transaction-state. Reproduz primeiro no teu MySQL 8.0.44. O contador do stash é uma hipótese e precisa de cobrir transacções reais, commits implícitos, falhas e perda de ligação. Actualiza todos os consumidores afectados, com testes próprios e CI MariaDB preservada. Workflow MySQL separado, sem tocar no workflow principal. Não alegar homologação IIS/MySQL 8.4 a partir do teste local.
+
+https://github.com/atchutchi/plataforma-interna-arn/issues/37
+ALB-F113-02: conciliar proposta de tarefas com F1-12 integrada.
+Prioridade 2. Branch docs/albertina-f1-13-conciliacao. Actualiza a proposta contra o código F1-12 recebido na PR #32. Resolve as ambiguidades de notificações, comentários, operações HTTP e no-op. Mantém regras institucionais pendentes como propostas e os 32 IDs existentes Por executar. Só documentação, sem código ou activação F1-13.
+
+Depois do fix, retoma os critérios bloqueados da Issue #28: três actores, gravação/CAS/no-op, suspensão/reactivação, gates e REST com nonce da sessão real do browser. Regista os resultados novos sem apagar as falhas anteriores. Zoom nativo e CSS são provas distintas.
+
+Não alterar README/AGENTS, Identity/PreRegistration, GoogleLoginController, WpdbIdentityLinkRepository ou a branch feat/workspace-pre-cadastro-local. O pré-cadastro real fica exclusivamente com Atchutchi/Codex. Não aceder a produção, .205/.151, AD, DNS, Workspace ou email. Usa apenas o teu laboratório, fixtures e configuração privada.
+
+Cada tarefa tem branch, commits, push e PR contra main próprios. Devolve SHA, testes, provas, limitações e decisões pendentes. Não fazer merge ou deploy. Não limpar o stash ou a branch antiga à força. Lê integralmente as Issues e a coordenação antes de alterar código.

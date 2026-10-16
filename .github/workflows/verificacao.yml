@@ -139,3 +139,34 @@ jobs:
         run: npm run test:f112-readiness:integration
       - if: always()
         run: npm run env:stop:tests
+
+  workspace-integration:
+    name: Pré-cadastro Workspace, SQL fictício e concorrência
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run env:start:tests
+      - run: npm run env:check:tests
+      - run: npm run composer:install
+      - name: Gates negativos em development, sem criar contas
+        run: |
+          npm run test:workspace-provisioning:integration
+          npm run test:workspace-access:integration
+          npm run test:workspace-claim:integration
+          npm run test:workspace-readiness:integration
+          npm run test:workspace-review:integration
+      - name: Activar local apenas no contentor efémero desta job
+        run: node scripts/wp-env.mjs --tests run cli wp config set WP_ENVIRONMENT_TYPE local --type=constant
+      - run: npm run test:workspace-provisioning:integration
+      - run: npm run test:workspace-access:integration
+      - run: npm run test:workspace-claim:integration
+      - run: npm run test:workspace-readiness:integration
+      - run: npm run test:workspace-review:integration
+      - if: always()
+        run: npm run env:stop:tests
