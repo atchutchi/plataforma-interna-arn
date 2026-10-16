@@ -19,6 +19,11 @@ enum Action {
 	case AssignUnitTask;
 	case ReadUnitTask;
 	case PublishTeamNotice;
+	case ManageInstitutionalNotice;
+	case ReviewInstitutionalNotice;
+	case DecideInstitutionalNotice;
+	case ManageUnitEvent;
+	case ManageInstitutionalEvent;
 	case ReadHrRecord;
 	case WriteHrRecord;
 	case CreateNewsDraft;

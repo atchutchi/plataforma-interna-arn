@@ -19,4 +19,8 @@ enum Role {
 	case TechnicalAdministrator;
 	case Leadership;
 	case Support;
+	case NoticeAuthor;
+	case NoticeReviewer;
+	case UnitEventManager;
+	case InstitutionalEventManager;
 }
