@@ -15,8 +15,20 @@ function status_header( int $status ): void {
 	http_response_code( $status ); }
 function wp_get_environment_type(): string {
 	return 'local'; }
+function get_queried_object(): mixed {
+	return null; }
+function home_url( string $path = '/' ): string {
+	return 'http://localhost/missing' . $path; }
+function wp_parse_url( string $url, int $component = -1 ): mixed {
+	return parse_url( $url, $component ); }
 
 $request_path = parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH );
+if ( str_starts_with( (string) $request_path, '/missing/' ) || str_starts_with( (string) $request_path, '/outside/' ) ) {
+	// Execute the real boundary with no resolved post, before the portal's login fallback.
+	\Arn\Intranet\People\PeopleController::route();
+	header( 'Location: /wp-login.php', true, 302 );
+	exit;
+}
 if ( ! str_starts_with( (string) $request_path, '/off/' ) ) {
 	define( 'ARN_ALLOW_LOCAL_PEOPLE', true );
 }

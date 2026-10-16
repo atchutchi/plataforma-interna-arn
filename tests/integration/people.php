@@ -203,12 +203,12 @@ try {
 	$other->query( 'START TRANSACTION' );
 	$other->get_results( $other->prepare( 'SELECT user_id FROM %i WHERE user_id=%d FOR UPDATE', $prefix . 'arn_authz_accounts', $ids['alfa'] ) );
 	$command = array(
-		realpath( '.git/tools/php/php.exe' ),
-		realpath( '.git/tools/wp-cli.phar' ),
-		'--path=' . realpath( '.git/tools/local-wp/wordpress' ),
-		'--user=lab_admin',
+		PHP_BINARY,
+		$_SERVER['argv'][0],
+		'--path=' . ABSPATH,
+		'--user=' . wp_get_current_user()->user_login,
 		'eval-file',
-		realpath( 'tests/integration/people-worker.php' ),
+		__DIR__ . '/people-worker.php',
 	);
 	foreach ( array( 'a', 'b' ) as $label ) {
 		$environment = array_merge(

@@ -37,6 +37,24 @@ final class PeoplePages {
 		return '<!-- wp:arn/people-view {"view":"' . $view . '"} /-->';
 	}
 
+	/** Recognises only reserved destinations under this site's own base path. */
+	public static function isReservedPath( string $request_uri, string $site_url ): bool {
+		$path = wp_parse_url( $request_uri, PHP_URL_PATH );
+		$base = wp_parse_url( $site_url, PHP_URL_PATH );
+		if ( ! is_string( $path ) || ( null !== $base && ! is_string( $base ) ) ) {
+			return false;
+		}
+		$prefix = rtrim( (string) $base, '/' ) . '/';
+		if ( ! str_starts_with( $path, $prefix ) ) {
+			return false;
+		}
+		$relative = rawurldecode( substr( $path, strlen( $prefix ) ) );
+		if ( str_starts_with( $relative, 'index.php/' ) ) {
+			$relative = substr( $relative, strlen( 'index.php/' ) );
+		}
+		return in_array( rtrim( $relative, '/' ), self::SLUGS, true );
+	}
+
 	/** Checks all three destinations before the installer creates any resource. */
 	public function preflight( bool $repeat ): array {
 		$pages = array();

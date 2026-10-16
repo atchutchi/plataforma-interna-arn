@@ -23,6 +23,10 @@ final class PeopleController {
 	public static function route(): void {
 		$post = get_queried_object();
 		if ( ! $post instanceof WP_Post || 'page' !== $post->post_type || ! in_array( $post->post_name, array( 'funcionarios', 'meu-perfil', 'minha-equipa' ), true ) ) {
+			$request_uri = $_SERVER['REQUEST_URI'] ?? '';
+			if ( is_string( $request_uri ) && PeoplePages::isReservedPath( $request_uri, home_url( '/' ) ) ) {
+				self::refuse();
+			}
 			return;
 		}
 		self::privateHeaders();
