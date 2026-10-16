@@ -18,7 +18,7 @@ As cinco tarefas de código estão executadas. O commit a7f298e acrescentou CMS,
 
 ## Activação e aceitação executadas
 
-A revisão independente foi seguida da correcção bc60cf5 e CI 38907064548 aprovada em todas as seis jobs. A activação normal ocorreu depois dessa confirmação, com backup e baselines próprios. As duas junctions apontam para esta branch, as duas flags novas estão true e existem seis contas Subscriber fictícias, 13 grants e duas páginas. A conclusão verificada é obrigatória antes de abrir rotas. Não repetir a instalação como se o laboratório estivesse vazio.
+A revisão independente foi seguida da correcção bc60cf5 e CI 38907064548 aprovada em todas as seis jobs. A activação normal ocorreu depois dessa confirmação, com backup e baselines próprios. As duas junctions ligam o código F1-12 revisto ao laboratório, as duas flags novas estão true e existem seis contas Subscriber fictícias, 13 grants e duas páginas. Verificar os destinos efectivos antes de mudar de checkout. A conclusão verificada é obrigatória antes de abrir rotas. Não repetir a instalação como se o laboratório estivesse vazio.
 
 A suite passou 800 testes PHP/3612 asserções/quatro omissões Windows preexistentes, SQL70/70/52/52 e Node55/lint/build. Playwright executou os percursos e os 32 critérios estão preenchidos por camada na [QA](qa-comunicados-calendario-local-f1-12.md). A correcção visual 65a01e2 aumentou as áreas de clique após medição real. Passaram 16 combinações front end, 12 CMS e quatro títulos longos, com texto CSS200%, foco e teclado. Zoom nativo/segundo PC não foram apresentados como executados.
 
@@ -26,7 +26,7 @@ O snapshot final preserva todas as linhas anteriores de negócio, contas, sessõ
 
 ## Próximas parcelas
 
-Confirmar CI no SHA entregue e devolver a PR de implementação contra main. Integração apenas depois de CI verde, sem deploy. Preservar a instalação já activa neste PC, os baselines e a auditoria. Rever depois a proposta F1-13 da Issue #29 quando for entregue pela Albertina, sem executar a tarefa documental dela em paralelo. PEN-07, escala com população real e IIS/MySQL permanecem pendentes. O pré-cadastro Workspace é uma evolução separada de identidade/autorização, nunca uma atribuição automática de competências por email ou nome.
+A entrega está na [PR #32](https://github.com/atchutchi/plataforma-interna-arn/pull/32), que contém o estado Git e a CI do SHA entregue. Integração apenas depois de CI verde, sem deploy. Preservar a instalação já activa neste PC, os baselines e a auditoria. Rever depois a proposta F1-13 da Issue #29 quando for entregue pela Albertina, sem executar a tarefa documental dela em paralelo. PEN-07, escala com população real e IIS/MySQL permanecem pendentes. O pré-cadastro Workspace é uma evolução separada de identidade/autorização, nunca uma atribuição automática de competências por email ou nome.
 
 ## Inventário Workspace separado
 
