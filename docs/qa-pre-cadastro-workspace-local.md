@@ -1,6 +1,6 @@
 # QA do pré-cadastro Workspace
 
-Estado em execução. A preparação do plano foi aprovada para execução directa com revisão independente final. As provas operacionais ficam privadas. Não contém uma lista de funcionários ou configuração OAuth.
+Estado corrente: implementação revista, integrada e aplicada apenas neste laboratório. As 73 contas autorizadas foram criadas e auditadas sem competências. Todas continuam AwaitingGoogle. As secções iniciais conservam a sequência dos ensaios. A conclusão e os deltas da aplicação estão no fim. Provas, dados e configuração ficam privados.
 
 ## Verificações já executadas
 
@@ -53,3 +53,40 @@ A emissão de sessão de pré-cadastro relê o vínculo persistido antes de cria
 A pré-validação agora consulta todas as entradas sem DML. Distingue create, resume e conflict e guarda um relatório novo e privado em cada execução. Os detalhes identificáveis não entram na consola. Uma colisão conhecida impede a aplicação de qualquer entrada do lote. A aplicação repete a análise antes do primeiro INSERT e mantém as verificações transaccionais por conta. A concorrência posterior pode ainda interromper a aplicação. Nesse caso, uma nova pré-validação revela as entradas exactas já confirmadas e o conflito, sem adoptar contas anteriores ou renovar prazos.
 
 Regressão SQL exclusiva: 17 verificações, incluindo colisão no fim sem escrita, esquema parcial e preservação da sessão anterior, revogação antes e durante a criação do token. Suite PHP completa: 847 testes e 3738 asserções, com quatro omissões Windows anteriores. Integrações existentes de identidade, sessão federada e sessões locais: 21, 24 e 78 verificações. Os ensaios usam contas fictícias. A aplicação real continua pendente da CI do commit corrigido.
+## Aplicação real concluída neste PC
+
+Produto integrado na PR #33, merge ece43e0bfc92aed59f1d80f1a7642deb6c566a9b. Os 15 checks passaram no head def66450c2e500a61e74101de88741abddb3fee7 antes da activação. A revisão independente identificou três achados importantes e nenhum menor ou crítico. As três correcções tiveram RED/GREEN e regressão. Contagens finais: PHP 847 testes e 3738 asserções, quatro omissões Windows anteriores, PHPCS 389 ficheiros sem erros/avisos, Node 55, lint e build aprovados. A CI também executou a regressão SQL nova com 17 verificações.
+
+A execução automática rejeitou a operação combinada de substituição de junctions e paragem do servidor antes de a executar, sem motivo mais específico além do bloqueio por política. Usou-se a integração Git autorizada e fast-forward do checkout principal. As duas junctions e o processo HTTP original foram conservados. O produto carregado foi confirmado por Reflection no checkout integrado. Não houve alteração de portas, cliente OAuth, âmbitos, MFA ou segredo. A configuração recebeu apenas duas constantes próprias, com os bytes anteriores guardados privadamente.
+
+Foram guardados dump, configuração, ACL, fontes e snapshots novos sem substituir provas anteriores. A fonte original permaneceu intacta. O inventário original guardava source_sha256 em maiúsculas. Criou-se uma cópia privada de aplicação, alterando apenas a capitalização desse campo para o contrato canónico. A igualdade estrutural de todos os restantes campos foi confirmada. Os bytes da exportação e a população 73/4 não mudaram. A leitura protegida e o prazo voltaram a ser verificados.
+
+Readiness explícita concluída por CLI. Pré-validação antes da criação: create=73, resume=0, conflict=0, com relatório privado. Aplicação: 73 utilizadores, 292 metadados, 73 pré-cadastros e 73 eventos novos. Zero alterações ou remoções de linhas anteriores. Zero alterações de opções, configuração, sessões anteriores ou dos 89 ficheiros durante a criação. Só aquelas quatro tabelas receberam linhas. Não houve concessões ou perfis People, roles/capabilities individuais, sessões, vínculos Google ou tentativas de email para as contas novas. As quatro genéricas ficaram excluídas.
+
+Retoma: create=0, resume=73, conflict=0. Os hashes integrais das 52 tabelas, configuração, sessões e 89 ficheiros ficaram iguais antes e depois. Assim, IDs, nomes, emails, passwords técnicas, revisões, estados e auditoria não foram regenerados. Os relatórios de pré-validação são provas privadas novas por execução e não entram no conjunto dos originais.
+
+O login Google real do titular autorizado entrou na conta administrativa anterior. O vínculo persistido e a sua auditoria conservaram os hashes. A sessão nova tem marca OIDC e limite absoluto de uma hora, sem revisão de pré-cadastro porque pertence à conta anterior. O pré-cadastro pendente para o mesmo email não foi associado. Ficou um conflito privado deduplicado com referências opacas e alvo anterior preservado. Depois desta entrada, as 73 contas seleccionadas continuaram AwaitingGoogle, sem capabilities, sessões ou vínculos e com exactamente 73 eventos de criação. Não se afirma primeiro vínculo real novo ou 73 logins reais.
+
+A observação original é de 16 de outubro de 2026 às 10:55:33 UTC, com fracções arredondadas para baixo. O prazo inicial termina em 17 de outubro de 2026 às 10:55:33 UTC. As entradas ainda pendentes deixam de poder obter o primeiro vínculo depois desse instante. Só uma origem novamente verificada e renovação CLI explícita reabrem a janela. Reaplicar o lote, GET e login não renovam o prazo.
+
+## Deltas nativos da aplicação e do login real
+
+Entre o snapshot anterior à activação e o anterior à criação, as sessões e os 89 ficheiros ficaram iguais. A configuração recebeu as duas constantes e surgiram três tabelas Workspace, com uma linha de versão. A opção de readiness foi acrescentada. A opção cron mudou e o par de transientes wp_theme_files_patterns foi regenerado com novos IDs. Nenhuma outra linha anterior de negócio, identidade ou utilizadores mudou.
+
+O dump anterior e o cron actual mostram reagendamentos de rotinas nativas de manutenção, actualizações, privacidade e limpeza. O valor do dump não coincide exactamente com o snapshot intermédio de cron. Portanto, não se atribui cada diferença desse intervalo a um evento isolado nem se afirma igualdade integral na activação. Os estados não foram restaurados para apagar a diferença. A comparação imediatamente anterior e posterior à criação tem zero deltas anteriores, como indicado acima.
+
+Entre a retoma e o login Google real, mudou uma linha session_tokens da conta administrativa. O par de transientes available_translations foi regenerado durante a página de login. As restantes linhas anteriores, os registos Workspace, vínculos/auditorias e a configuração conservaram os hashes. Os 89 ficheiros ficaram iguais. A limpeza normal de tokens expirados na emissão não foi executada como preparação manual nem revertida depois.
+
+## Decisões de execução e custo
+
+Os auxiliares de extracção esperavam títulos Task em inglês. Foram criados briefs privados equivalentes aos títulos Tarefa aprovados. Custo: manutenção dos briefs privados. O vendor ignorado foi copiado de forma independente para resolver classes no checkout de ensaio. Não se mudou o lock ou dependências. Custo: espaço local adicional.
+
+A observação aceita fracções UTC canónicas e arredonda para baixo. Custo: uma janela inicial inferior por uma fracção de segundo. Nomes e emails têm os limites dos campos nativos e nunca são truncados. Uma entrada excessiva faz parar para correcção. A verificação de ACL usa o módulo nativo do PowerShell e apenas operador, SYSTEM e Administrators. Custo: preparação explícita da ACL local, sem alargar a política para facilitar testes.
+
+Os ensaios SQL usam tabelas nativas exclusivas e o browser usa um WordPress separado. Custo: não homologam o servidor institucional. As vias nativas HTTP que não cabiam nos ensaios SQL iniciais foram concluídas no ensaio completo. Reactivar o estado Workspace não reactiva um vínculo Google revogado separadamente. Custo: decisão própria para restaurar esse vínculo.
+
+O tempo em espera SQL conta para a validade do primeiro vínculo. Custo: um pedido atrasado pode ser recusado. O relatório de conflito usa referências opacas e deduplicação. Custo: a identificação humana só é feita por revisão privada autorizada. GET/HEAD conservam a actualização last_seen da sessão federada. Custo: há DML de sessão, embora não haja escrita de negócio, esquema ou auditoria pela página pessoal.
+
+O auxiliar de pesquisa UI UX Pro Max não existe nesta instalação. Foram usados as instruções disponíveis, PRODUCT/DESIGN, Impeccable e verificação visual, sem alegar pesquisa executada. Custo: a direcção visual depende do sistema institucional já existente. A cópia canónica do digest mantém o original e todos os dados. Custo: gerir dois inventários privados distintos e usar o hash correcto. A integração Git anterior à activação evitou operações locais bloqueadas. Custo: uma PR adicional só para documentar a aplicação.
+
+Não há achados menores adiados. RH, concessões institucionais, outros titulares, escala real, segundo PC e IIS/MySQL continuam fora desta aceitação. As Issues #36/#37 e os ficheiros exclusivos da Albertina não foram alterados.

@@ -78,3 +78,5 @@ Apenas consulta, pré-verificação privada e especificação agora aprovada. N�
 ## Registo de execução posterior à especificação
 
 O estado documental anterior é o registo da entrega original. Depois da aprovação do plano, a implementação avançou na branch separada, com 73 contas fictícias e ensaios HTTP/SQL. A revisão independente e a CI exacta precedem a activação no laboratório normal e a aplicação das 73 contas nominativas reais. O estado corrente está no README e em docs/qa-pre-cadastro-workspace-local.md.
+
+A implementação posterior foi revista e integrada pela PR33 e o lote real autorizado foi aplicado e repetido localmente. As 73 contas permanecem sem competências em AwaitingGoogle. O login real preservou um vínculo anterior e não provou um primeiro vínculo novo. O README e a QA contêm o estado corrente, o prazo inicial e as diferenças nativas observadas. Os parágrafos documentais anteriores conservam a história da aprovação e não descrevem o estado operacional actual.
