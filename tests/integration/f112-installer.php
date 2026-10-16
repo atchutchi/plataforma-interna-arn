@@ -197,7 +197,20 @@ function arn_f112_installer_test(): void {
 		}
 		$assert( rmdir( $root ), 'limpeza de ficheiros próprios' );
 		$assert( 0 === (int) $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME LIKE %s', $db->esc_like( $prefix ) . '%' ) ), 'nenhuma tabela residual própria' );
-		$assert( arn_f112_normal_snapshot() === $before, 'todas as linhas normais preservadas' );
+		$after = arn_f112_normal_snapshot();
+		if ( $after !== $before ) {
+			foreach ( array_unique( array_merge( array_keys( $before ), array_keys( $after ) ) ) as $table ) {
+				if ( ( $before[ $table ] ?? null ) !== ( $after[ $table ] ?? null ) ) {
+					WP_CLI::log( 'Tabela normal divergente, sem valores: ' . $table );
+				}
+			}
+			foreach ( array_unique( array_merge( array_keys( $before['__options_by_name'] ?? array() ), array_keys( $after['__options_by_name'] ?? array() ) ) ) as $option ) {
+				if ( ( $before['__options_by_name'][ $option ] ?? null ) !== ( $after['__options_by_name'][ $option ] ?? null ) ) {
+					WP_CLI::log( 'Opção divergente, sem valor: ' . $option );
+				}
+			}
+		}
+		$assert( $after === $before, 'todas as linhas normais preservadas' );
 	}
 	WP_CLI::success( 'F112 instalador: ' . $checks . ' verificações e limpeza própria.' );
 }
