@@ -55,6 +55,10 @@ final class PeopleHttpTest extends TestCase {
 				)
 			);
 			foreach ( array(
+				array( 'GET', '/missing/funcionarios/', '' ),
+				array( 'GET', '/missing/meu-perfil', '' ),
+				array( 'POST', '/missing/index.php/minha-equipa/', '' ),
+				array( 'HEAD', '/missing/%66uncionarios/', '' ),
 				array( 'GET', '/off/meu-perfil/', '' ),
 				array( 'GET', '/funcionarios/?person=01', '' ),
 				array( 'GET', '/funcionarios/?person=9', '' ),
@@ -83,6 +87,19 @@ final class PeopleHttpTest extends TestCase {
 				self::assertStringContainsString( '404 Not Found', $headers );
 				self::assertStringContainsString( 'private, no-store', $headers );
 				self::assertStringNotContainsString( 'Location:', $headers );
+			}
+			$ordinary = stream_context_create(
+				array(
+					'http' => array(
+						'follow_location' => 0,
+						'ignore_errors'   => true,
+						'timeout'         => 3,
+					),
+				)
+			);
+			foreach ( array( '/missing/ordinary/', '/missing/funcionarios-extra/', '/missing/other/funcionarios/', '/outside/funcionarios/' ) as $route ) {
+				file_get_contents( 'http://' . $address . $route, false, $ordinary );
+				self::assertStringContainsString( '302 Found', implode( "\n", $http_response_header ) );
 			}
 			$context = stream_context_create(
 				array(

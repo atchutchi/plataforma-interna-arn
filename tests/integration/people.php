@@ -28,6 +28,10 @@ use Arn\Intranet\People\WpdbPeopleRepository;
 if ( ! defined( 'WP_CLI' ) || true !== WP_CLI || ! current_user_can( 'manage_options' ) || ! in_array( wp_get_environment_type(), array( 'local', 'development' ), true ) ) {
 	throw new RuntimeException( 'Ensaio People indisponível.' );
 }
+$launcher = realpath( (string) ( $_SERVER['argv'][0] ?? '' ) );
+if ( false === $launcher || ! is_file( $launcher ) || ! is_readable( $launcher ) ) {
+	throw new RuntimeException( 'Launcher WP-CLI indisponível.' );
+}
 $prefix = 'arn_peo_' . bin2hex( random_bytes( 5 ) ) . '_';
 $root   = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'arn_people_private_' . bin2hex( random_bytes( 8 ) );
 if ( ! mkdir( $root, 0700 ) ) {
@@ -203,12 +207,12 @@ try {
 	$other->query( 'START TRANSACTION' );
 	$other->get_results( $other->prepare( 'SELECT user_id FROM %i WHERE user_id=%d FOR UPDATE', $prefix . 'arn_authz_accounts', $ids['alfa'] ) );
 	$command = array(
-		realpath( '.git/tools/php/php.exe' ),
-		realpath( '.git/tools/wp-cli.phar' ),
-		'--path=' . realpath( '.git/tools/local-wp/wordpress' ),
-		'--user=lab_admin',
+		PHP_BINARY,
+		$launcher,
+		'--path=' . ABSPATH,
+		'--user=' . wp_get_current_user()->user_login,
 		'eval-file',
-		realpath( 'tests/integration/people-worker.php' ),
+		__DIR__ . '/people-worker.php',
 	);
 	foreach ( array( 'a', 'b' ) as $label ) {
 		$environment = array_merge(

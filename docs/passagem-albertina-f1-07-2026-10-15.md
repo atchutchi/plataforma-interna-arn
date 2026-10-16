@@ -1,5 +1,7 @@
 # Passagem a Albertina4264: ALB-F1-07-QA
 
+Actualização de 16 de outubro de 2026: este guião é histórico. O responsável pediu que Codex/Atchutchi assumisse a tarefa neste PC. A execução e os limites estão na [entrega F1-07](entrega-f1-07-2026-10-16.md) e na [matriz QA actual](qa-directorio-perfil-local-f1-07.md). Não reenviar ou executar esta tarefa em duplicado nem presumir que Albertina produziu a entrega. A sua branch e laboratório não foram alterados. Os parágrafos seguintes conservam o estado recebido em 15 de outubro.
+
 15 de outubro de 2026. Pedido de Atchutchi: actualizar o estado e preparar uma tarefa para Albertina continuar na sua branch e devolver o trabalho para revisão. Este guião e o prompt associado constituem a passagem. Não foi criada uma Issue nem enviada uma mensagem à colaboradora.
 
 ## Objectivo e limite
