@@ -15,6 +15,20 @@ use PHPUnit\Framework\TestCase;
 /** Rejects invalid Unicode and structural inputs before persistence. */
 final class F112ValuesTest extends TestCase {
 
+	/** C1 controls are forbidden even when they are valid multi-byte UTF-8. */
+	public function test_unicode_control_characters_are_not_treated_as_whitespace(): void {
+		foreach ( array( false, true ) as $multiline ) {
+			foreach ( array( "A\u{0085}B", "A\u{009f}B" ) as $value ) {
+				try {
+					PlainText::value( $value, 100, $multiline );
+					self::fail( 'Unicode control accepted.' );
+				} catch ( InvalidArgumentException ) {
+					self::assertTrue( true );
+				}
+			}
+		}
+	}
+
 	/** Text remains literal and bodies normalise only CRLF. */
 	public function test_text_is_unicode_bounded_and_literal(): void {
 		self::assertSame( 'Olá', PlainText::value( " \u{00a0}Olá ", 3, false ) );

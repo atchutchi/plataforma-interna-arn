@@ -25,7 +25,7 @@ final class PlainText {
 		if ( $multiline ) {
 			$value = str_replace( "\r\n", "\n", $value );
 		}
-		$controls = $multiline ? '/[\x00-\x09\x0b-\x1f\x7f\p{Cf}]/u' : '/[\x00-\x1f\x7f\p{Cf}\x{2028}\x{2029}]/u';
+		$controls = $multiline ? '/(?!\n)[\p{Cc}\p{Cf}]/u' : '/[\p{Cc}\p{Cf}\x{2028}\x{2029}]/u';
 		if ( $maximum < 1 || ! mb_check_encoding( $value, 'UTF-8' ) || 1 === preg_match( $controls, $value ) ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Constant domain error.
 			throw new InvalidArgumentException( 'Texto inválido.' );

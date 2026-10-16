@@ -10,12 +10,28 @@ namespace Arn\Intranet\Tests;
 use Arn\Intranet\Calendar\Event;
 use Arn\Intranet\Calendar\EventContent;
 use Arn\Intranet\Calendar\EventState;
+use Arn\Intranet\Calendar\EventVersion;
 use Arn\Intranet\F112\Audience;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 /** Invalid dates and transitions cannot be silently normalised. */
 final class CalendarModelTest extends TestCase {
+
+	/** External references cannot rewrite an already-validated event or its audit. */
+	public function test_constructor_detaches_external_evidence_references(): void {
+		$draft                = Event::draft( 1, 7, 'LAB-A', $this->content(), 10 );
+		$reason               = 'Criação de rascunho.';
+		$history              = $draft->history;
+		$history[0]['reason'] = &$reason;
+		$version              = $draft->versions[0];
+		$versions             = array( &$version );
+		$copy                 = new Event( 1, 7, 'LAB-A', 1, EventState::Draft, $versions, null, null, null, null, $history );
+		$reason               = 'Mutação externa.';
+		$version              = new EventVersion( 1, $this->content( 'Injectado' ), 7, 10 );
+		self::assertSame( 'Encontro', $copy->latest()->content->title );
+		self::assertSame( 'Criação de rascunho.', $copy->history[0]['reason'] );
+	}
 
 	/** Canonical Gregorian time and exclusive all-day bounds. */
 	public function test_time_dates_modes_and_https_are_strict(): void {

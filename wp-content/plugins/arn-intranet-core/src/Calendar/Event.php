@@ -13,6 +13,18 @@ use InvalidArgumentException;
 /** Publication and organiser remain stable while the current draft changes. */
 final readonly class Event {
 
+	/** Detached immutable versions.
+	 *
+	 * @var array<EventVersion>
+	 */
+	public array $versions;
+
+	/** Detached scalar audit records.
+	 *
+	 * @var array<array>
+	 */
+	public array $history;
+
 	/** Hydrate only if the entire history proves the derived state.
 	 *
 	 * @param int         $id Native private anchor.
@@ -27,7 +39,7 @@ final readonly class Event {
 	 * @param int|null    $cancelled_at Cancellation clock.
 	 * @param array       $history Complete audit transitions.
 	 */
-	public function __construct( public int $id, public int $author_id, public ?string $unit_id, public int $revision, public EventState $state, public array $versions, public ?int $published_version, public ?int $published_at, public ?int $published_revision, public ?int $cancelled_at, public array $history ) {
+	public function __construct( public int $id, public int $author_id, public ?string $unit_id, public int $revision, public EventState $state, array $versions, public ?int $published_version, public ?int $published_at, public ?int $published_revision, public ?int $cancelled_at, array $history ) {
 		if ( $id < 1 || $author_id < 1 || $revision < 1 || ! $versions || ! array_is_list( $versions ) || ! array_is_list( $history ) || count( $history ) !== $revision || ( null !== $unit_id && ! in_array( $unit_id, array( 'LAB-A', 'LAB-B' ), true ) ) ) {
 			self::invalid();
 		}
@@ -87,6 +99,16 @@ final readonly class Event {
 		if ( count( $versions ) !== $seen || $state !== $derived || $published_version !== $pub || $published_at !== $at || $published_revision !== $pub_rev || $cancelled_at !== $cancelled ) {
 			self::invalid();
 		}
+		$version_copy = array();
+		foreach ( $versions as $version ) {
+			$version_copy[] = $version;
+		}
+		$history_copy = array();
+		foreach ( $history as $entry ) {
+			$history_copy[] = self::entry( $entry['operation'], $entry['actor_id'], $entry['version'], $entry['revision'], $entry['occurred_at'], $entry['reason'] );
+		}
+		$this->versions = $version_copy;
+		$this->history  = $history_copy;
 	}
 
 	/** Create in a server-resolved owner scope.

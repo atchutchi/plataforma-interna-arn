@@ -11,12 +11,28 @@ use Arn\Intranet\Communications\DecisionToken;
 use Arn\Intranet\Communications\Notice;
 use Arn\Intranet\Communications\NoticeContent;
 use Arn\Intranet\Communications\NoticeState;
+use Arn\Intranet\Communications\NoticeVersion;
 use Arn\Intranet\F112\Audience;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 /** Old publication survives edits, but not expiry or archive. */
 final class NoticeModelTest extends TestCase {
+
+	/** Readonly arrays must not retain references owned by an external caller. */
+	public function test_constructor_detaches_version_and_audit_references(): void {
+		$draft                = Notice::draft( 1, 7, new NoticeContent( 'Original', 'B', Audience::unit( 'LAB-A' ), 'team-direct', null ), 90 );
+		$reason               = 'Criação de rascunho.';
+		$history              = $draft->history;
+		$history[0]['reason'] = &$reason;
+		$version              = $draft->versions[0];
+		$versions             = array( &$version );
+		$copy                 = new Notice( 1, 7, 'LAB-A', 1, NoticeState::Draft, $versions, null, null, null, null, null, $history );
+		$reason               = 'Mutação externa.';
+		$version              = new NoticeVersion( 1, new NoticeContent( 'Injectado', 'B', Audience::unit( 'LAB-A' ), 'team-direct', null ), 7, 90 );
+		self::assertSame( 'Original', $copy->latest()->content->title );
+		self::assertSame( 'Criação de rascunho.', $copy->history[0]['reason'] );
+	}
 
 	/** Publication is immediate with an exclusive validity endpoint. */
 	public function test_team_publication_expiry_cas_noop_and_archive(): void {

@@ -13,6 +13,18 @@ use InvalidArgumentException;
 /** Private workflow revision is independent of the published version. */
 final readonly class Notice {
 
+	/** Detached immutable versions.
+	 *
+	 * @var array<NoticeVersion>
+	 */
+	public array $versions;
+
+	/** Detached scalar audit records.
+	 *
+	 * @var array<array>
+	 */
+	public array $history;
+
 	/** Validate every derived field against the complete ordered history.
 	 *
 	 * @param int         $id Anchor ID.
@@ -34,13 +46,13 @@ final readonly class Notice {
 		public ?string $unit_id,
 		public int $revision,
 		public NoticeState $state,
-		public array $versions,
+		array $versions,
 		public ?int $published_version,
 		public ?int $published_at,
 		public ?int $published_revision,
 		public ?int $submitted_version,
 		public ?int $last_submitted_version,
-		public array $history,
+		array $history,
 	) {
 		if ( $id < 1 || $author_id < 1 || $revision < 1 || ! array_is_list( $versions ) || ! $versions || ! array_is_list( $history ) || count( $history ) !== $revision ) {
 			self::invalid();
@@ -120,6 +132,16 @@ final readonly class Notice {
 		if ( count( $versions ) !== $seen || $derived !== $state || $pub !== $published_version || $at !== $published_at || $pub_rev !== $published_revision || $pending !== $submitted_version || $last !== $last_submitted_version ) {
 			self::invalid();
 		}
+		$version_copy = array();
+		foreach ( $versions as $version ) {
+			$version_copy[] = $version;
+		}
+		$history_copy = array();
+		foreach ( $history as $entry ) {
+			$history_copy[] = self::entry( $entry['operation'], $entry['actor_id'], $entry['version'], $entry['revision'], $entry['occurred_at'], $entry['reason'] );
+		}
+		$this->versions = $version_copy;
+		$this->history  = $history_copy;
 	}
 
 	/** Create a version and its initial audit event.
