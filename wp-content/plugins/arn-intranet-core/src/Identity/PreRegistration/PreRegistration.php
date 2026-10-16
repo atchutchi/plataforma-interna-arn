@@ -53,4 +53,9 @@ final readonly class PreRegistration {
 			throw new RuntimeException( 'Pré-cadastro indisponível.' ); }
 		return $integer;
 	}
+	public function toRow(): array {
+		$row                  = get_object_vars( $this );
+		$row['state']         = $this->state->value;
+		$row['disabled_from'] = $this->disabled_from?->value;
+		return $row;}
 }

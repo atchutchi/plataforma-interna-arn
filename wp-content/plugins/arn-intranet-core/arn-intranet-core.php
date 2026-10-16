@@ -59,6 +59,22 @@ if ( is_string( $arn_vendor ) && is_readable( $arn_vendor ) ) {
 }
 unset( $arn_vendor );
 
+// As guardas persistentes não dependem da activação do cliente Google.
+( new \Arn\Intranet\Identity\PreRegistration\WordPressPreRegistrationAccess() )->register();
+if ( defined( 'WP_CLI' ) && true === WP_CLI ) {
+	$arn_workspace_command = new \Arn\Intranet\Identity\PreRegistration\WorkspacePreRegistrationCommand();
+	foreach ( array(
+		'install-schema' => 'installSchema',
+		'preflight'      => 'preflight',
+		'provision'      => 'provision',
+		'disable'        => 'disable',
+		'enable'         => 'enable',
+	) as $arn_workspace_action => $arn_workspace_method ) {
+		\WP_CLI::add_command( 'arn workspace ' . $arn_workspace_action, array( $arn_workspace_command, $arn_workspace_method ) );
+	}
+	unset( $arn_workspace_command, $arn_workspace_action, $arn_workspace_method );
+}
+
 if ( class_exists( \GuzzleHttp\Client::class ) ) {
 	( new GoogleLoginController() )->registerHooks();
 }

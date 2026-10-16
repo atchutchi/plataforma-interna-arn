@@ -18,6 +18,20 @@ final class WorkspacePreRegistrationCommand {
 	public static function permitted( bool $ready = false ): bool {
 		return defined( 'WP_CLI' ) && true === WP_CLI && 'local' === wp_get_environment_type() && ! is_multisite() && current_user_can( 'manage_options' ) && defined( 'ARN_ALLOW_LOCAL_WORKSPACE_PREREGISTRATION' ) && true === ARN_ALLOW_LOCAL_WORKSPACE_PREREGISTRATION && ( ! $ready || '1' === get_option( 'arn_workspace_prereg_ready' ) );
 	}
+	public function disable( array $args, array $options ): void {
+		$this->changeState( $args, $options, false );}
+	public function enable( array $args, array $options ): void {
+		$this->changeState( $args, $options, true );}
+	private function changeState( array $args, array $options, bool $enabled ): void {
+		$this->run(
+			function () use ( $args, $options, $enabled ): void {
+				if ( ! self::permitted( true ) || 1 !== count( $args ) || ! is_string( $args[0] ) || 2 !== count( $options ) || array_diff( array_keys( $options ), array( 'revision', 'reason' ) ) || ! is_string( $options['reason'] ?? null ) ) {
+					throw new RuntimeException();
+				}$revision = PreRegistration::positive( $options['revision'] ?? null );
+				( new PreRegistrationStateService( $this->repository() ) )->setEnabled( $args[0], $revision, $enabled, get_current_user_id(), $options['reason'], time() );
+				\WP_CLI::success( 'Estado de pré-cadastro actualizado sem atribuição de permissões.' );
+			}
+		);}
 	public function installSchema( array $args, array $options ): void {
 		$this->run(
 			function () use ( $args, $options ): void {

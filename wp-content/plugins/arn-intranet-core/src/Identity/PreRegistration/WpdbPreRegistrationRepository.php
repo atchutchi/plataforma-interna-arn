@@ -138,6 +138,51 @@ final class WpdbPreRegistrationRepository {
 		);
 	}
 
+	public function setEnabled( string $id, int $expected_revision, bool $enabled, int $actor_id, string $reason, int $now ): PreRegistration {
+		return $this->silently(
+			function () use ( $id, $expected_revision, $enabled, $actor_id, $reason, $now ): PreRegistration {
+				$this->schema->assertReady();
+				if ( 1 !== preg_match( '/\A[a-f0-9]{32}\z/D', $id ) || $expected_revision < 1 || $actor_id < 1 || $now < 1 || '' === trim( $reason ) ) {
+					throw new RuntimeException();}
+				$this->execute( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED' );
+				$this->execute( 'START TRANSACTION' );
+				try {
+					$record = $this->record( $this->database->prepare( 'SELECT * FROM %i WHERE id=%s FOR UPDATE', $this->schema->table( 'accounts' ), $id ) );
+					if ( null === $record || $record->revision !== $expected_revision ) {
+						throw new RuntimeException();}
+					if ( ( PreRegistrationState::Disabled !== $record->state ) === $enabled ) {
+						$this->execute( 'COMMIT' );
+						return $record;}
+					if ( PHP_INT_MAX === $record->revision ) {
+						throw new RuntimeException();}
+					$row                  = $record->toRow();
+					$row['state']         = $enabled ? $record->disabled_from->value : 'Disabled';
+					$row['disabled_from'] = $enabled ? null : $record->state->value;
+					++$row['revision'];
+					$next = PreRegistration::fromRow( $row );
+					if ( 1 !== $this->database->update(
+						$this->schema->table( 'accounts' ),
+						array(
+							'state'         => $row['state'],
+							'disabled_from' => $row['disabled_from'],
+							'revision'      => $row['revision'],
+						),
+						array(
+							'id'       => $id,
+							'revision' => $expected_revision,
+						)
+					) || '' !== $this->database->last_error ) {
+						throw new RuntimeException();}
+					$this->audit( $next, $actor_id, $enabled ? 'enabled' : 'disabled', $record->state, $reason, $now );
+					$this->execute( 'COMMIT' );
+					return $next;
+				} catch ( Throwable ) {
+					$this->database->query( 'ROLLBACK' );
+					throw new RuntimeException();}
+			}
+		);
+	}
+
 	public function assertNative( PreRegistration $record ): void {
 		$users = $this->rows( $this->database->prepare( 'SELECT ID,user_login,user_email,display_name,user_activation_key FROM %i WHERE ID=%d OR user_email=%s', $this->schema->nativeTable( 'users' ), $record->user_id, $record->primary_email ) );
 		if ( 1 !== count( $users ) || PreRegistration::positive( $users[0]['ID'] ) !== $record->user_id || $users[0]['user_email'] !== $record->primary_email || $users[0]['display_name'] !== $record->display_name || '' !== $users[0]['user_activation_key'] ) {
