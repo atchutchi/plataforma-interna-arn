@@ -1,22 +1,63 @@
-F1-12: decisões de implementação e revisão
+# F1-12: decisões de implementação e revisão
 
-Registo integral das decisões tomadas durante as cinco tarefas e a revisão final. As provas de aceitação WordPress/Playwright ficam no relatório próprio. Nenhum ponto representa aprovação institucional.
+16 de outubro de 2026. Registo das decisões das cinco tarefas, revisão e aceitação, pela ordem em que ocorreram. Conserva hipóteses substituídas e confirmações repetidas. Custos indicados caso a decisão esteja errada. A prova efectiva consta da QA F1-12. Nenhum ponto representa aprovação institucional.
 
-Ruling: PlainText uses value(string,int,bool,bool=true), Audience serialises type and unit_id, and ActorContext::allows adds the existing policy's audience proof through its valid server context. These signatures close previously unnamed helper interfaces. If wrong, internal callers need an API adjustment, no persisted data exists yet.
-Task 1: Ruling: independent ignored vendor copy replaces the junction because Composer resolves its PSR-4 base to main and loads old enums. No dependency versions or tracked lockfiles change. Cost if wrong: local disk space only.
-Task 1: Ruling: replace the vendor junction with an independent ignored copy. Composer resolves the junction to main and loads old core enums before the worktree autoloader. The targeted test exposed missing new Role cases. Independent vendor resolves its PSR-4 base to this worktree. Cost if wrong: local dependency disk space, no source or lockfile change.
-Task 1: Ruling: draft accepts an optional server audit reason and selection accepts a server-only management boolean. Creation must preserve the actual supplied reason and CMS filtering must not search private draft text in recipient lists. Existing declared calls remain compatible. Cost if wrong: adjust internal adapters before SQL or HTTP activation.
-Task 2: Ruling: event creation takes an optional private reason and agenda a server-only CMS boolean, consistent with Task 1. Cancellation records the last published version even when a newer private draft exists, as required by the spec. If wrong, internal adapter signatures and audit interpretation require adjustment before persistence.
-Task 3: Ruling: move Configuration from Task 4 into Task 3 because repositories must gate before SQL. CurrentActor receives an explicit server roster array, plus an optional server resolver for exclusive tests, not a later LocalRoster dependency. Offline recipient eligibility uses canReceive without manufacturing an authenticated session. All route reads still require valid native session generation separately. If wrong, internal wiring changes before activation; no real accounts are involved.
-Task 3: Ruling: a member fixture needs at least one currently active membership even for all-audience eligibility, while designated institutional fixtures retain no invented personal unit. Fails closed on an inactive sole unit. If wrong, local eligibility presets need institutional confirmation before real activation.
-Task 3: Ruling: worker failure retains only private minimal signals and stdout/stderr outside Git, removes its payload, and always stops its own processes/transactions; successful runs remove the directory. This makes technical failures diagnosable without exposing fixture session metadata. If wrong, temporary local diagnostic files require explicit cleanup.
-Task 3: Ruling: move the test barrier from the aggregate row to the first sorted account row in the actual production lock protocol. Two aggregate-barrier calendar failures observed one genuine account LOCK WAIT and the other writer RUNNING/Statistics at SELECT objects FOR UPDATE, with both resolvers at call3. Keep the exact two-live-lock-waits requirement and one-commit/one-CAS-conflict assertions. Full roster locks already serialise these production mutations before the aggregate. If the lock protocol is later made per-object, adapt this harness to prove that new contention explicitly. No production lock or retry changed.
-Task 3: Ruling: institutional history is restricted to its author; a reviewer receives the authorised frozen submission and opaque decision proof, not the private revision timeline. SQL RED accepted reviewer history, then guard added. Unit managers retain team history. If reviewers later need historical decisions, define a separate redacted projection rather than expose private CAS.
-Task 3: Ruling: require a seeded three-unit organisational snapshot at runtime, even for institutional fixtures with no personal unit. The foundation valid empty snapshot is not a ready F112 dependency. Exclusive SQL RED showed an institutional actor could pass with an empty tree. If wrong, access remains closed until dependencies are prepared.
-Task 3: Ruling: early test-only WP_CLI bootstrap disables ready-cron job discovery in parent and child CLI processes, without changing schedules/options/configuration or suppressing row assertions. Native background cron had run during strict comparisons. One subsequent calendar case observed only two native theme-pattern cache transient changes, kept as a failed run; its unchanged rerun passed65 checks. Communications also65, Node55/lint pass. No claim that every unrelated native bootstrap is side-effect-free. Cost if wrong: strict preservation fails visibly; no exemptions or baseline replacement.
-Task 5 Ruling: find gains optional closed server mode read/manage/either (default preserves existing internal callers). Public and CMS details request their own policy under the repository lock, avoiding a stale Portal context plus the old read-or-manage union. SQL RED then communications GREEN68 proved a manager without Employee cannot pass read, and a reader cannot obtain manage. markRead gains optional server timestamp default null so real HTTP uses the actual locked clock; explicit test timestamps remain strictly checked. RED ArgumentCountError observed before this adapter extension. No timestamp comes from the browser. If wrong, internal adapter signatures need adjustment; no normal installation exists yet.
-Final Ruling: CI diagnostic ef07d55 run38904248446 identifies only fresh_site. Core _delete_option_fresh_site updates it on publish_page. Treat reserved native marker pages as infrastructure, preserve that specific option through a temporary pre_update_option_fresh_site filter only during explicit Pages::install and remove it in finally. Also guard Pages::install itself with CLI/admin/both gates. Full row comparisons remain unchanged. CI failure is the actual new-site RED; add direct before/after assertion and whether new-site branch is covered. Cost if wrong: first-publication UI remains fresh until actual content, no content/authority/security data changed. Reviewer informed; include in whole-branch fix audit.
-Final Ruling: completion is a dedicated non-autoload option keyed by a hash of the server prefix, containing only version/prefix/six fixture IDs/two page IDs. Runtime requires exact resources and only the current module page after completion. It is not a grant or schema migration and never auto-repaired. Cost if wrong: controlled installation recovery remains manual; module independence must retain regression coverage.
-Final Ruling: public DTO projection moves into publishedList/publishedDetail repository methods to share the transactional clock with selection/authorisation. Existing visible/find/manageable contracts remain for internal callers. Cost if wrong: an internal adapter needing different projections must add a separate explicit method, not reconstruct publication outside the policy clock.
+D01. Fechar as interfaces auxiliares PlainText::value, serialização Audience e prova de audiência de ActorContext::allows. Custo: ajustar adaptadores internos. Ainda não existia persistência.
 
-Minor deferred: none. M1 and M2 were regraded Important and fixed in the single final review fix pass.
+D02. Substituir a junction vendor por cópia privada independente. O Composer carregava enums do main. Sem mudar versões/lockfiles. Custo: espaço local.
+
+D03. Confirmar a mesma decisão após o teste detectar novos casos Role ausentes. Entrada repetida conservada como confirmação. Custo: o mesmo espaço local, sem mudança de código ou lockfile.
+
+D04. Rascunho aceita motivo privado opcional do servidor e selecção recebe modo de gestão interno. Conserva o motivo efectivo e evita pesquisar rascunhos privados na lista publicada. Custo: ajustar adaptadores antes de activar SQL/HTTP.
+
+D05. Aplicar o mesmo contrato aos eventos. Cancelamento referencia a última publicação mesmo com rascunho posterior. Custo: rever assinaturas e interpretação da auditoria antes da persistência.
+
+D06. Antecipar Configuration da tarefa 4 para a 3 para fechar antes do SQL. CurrentActor recebe elenco de servidor e resolver opcional de ensaios exclusivos. canReceive avalia destinatários sem inventar sessões. Rotas exigem sessão nativa corrente. Custo: ajustar composição antes da activação.
+
+D07. Membro fictício precisa de uma pertença activa, também para audiência geral. Fixtures institucionais não recebem unidade pessoal inventada. Custo: confirmar presets antes de uso real.
+
+D08. Falha de worker conserva apenas diagnóstico técnico mínimo privado, remove payload e termina processos/transacções próprios. Sucesso limpa o directório. Custo: limpar diagnósticos residuais explicitamente.
+
+D09. Experimentar a barreira de concorrência na primeira conta bloqueada, mantendo duas esperas reais e um commit/um conflito. Hipótese substituída por D10. Custo: diagnóstico inadequado do observador, sem alterar locks de produção.
+
+D10. Restaurar a barreira original do agregado e usar polling de 200 ms. O polling de 50 ms reiniciava o intervalo da cache de metadados MariaDB 11.8. Mantiveram-se duas esperas reais, CAS e todos os resultados. Sem mudar configuração SQL, locks ou retries. Custo: o teste continuaria a falhar visivelmente, sem sucesso enfraquecido.
+
+D11. Histórico institucional exclusivo do autor. Revisor recebe submissão corrente e token opaco, sem cronologia privada ou CAS do autor. Gestor conserva histórico da equipa. Custo: uma futura necessidade de histórico de decisão exige projecção redigida própria.
+
+D12. Exigir snapshot organizacional preparado de três unidades, também para fixtures institucionais. Snapshot vazio da fundação não prova dependência pronta. Custo: acesso fechado até preparar dependências.
+
+D13. Bootstrap exclusivo WP-CLI impede apenas descoberta de cron pronto nos processos de ensaio/workers. Não muda agendas/opções/configuração ou comparações. Falhas por cache nativa ficam registadas. Custo: preservação estrita falha visivelmente, sem substituir baselines. Não se garante ausência de efeitos em todo o bootstrap nativo.
+
+D14. find aceita modos internos fechados read/manage/either. Portal/CMS pedem políticas distintas sob transacção. markRead usa relógio efectivo sob lock no HTTP e injecção explícita no teste. Browser não fornece relógio. Custo: ajustar adaptadores, sem alargar permissões.
+
+D15. Páginas marcadoras são infraestrutura. Pages::install conserva fresh_site com filtro temporário apenas em CLI/admin/com ambos os gates, removido em finally. A falha real da CI em site novo originou a regressão. Custo: indicação de primeira publicação permanece até conteúdo efectivo. Sem mudar conteúdo ou autoridade.
+
+D16. Reclassificar de Minor para Important o regresso aos avisos e a validade na lista. A navegação mudava de colecção e faltavam metadados exigidos. Corrigidos na mesma passagem final. Custo: classificação superior ao impacto, sem funcionalidade fora da especificação.
+
+D17. Presets, audiências e conservação fictícios. Revisor não decide PEN-07. Custo: activação real exige decisões institucionais.
+
+D18. IIS/MySQL 8.4, servidores, AD, DNS e produção fora desta homologação. Custo: compatibilidade nesses ambientes sem prova.
+
+D19. Revisor não executou aceitação nativa. Controlador assumiu os 32 critérios e WordPress/REST/Playwright após correcções. Custo: revisão pura não permitiria aceitar a interface.
+
+D20. Revisor não reproduziu preservação SQL. Conservar ensaios do executante e baselines imutáveis e comparar novamente. Custo: revisão isolada não serve de prova SQL.
+
+D21. Locks e pesquisas sobre o elenco completo aceites só para seis fixtures. Custo: expansão exige medir e rever desenho antes de uso real.
+
+D22. Conservar suites e pontos de integração anteriores. Sem nova auditoria integral do legado. Custo: regressão anterior exige investigação dirigida.
+
+D23. Anexos, recorrência, ICS, lembretes, convites e Google Calendar excluídos. Custo: exigem especificação separada.
+
+D24. Albertina #28/#29 e identidades reais fora da F1-12. Inventário privado não concede acessos. Custo: pré-cadastro exige trabalho controlado próprio.
+
+D25. Conclusão usa opção própria sem autoload, por hash do prefixo, apenas com versão/prefixo/IDs das seis fixtures e duas páginas. Sem grant, migração ou reparação automática. Após conclusão cada módulo verifica só a sua página/schema e dependências comuns. Custo: recuperação manual e regressões de independência necessárias.
+
+D26. publishedList/publishedDetail projectam no repositório com o mesmo relógio transaccional da política/selecção. visible/find/manageable conservados. Custo: outro consumidor precisa de método explícito, sem reconstruir publicação com relógio diferente.
+
+D27. Aceitação mediu ligações com 25 a 27 px. Correcção limitada a ligações dos módulos com mínimo de 44 px, validada em 16 vistas front e 12 CMS. Sem segundo ciclo de revisão do conjunto. Custo: efeito no espaçamento, coberto nas quatro larguras.
+
+D28. Deltas nativos de opções não são excluídos ou apagados. Reconciliar cache, contador de seis contas e avanço horário do mesmo hook cron com hashes dos registos técnicos. Leituras finais/repetições continuam a exigir identidade integral. Custo: delta inexplicado impede afirmar preservação total e exige diagnóstico.
+
+D29. Aceitar apenas o âmbito local fictício medido nos 32 critérios. Texto CSS200% não prova zoom nativo ou segundo PC. PEN-07, IIS/MySQL e população real ficam separados. Custo: nenhum resultado de produção ou de contas reais pode ser inferido desta aceitação.
+
+Não há Minor adiado. As duas omissões iniciais foram tratadas como Important. Zoom nativo, segundo PC, escala real e homologação institucional são limites separados e não testes executados.

@@ -1,4 +1,4 @@
-# F1-12: execução local em curso
+# F1-12: execução local e continuidade
 
 16 de outubro de 2026. Branch `feat/f1-12-comunicados-calendario`, iniciada em main `fffef58323636d59985a073e6b03bfc8e3c40e69`. A proposta da PR #26 foi adoptada pelo responsável. Plano: [cinco tarefas](superpowers/plans/2026-10-16-f112.md). Especificação e 32 critérios permanecem a referência de comportamento, sem substituir provas executadas.
 
@@ -16,9 +16,17 @@ A suite PHP passou 781 testes e 3414 asserções, com quatro omissões anteriore
 
 As cinco tarefas de código estão executadas. O commit a7f298e acrescentou CMS, vistas publicadas, avisos internos, navegação autorizada e guardas HTTP. A revisão independente de toda a branch identificou instalação parcial, redireccionamento após decisão, relógio da projecção e duas omissões de navegação/metadados. A passagem final corrigiu estes pontos com regressões RED/GREEN. As decisões e os seus custos estão no registo próprio.
 
+## Activação e aceitação executadas
+
+A revisão independente foi seguida da correcção bc60cf5 e CI 38907064548 aprovada em todas as seis jobs. A activação normal ocorreu depois dessa confirmação, com backup e baselines próprios. As duas junctions apontam para esta branch, as duas flags novas estão true e existem seis contas Subscriber fictícias, 13 grants e duas páginas. A conclusão verificada é obrigatória antes de abrir rotas. Não repetir a instalação como se o laboratório estivesse vazio.
+
+A suite passou 800 testes PHP/3612 asserções/quatro omissões Windows preexistentes, SQL70/70/52/52 e Node55/lint/build. Playwright executou os percursos e os 32 critérios estão preenchidos por camada na [QA](qa-comunicados-calendario-local-f1-12.md). A correcção visual 65a01e2 aumentou as áreas de clique após medição real. Passaram 16 combinações front end, 12 CMS e quatro títulos longos, com texto CSS200%, foco e teclado. Zoom nativo/segundo PC não foram apresentados como executados.
+
+O snapshot final preserva todas as linhas anteriores de negócio, contas, sessões e os 83 ficheiros privados anteriores. Acrescentou seis ficheiros de password. As opções nativas foram reconciliadas sem excluir deltas: cache regenerada, contador das seis contas e o mesmo hook cron horário avançado 3600 segundos. Doze GET/HEAD e repetição do instalador antes/depois de edição passaram comparação integral idêntica das 49 tabelas. Ver detalhes e limites na QA.
+
 ## Próximas parcelas
 
-Fechar a verificação conjunta das correcções, confirmar CI no SHA exacto e executar a activação controlada e aceitação WordPress/SQL/Playwright dos 32 critérios. Ainda não há instalação F1-12 normal ou aceitação Playwright. A configuração e as junctions mantêm-se no main até essa etapa. Não declarar o módulo aceite enquanto houver critérios de segurança sem prova.
+Confirmar CI no SHA entregue e devolver a PR de implementação contra main. Integração apenas depois de CI verde, sem deploy. Preservar a instalação já activa neste PC, os baselines e a auditoria. Rever depois a proposta F1-13 da Issue #29 quando for entregue pela Albertina, sem executar a tarefa documental dela em paralelo. PEN-07, escala com população real e IIS/MySQL permanecem pendentes. O pré-cadastro Workspace é uma evolução separada de identidade/autorização, nunca uma atribuição automática de competências por email ou nome.
 
 ## Inventário Workspace separado
 
@@ -27,5 +35,4 @@ O responsável autorizou consultar os nomes e emails no Admin Console e escolheu
 O export e o inventário mínimo ficam fora dos repositórios e do document root, na área privada local. Nenhum nome/email desta consulta foi acrescentado aos fixtures ou ao Git. Não foram provisionadas contas reais na aplicação, atribuídas funções ou alteradas credenciais Workspace. O pré-cadastro e a associação autenticada devem seguir o circuito de identidade/autorização já existente, com auditoria e regras de activação próprias. A F1-12 usa exclusivamente dados fictícios.
 
 As tarefas #28/#29, branches e laboratório da Albertina mantêm-se independentes. Sem alteração de produção, servidores, AD, DNS, originais privados ou fontes institucionais.
-`Task 3` fechou a verificação conjunta no SHA 4404997: suite PHP completa e ambos os ensaios SQL aprovados na mesma execução serial. Seguem instalação e interfaces, ainda pendentes.
-`Task 4` concluída no commit a5f9b76: instalador CLI explícito, seis fixtures Subscriber, duas páginas canónicas, preflight antes dos recursos e tipos privados sem editor/REST. A verificação conjunta passou 785 testes PHP/3486 asserções/quatro omissões anteriores e SQL65/65/42 para comunicados, calendário e instalador. Node55/lint e PHPCS12 ficheiros aprovados. Repetição integral sem alterações após edição auditada, colisões e recusa de suspensão/revogação cobertas. Sem instalação normal, interface ou Playwright F1-12 ainda.
+Registo histórico das fases: Task 3 fechou em 4404997 e Task 4 em a5f9b76, então ainda sem activação normal. Task 5 fechou em a7f298e. A revisão, activação e aceitação posteriores descritas acima substituem esse estado de preparação, sem repetir os baselines ou apagar os primeiros resultados.
