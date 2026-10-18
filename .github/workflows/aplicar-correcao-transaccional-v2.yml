@@ -30,8 +30,9 @@ jobs:
           set -euo pipefail
           cat .bootstrap/mysql-v2/chunk-*.txt | tr -d '\n' | base64 --decode | gzip --decompress > /tmp/arn-mysql-v2.patch
           echo 'f6166298616e00b323f90be6a771633ebde6c5221ddfda237a36c8eaa2fdac09  /tmp/arn-mysql-v2.patch' | sha256sum --check --strict
-          git apply --check /tmp/arn-mysql-v2.patch
-          git apply --index /tmp/arn-mysql-v2.patch
+          patch --batch --forward --fuzz=0 -p1 --dry-run < /tmp/arn-mysql-v2.patch
+          patch --batch --forward --fuzz=0 -p1 < /tmp/arn-mysql-v2.patch
+          git add -A
           git diff --cached --check
           test "$(git diff --cached --name-only | wc -l | tr -d ' ')" = "22"
 
