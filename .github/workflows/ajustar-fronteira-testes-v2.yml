@@ -94,6 +94,11 @@ jobs:
               1,
           )
           content = content.replace(
+              "\t * @return mixed Valor permitido.\n\t */\n\tpublic function __get",
+              "\t * @return mixed Valor permitido.\n\t * @throws RuntimeException Quando o handle nativo é pedido.\n\t */\n\tpublic function __get",
+              1,
+          )
+          content = content.replace(
               "\t/**\n\t * @param string $name Propriedade alterada.",
               "\t/**\n\t * Impede a substituição externa do handle nativo.\n\t *\n\t * @param string $name Propriedade alterada.",
               1,
