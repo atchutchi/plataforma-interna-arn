@@ -112,6 +112,10 @@ final class IdentityWpdb extends \wpdb {
 			return $this->refuseTransactionCommand();
 		}
 
+		if ( 'begin' === $command && null !== $this->transaction_guard ) {
+			return $this->refuseTransactionCommand();
+		}
+
 		if ( null === $this->transaction_guard && $this->hasDedicatedConnection() ) {
 			try {
 				if ( $this->inTransaction() ) {
