@@ -1,0 +1,59 @@
+name: Aplicar correcao transaccional v2
+
+on:
+  push:
+    branches:
+      - fix/atchutchi-mysql-transaction-boundary-v2
+
+permissions:
+  contents: write
+
+jobs:
+  apply-patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          extensions: mysqli, mbstring
+
+      - name: Reconstruir e aplicar o patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .bootstrap/mysql-v2/chunk-*.txt | tr -d '\n' | base64 --decode | gzip --decompress > /tmp/arn-mysql-v2.patch
+          echo 'f6166298616e00b323f90be6a771633ebde6c5221ddfda237a36c8eaa2fdac09  /tmp/arn-mysql-v2.patch' | sha256sum --check --strict
+          git apply --check /tmp/arn-mysql-v2.patch
+          git apply --index /tmp/arn-mysql-v2.patch
+          git diff --cached --check
+          test "$(git diff --cached --name-only | wc -l | tr -d ' ')" = "22"
+
+      - name: Verificar sintaxe dos ficheiros centrais
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l wp-content/plugins/arn-intranet-core/src/Identity/TransactionBoundary.php
+          php -l wp-content/plugins/arn-intranet-core/src/Identity/IdentityWpdb.php
+          php -l tests/phpunit/TransactionBoundaryTest.php
+          php -l tests/phpunit/IdentityWpdbTransactionTest.php
+          php -l tests/integration/mysql-transaction-bootstrap.php
+          php -l tests/integration/mysql-transaction-state.php
+          php -l tests/integration/mysql-transaction-worker.php
+
+      - name: Publicar a correcao na branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm -r .bootstrap/mysql-v2 .github/workflows/aplicar-correcao-transaccional-v2.yml
+          git diff --cached --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'fix: controlar fronteiras transaccionais da ligacao dedicada'
+          git push origin HEAD:fix/atchutchi-mysql-transaction-boundary-v2
