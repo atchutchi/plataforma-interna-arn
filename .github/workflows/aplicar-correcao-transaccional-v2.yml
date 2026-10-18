@@ -47,6 +47,15 @@ jobs:
             { print }
           ' /tmp/arn-mysql-v2.patch > /tmp/arn-mysql-v2-effective.patch
           echo '7a4799adffa574edca16712315f6094ff8d61d6a207c0fac15db43c5f7b82f03  /tmp/arn-mysql-v2-effective.patch' | sha256sum --check --strict
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('wp-content/plugins/arn-intranet-core/src/Identity/IdentityWpdb.php')
+          content = path.read_text(encoding='utf-8')
+          redundant = '\t\t\t\t// Não propagar detalhes internos de uma ligação parcialmente aberta.\n'
+          if content.count(redundant) != 1:
+              raise SystemExit('Estado inesperado do IdentityWpdb antes da aplicação')
+          path.write_text(content.replace(redundant, '', 1), encoding='utf-8')
+          PY
           patch --batch --forward --fuzz=0 -p1 --dry-run < /tmp/arn-mysql-v2-effective.patch
           patch --batch --forward --fuzz=0 -p1 < /tmp/arn-mysql-v2-effective.patch
           git add -A
