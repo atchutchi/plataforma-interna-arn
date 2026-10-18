@@ -9,14 +9,16 @@ declare(strict_types=1);
 
 use Arn\Intranet\Identity\IdentityWpdb;
 
+// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Rótulos constantes do ensaio CLI.
+
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI || ! in_array( wp_get_environment_type(), array( 'local', 'development' ), true ) || ! current_user_can( 'manage_options' ) ) {
 	throw new RuntimeException( 'Ensaio permitido apenas no laboratório por administrador.' );
 }
 
 $database = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
 $database->suppress_errors( true );
-$checks = 0;
-$assert = static function ( bool $condition, string $name ) use ( &$checks ): void {
+$checks   = 0;
+$assert   = static function ( bool $condition, string $name ) use ( &$checks ): void {
 	if ( ! $condition ) {
 		throw new RuntimeException( 'Falhou placeholder dedicado: ' . $name );
 	}
