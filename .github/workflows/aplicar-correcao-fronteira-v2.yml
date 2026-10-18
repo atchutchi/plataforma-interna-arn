@@ -1,0 +1,302 @@
+name: Aplicar correcao da fronteira v2
+
+on:
+  push:
+    branches:
+      - fix/atchutchi-mysql-transaction-boundary-v2
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          extensions: mbstring
+
+      - name: Confirmar regressao antes da correcao
+        run: |
+          php <<'PHP'
+          <?php
+          require 'wp-content/plugins/arn-intranet-core/src/Identity/TransactionBoundary.php';
+
+          use Arn\Intranet\Identity\TransactionBoundary;
+          use RuntimeException;
+
+          $cases = array(
+              'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ',
+              'START TRANSACTION WITH CONSISTENT SNAPSHOT',
+              'SET SESSION innodb_lock_wait_timeout=1',
+              "CREATE TRIGGER arn_probe BEFORE INSERT ON arn_table FOR EACH ROW BEGIN IF NEW.id=1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='probe'; END IF; END",
+          );
+
+          foreach ($cases as $sql) {
+              $boundary = new TransactionBoundary();
+              $boundary->markReady();
+              try {
+                  $boundary->prepare($sql);
+                  fwrite(STDERR, "O caso RED foi aceite antes da correcao: {$sql}\n");
+                  exit(1);
+              } catch (RuntimeException) {
+                  // Falha esperada antes da correcao.
+              }
+          }
+
+          echo "RED confirmado: quatro contratos existentes eram recusados.\n";
+          PHP
+
+      - name: Aplicar correcao focada
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          boundary_path = Path('wp-content/plugins/arn-intranet-core/src/Identity/TransactionBoundary.php')
+          boundary = boundary_path.read_text(encoding='utf-8')
+
+          replacements = []
+
+          replacements.append((
+          "\t/** Consulta de leitura. */\n\tprivate const READ_STATEMENT = 'read_statement';",
+          "\t/** Limite controlado de espera por bloqueio da sessao. */\n\tprivate const SET_LOCK_TIMEOUT = 'set_lock_timeout';\n\n\t/** Consulta de leitura. */\n\tprivate const READ_STATEMENT = 'read_statement';"
+          ))
+
+          replacements.append((
+          "\t\t\tcase self::BEGIN:\n\t\t\t\t$this->requireState( self::IDLE, 'Transacção aninhada recusada.' );\n\t\t\t\t$prepared = 'START TRANSACTION';\n\t\t\t\tbreak;",
+          "\t\t\tcase self::BEGIN:\n\t\t\t\t$this->requireState( self::IDLE, 'Transacção aninhada recusada.' );\n\t\t\t\t$prepared = $statement['sql'];\n\t\t\t\tbreak;"
+          ))
+
+          replacements.append((
+          "\t\t\tcase self::SET_ISOLATION:\n\t\t\t\t$this->requireState( self::IDLE, 'Isolamento durante transacção recusado.' );\n\t\t\t\t$prepared = 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED';\n\t\t\t\tbreak;",
+          "\t\t\tcase self::SET_ISOLATION:\n\t\t\tcase self::SET_LOCK_TIMEOUT:\n\t\t\t\t$this->requireState( self::IDLE, 'Configuração durante transacção recusada.' );\n\t\t\t\t$prepared = $statement['sql'];\n\t\t\t\tbreak;"
+          ))
+
+          replacements.append((
+          "\t\t$cleaned = self::sanitize( $sql );",
+          "\t\t$cleaned = self::isTriggerStatement( $sql ) ? self::sanitizeTrigger( $sql ) : self::sanitize( $sql );"
+          ))
+
+          replacements.append((
+          "\t\tif ( 1 === preg_match( '/^(START TRANSACTION|BEGIN(?: WORK)?)$/D', $normalized ) ) {\n\t\t\treturn array(\n\t\t\t\t'kind' => self::BEGIN,\n\t\t\t\t'sql'  => 'START TRANSACTION',\n\t\t\t);\n\t\t}",
+          "\t\tif ( 'START TRANSACTION WITH CONSISTENT SNAPSHOT' === $normalized ) {\n\t\t\treturn array(\n\t\t\t\t'kind' => self::BEGIN,\n\t\t\t\t'sql'  => 'START TRANSACTION WITH CONSISTENT SNAPSHOT',\n\t\t\t);\n\t\t}\n\t\tif ( 1 === preg_match( '/^(START TRANSACTION|BEGIN(?: WORK)?)$/D', $normalized ) ) {\n\t\t\treturn array(\n\t\t\t\t'kind' => self::BEGIN,\n\t\t\t\t'sql'  => 'START TRANSACTION',\n\t\t\t);\n\t\t}"
+          ))
+
+          replacements.append((
+          "\t\tif ( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED' === $normalized ) {\n\t\t\treturn array(\n\t\t\t\t'kind' => self::SET_ISOLATION,\n\t\t\t\t'sql'  => $cleaned,\n\t\t\t);\n\t\t}",
+          "\t\tif ( in_array( $normalized, array( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED', 'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ' ), true ) ) {\n\t\t\treturn array(\n\t\t\t\t'kind' => self::SET_ISOLATION,\n\t\t\t\t'sql'  => $normalized,\n\t\t\t);\n\t\t}\n\t\tif ( 1 === preg_match( '/^SET SESSION INNODB_LOCK_WAIT_TIMEOUT\\s*=\\s*([1-9][0-9]{0,2})$/D', $normalized, $matches ) ) {\n\t\t\treturn array(\n\t\t\t\t'kind' => self::SET_LOCK_TIMEOUT,\n\t\t\t\t'sql'  => 'SET SESSION innodb_lock_wait_timeout = ' . (int) $matches[1],\n\t\t\t);\n\t\t}"
+          ))
+
+          helper_marker = "\t/**\n\t * Remove comentários ordinários, rejeita comentários executáveis e impede\n\t * múltiplas instruções. O conteúdo entre aspas é preservado integralmente."
+          helper_code = r'''	/** Confirma se a instrucao pertence ao contrato fechado de triggers de ensaio. */
+	private static function isTriggerStatement( string $sql ): bool {
+		return 1 === preg_match( '/^\s*CREATE\s+TRIGGER\b/i', $sql );
+	}
+
+	/**
+	 * Aceita apenas os dois formatos de trigger usados para injectar falhas nos
+	 * ensaios. Os pontos e virgulas internos pertencem ao corpo BEGIN/END e nao
+	 * abrem uma segunda instrucao arbitraria.
+	 *
+	 * @param string $sql Definicao do trigger.
+	 * @return string Definicao validada sem terminador final.
+	 * @throws RuntimeException Quando o trigger sai do contrato fechado.
+	 */
+	private static function sanitizeTrigger( string $sql ): string {
+		if ( 1 === preg_match( '/\/\*|#|--[\x00-\x20]/', $sql ) ) {
+			throw new RuntimeException( 'Comentario SQL em trigger recusado.' );
+		}
+
+		$cleaned = trim( $sql );
+		if ( str_ends_with( $cleaned, ';' ) ) {
+			$cleaned = rtrim( substr( $cleaned, 0, -1 ) );
+		}
+
+		$identifier = '(?:`(?:``|[^`])+`|[A-Za-z0-9_]+)';
+		$literal    = "'(?:''|\\\\.|[^'])*'";
+		$signal     = "SIGNAL\\s+SQLSTATE\\s+{$literal}\\s+SET\\s+MESSAGE_TEXT\\s*=\\s*{$literal}";
+		$prefix     = "^CREATE\\s+TRIGGER\\s+{$identifier}\\s+(?:BEFORE|AFTER)\\s+(?:INSERT|UPDATE|DELETE)\\s+ON\\s+{$identifier}\\s+FOR\\s+EACH\\s+ROW\\s+";
+		$simple     = "/{$prefix}{$signal}$/isD";
+		$compound   = "/{$prefix}BEGIN\\s+IF\\s+NEW\\.[A-Za-z0-9_]+\\s*=\\s*(?:-?[0-9]+|{$literal})\\s+THEN\\s+{$signal}\\s*;\\s*END\\s+IF\\s*;\\s*END$/isD";
+
+		if ( 1 !== preg_match( $simple, $cleaned ) && 1 !== preg_match( $compound, $cleaned ) ) {
+			throw new RuntimeException( 'Trigger SQL fora do contrato recusado.' );
+		}
+
+		return $cleaned;
+	}
+
+'''
+          if helper_marker not in boundary:
+              raise SystemExit('Marcador dos helpers nao encontrado')
+          boundary = boundary.replace(helper_marker, helper_code + helper_marker, 1)
+
+          for old, new in replacements:
+              count = boundary.count(old)
+              if count != 1:
+                  raise SystemExit(f'Replacement inesperado ({count}): {old[:80]}')
+              boundary = boundary.replace(old, new, 1)
+
+          boundary_path.write_text(boundary, encoding='utf-8')
+
+          identity_path = Path('wp-content/plugins/arn-intranet-core/src/Identity/IdentityWpdb.php')
+          identity = identity_path.read_text(encoding='utf-8')
+          old = "\t\t\t\t'START TRANSACTION',\n\t\t\t\t'COMMIT AND NO CHAIN NO RELEASE',\n\t\t\t\t'ROLLBACK AND NO CHAIN NO RELEASE',\n\t\t\t\t'SET TRANSACTION ISOLATION LEVEL READ COMMITTED',"
+          new = "\t\t\t\t'START TRANSACTION',\n\t\t\t\t'START TRANSACTION WITH CONSISTENT SNAPSHOT',\n\t\t\t\t'COMMIT AND NO CHAIN NO RELEASE',\n\t\t\t\t'ROLLBACK AND NO CHAIN NO RELEASE',\n\t\t\t\t'SET TRANSACTION ISOLATION LEVEL READ COMMITTED',\n\t\t\t\t'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ',"
+          if identity.count(old) != 1:
+              raise SystemExit('Lista de fronteiras nao encontrada')
+          identity = identity.replace(old, new, 1)
+          old = "\t\t) || 1 === preg_match( '/^(SAVEPOINT|ROLLBACK(?: WORK)? TO|RELEASE SAVEPOINT)\\b/i', $sql );"
+          new = "\t\t) || 1 === preg_match( '/^(SAVEPOINT|ROLLBACK(?: WORK)? TO|RELEASE SAVEPOINT)\\b/i', $sql )\n\t\t\t|| 1 === preg_match( '/^SET SESSION innodb_lock_wait_timeout = [1-9][0-9]{0,2}$/D', $sql );"
+          if identity.count(old) != 1:
+              raise SystemExit('Retorno isBoundaryCommand nao encontrado')
+          identity = identity.replace(old, new, 1)
+          identity_path.write_text(identity, encoding='utf-8')
+
+          test_path = Path('tests/phpunit/TransactionBoundaryTest.php')
+          test = test_path.read_text(encoding='utf-8')
+          marker = "\t/**\n\t * Cria uma fronteira com transacção activa."
+          addition = r'''	/** Snapshot consistente, isolamento e timeout preservam o contrato existente. */
+	public function testExistingSnapshotAndLockTimeoutCommandsRemainSupported(): void {
+		$boundary = new TransactionBoundary();
+		$boundary->markReady();
+
+		self::assertSame( 'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ', $boundary->prepare( 'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ' ) );
+		$boundary->confirm( true );
+		self::assertSame( 'SET SESSION innodb_lock_wait_timeout = 1', $boundary->prepare( 'SET SESSION innodb_lock_wait_timeout=1' ) );
+		$boundary->confirm( true );
+		self::assertSame( 'START TRANSACTION WITH CONSISTENT SNAPSHOT', $boundary->prepare( 'START TRANSACTION WITH CONSISTENT SNAPSHOT' ) );
+		$boundary->confirm( true );
+		self::assertTrue( $boundary->inTransaction() );
+		$this->expectDenied( static fn() => $boundary->prepare( 'SET SESSION innodb_lock_wait_timeout=2' ) );
+		self::assertSame( 'ROLLBACK AND NO CHAIN NO RELEASE', $boundary->prepare( 'ROLLBACK' ) );
+		$boundary->confirm( true );
+		self::assertFalse( $boundary->inTransaction() );
+	}
+
+	/** Triggers fechados de falha sao uma unica DDL, sem aceitar SQL adicional. */
+	public function testClosedFailureTriggersAreAcceptedOnlyWhileIdle(): void {
+		$boundary = new TransactionBoundary();
+		$boundary->markReady();
+
+		$simple = "CREATE TRIGGER arn_simple BEFORE INSERT ON arn_table FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='simple'";
+		self::assertSame( $simple, $boundary->prepare( $simple ) );
+		$boundary->confirm( true );
+
+		$compound = "CREATE TRIGGER arn_compound BEFORE INSERT ON arn_table FOR EACH ROW BEGIN IF NEW.id=1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='compound'; END IF; END";
+		self::assertSame( $compound, $boundary->prepare( $compound ) );
+		$boundary->confirm( true );
+
+		$this->expectDenied( static fn() => $boundary->prepare( "CREATE TRIGGER arn_bad BEFORE INSERT ON arn_table FOR EACH ROW BEGIN SELECT 1; DROP TABLE arn_table; END" ) );
+
+		$boundary->prepare( 'START TRANSACTION' );
+		$boundary->confirm( true );
+		$this->expectDenied( static fn() => $boundary->prepare( $simple ) );
+		self::assertSame( 'ROLLBACK AND NO CHAIN NO RELEASE', $boundary->prepare( 'ROLLBACK' ) );
+		$boundary->confirm( true );
+	}
+
+'''
+          if test.count(marker) != 1:
+              raise SystemExit('Marcador de testes nao encontrado')
+          test = test.replace(marker, addition + marker, 1)
+          test_path.write_text(test, encoding='utf-8')
+
+          mysql_path = Path('tests/integration/mysql-transaction-state.php')
+          mysql = mysql_path.read_text(encoding='utf-8')
+          marker = "\t$assert( ! $db->inTransaction(), 'sessão inicial fora de transacção' );"
+          addition = """
+
+	$assert( 0 === $db->query( 'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ' ), 'isolamento repeatable read aceite' );
+	$assert( 0 === $db->query( 'SET SESSION innodb_lock_wait_timeout=1' ), 'timeout de lock controlado aceite' );
+	$assert( 0 === $db->query( 'START TRANSACTION WITH CONSISTENT SNAPSHOT' ) && $db->inTransaction(), 'snapshot consistente inicia transacção' );
+	$assert( 0 === $db->query( 'ROLLBACK' ) && ! $db->inTransaction(), 'snapshot consistente termina por rollback' );"""
+          if mysql.count(marker) != 1:
+              raise SystemExit('Marcador MySQL nao encontrado')
+          mysql = mysql.replace(marker, marker + addition, 1)
+          mysql_path.write_text(mysql, encoding='utf-8')
+
+          news_path = Path('tests/integration/news-editorial.php')
+          news = news_path.read_text(encoding='utf-8')
+          old = "if ( 'COMMIT' === $sql && ! $intercepted )"
+          new = "if ( 'COMMIT AND NO CHAIN NO RELEASE' === $sql && ! $intercepted )"
+          if news.count(old) != 1:
+              raise SystemExit('Intercepcao editorial nao encontrada')
+          news = news.replace(old, new, 1)
+          news_path.write_text(news, encoding='utf-8')
+
+          for temporary in (
+              Path('.github/workflows/inventariar-sql-transaccional-v2.yml'),
+              Path('.github/workflows/aplicar-correcao-fronteira-v2.yml'),
+          ):
+              if temporary.exists():
+                  temporary.unlink()
+          PY
+
+      - name: Confirmar comportamento corrigido
+        run: |
+          php <<'PHP'
+          <?php
+          require 'wp-content/plugins/arn-intranet-core/src/Identity/TransactionBoundary.php';
+
+          use Arn\Intranet\Identity\TransactionBoundary;
+          use RuntimeException;
+
+          $boundary = new TransactionBoundary();
+          $boundary->markReady();
+          if ('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ' !== $boundary->prepare('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ')) exit(1);
+          $boundary->confirm(true);
+          if ('SET SESSION innodb_lock_wait_timeout = 1' !== $boundary->prepare('SET SESSION innodb_lock_wait_timeout=1')) exit(1);
+          $boundary->confirm(true);
+          if ('START TRANSACTION WITH CONSISTENT SNAPSHOT' !== $boundary->prepare('START TRANSACTION WITH CONSISTENT SNAPSHOT')) exit(1);
+          $boundary->confirm(true);
+          if (!$boundary->inTransaction()) exit(1);
+          if ('ROLLBACK AND NO CHAIN NO RELEASE' !== $boundary->prepare('ROLLBACK')) exit(1);
+          $boundary->confirm(true);
+
+          $simple = "CREATE TRIGGER arn_simple BEFORE INSERT ON arn_table FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='simple'";
+          if ($simple !== $boundary->prepare($simple)) exit(1);
+          $boundary->confirm(true);
+
+          $compound = "CREATE TRIGGER arn_compound BEFORE INSERT ON arn_table FOR EACH ROW BEGIN IF NEW.id=1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='compound'; END IF; END";
+          if ($compound !== $boundary->prepare($compound)) exit(1);
+          $boundary->confirm(true);
+
+          try {
+              $boundary->prepare("CREATE TRIGGER arn_bad BEFORE INSERT ON arn_table FOR EACH ROW BEGIN SELECT 1; DROP TABLE arn_table; END");
+              exit(1);
+          } catch (RuntimeException) {
+              // Recusa esperada.
+          }
+
+          echo "GREEN confirmado: contratos existentes aceites e SQL adicional recusado.\n";
+          PHP
+
+          php -l wp-content/plugins/arn-intranet-core/src/Identity/TransactionBoundary.php
+          php -l wp-content/plugins/arn-intranet-core/src/Identity/IdentityWpdb.php
+          php -l tests/phpunit/TransactionBoundaryTest.php
+          php -l tests/integration/mysql-transaction-state.php
+          php -l tests/integration/news-editorial.php
+
+      - name: Executar PHPUnit focado
+        run: |
+          composer install --no-interaction --no-progress --prefer-dist
+          vendor/bin/phpunit -c phpunit.xml.dist tests/phpunit/TransactionBoundaryTest.php
+          vendor/bin/phpcs wp-content/plugins/arn-intranet-core/src/Identity/TransactionBoundary.php wp-content/plugins/arn-intranet-core/src/Identity/IdentityWpdb.php tests/phpunit/TransactionBoundaryTest.php tests/integration/mysql-transaction-state.php tests/integration/news-editorial.php
+
+      - name: Publicar correcao na branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix: preservar contratos SQL na fronteira transaccional"
+          git push origin HEAD:fix/atchutchi-mysql-transaction-boundary-v2
