@@ -18,4 +18,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rg -n --glob '*.php' "SET (SESSION )?(TRANSACTION|innodb_lock_wait_timeout)|START TRANSACTION|BEGIN( WORK)?|COMMIT|ROLLBACK|SAVEPOINT|CREATE TRIGGER|DROP TRIGGER|LOCK TABLES|UNLOCK TABLES|CALL |PREPARE |EXECUTE |DEALLOCATE" wp-content tests || true
+          grep -RInE --include='*.php' "SET (SESSION )?(TRANSACTION|innodb_lock_wait_timeout)|START TRANSACTION|BEGIN( WORK)?|COMMIT|ROLLBACK|SAVEPOINT|CREATE TRIGGER|DROP TRIGGER|LOCK TABLES|UNLOCK TABLES|CALL |PREPARE |EXECUTE |DEALLOCATE" wp-content tests || true
