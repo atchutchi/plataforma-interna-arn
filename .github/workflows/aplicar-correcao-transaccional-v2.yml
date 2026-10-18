@@ -60,7 +60,10 @@ jobs:
           patch --batch --forward --fuzz=0 -p1 < /tmp/arn-mysql-v2-effective.patch
           git add -A
           git diff --cached --check
-          test "$(git diff --cached --name-only | wc -l | tr -d ' ')" = "22"
+          count="$(git diff --cached --name-only | wc -l | tr -d ' ')"
+          echo "Ficheiros preparados: ${count}"
+          git diff --cached --name-status
+          test "${count}" = "22"
 
       - name: Verificar sintaxe dos ficheiros centrais
         shell: bash
