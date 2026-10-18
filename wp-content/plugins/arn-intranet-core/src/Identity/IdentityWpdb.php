@@ -323,8 +323,9 @@ final class IdentityWpdb extends \wpdb {
 			remove_filter( 'query', $previous, PHP_INT_MAX );
 		}
 
-		$guard = function ( $filtered ) use ( $sql ) {
-			if ( ! is_string( $filtered ) || $filtered !== $sql ) {
+		$expected = $this->remove_placeholder_escape( $sql );
+		$guard    = function ( $filtered ) use ( $expected ) {
+			if ( ! is_string( $filtered ) || $this->remove_placeholder_escape( $filtered ) !== $expected ) {
 				$this->pre_execution_rejection = true;
 				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Mensagem constante.
 				throw new RuntimeException( 'Alteração da consulta dedicada recusada.' );
