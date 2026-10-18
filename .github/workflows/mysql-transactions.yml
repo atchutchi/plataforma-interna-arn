@@ -108,7 +108,14 @@ jobs:
               raise SystemExit('throw de ligação não localizado')
           diagnostic = (
               "\t\t\tif ( '1' === getenv( 'ARN_TX_DIAGNOSTIC' ) ) {\n"
-              "\t\t\t\tthrow new RuntimeException( 'Diagnóstico ligação: ' . get_class( $connection_error ) . '@' . basename( $connection_error->getFile() ) . ':' . $connection_error->getLine() );\n"
+              "\t\t\t\t$diagnostic_message = $connection_error->getMessage();\n"
+              "\t\t\t\tforeach ( array( 'ARN_TX_TEST_USER', 'ARN_TX_TEST_PASSWORD', 'ARN_TX_TEST_NAME', 'ARN_TX_TEST_HOST' ) as $diagnostic_key ) {\n"
+              "\t\t\t\t\t$diagnostic_value = getenv( $diagnostic_key );\n"
+              "\t\t\t\t\tif ( is_string( $diagnostic_value ) && '' !== $diagnostic_value ) {\n"
+              "\t\t\t\t\t\t$diagnostic_message = str_replace( $diagnostic_value, '[redigido]', $diagnostic_message );\n"
+              "\t\t\t\t\t}\n"
+              "\t\t\t\t}\n"
+              "\t\t\t\tthrow new RuntimeException( 'Diagnóstico ligação: ' . get_class( $connection_error ) . '@' . basename( $connection_error->getFile() ) . ':' . $connection_error->getLine() . ' ' . substr( $diagnostic_message, 0, 240 ) );\n"
               "\t\t\t}\n"
           )
           block = block[:throw_pos] + diagnostic + block[throw_pos:]
