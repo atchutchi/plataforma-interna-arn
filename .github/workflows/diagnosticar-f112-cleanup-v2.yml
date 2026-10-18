@@ -1,0 +1,50 @@
+name: Diagnosticar limpeza F112 v2
+
+on:
+  push:
+    branches:
+      - fix/atchutchi-mysql-transaction-boundary-v2
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run env:start:tests
+      - run: npm run env:check:tests
+      - run: npm run composer:install
+      - name: Instrumentar limpeza exclusiva no checkout efemero
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path('tests/integration/f112-fixture.php')
+          text = path.read_text(encoding='utf-8')
+
+          old = """\t} catch ( Throwable $error ) {\n\t\t$failure = $error;\n\t} finally {\n\t\t$db->query( 'ROLLBACK' );"""
+          new = """\t} catch ( Throwable $error ) {\n\t\t$failure = $error;\n\t} finally {\n\t\t$state_before_cleanup = null;\n\t\ttry {\n\t\t\t$state_before_cleanup = $db->inTransaction();\n\t\t} catch ( Throwable $state_error ) {\n\t\t\t$state_before_cleanup = 'indisponivel:' . $state_error->getMessage();\n\t\t}\n\t\t$rollback_result = $db->query( 'ROLLBACK' );\n\t\t$rollback_error  = $db->last_error;"""
+          if text.count(old) != 1:
+              raise SystemExit('contexto de rollback nao encontrado')
+          text = text.replace(old, new, 1)
+
+          old = """\t\t$dropped_all = true;\n\t\tforeach ( array( 'arn_authz_grants', 'arn_authz_audit', 'arn_authz_accounts', 'arn_authz_schema', 'arn_org_header', 'arn_org_units', 'arn_org_audit', 'arn_comm_objects', 'arn_comm_versions', 'arn_comm_audit', 'arn_comm_notifications', 'arn_comm_schema', 'arn_calendar_objects', 'arn_calendar_versions', 'arn_calendar_audit', 'arn_calendar_notifications', 'arn_calendar_schema' ) as $suffix ) {\n\t\t\t$dropped     = $db->query( $db->prepare( 'DROP TABLE IF EXISTS %i', $prefix . $suffix ) );\n\t\t\t$dropped_all = false !== $dropped && '' === $db->last_error && $dropped_all;\n\t\t}\n\t\t$remaining = $db->get_col( $db->prepare( 'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME LIKE %s', $db->esc_like( $prefix ) . '%' ) );\n\t\t$assert( $dropped_all && array() === $remaining && '' === $db->last_error, 'nenhuma tabela do prefixo exclusivo fica por remover' );"""
+          new = """\t\t$dropped_all = true;\n\t\t$drop_report = array();\n\t\tforeach ( array( 'arn_authz_grants', 'arn_authz_audit', 'arn_authz_accounts', 'arn_authz_schema', 'arn_org_header', 'arn_org_units', 'arn_org_audit', 'arn_comm_objects', 'arn_comm_versions', 'arn_comm_audit', 'arn_comm_notifications', 'arn_comm_schema', 'arn_calendar_objects', 'arn_calendar_versions', 'arn_calendar_audit', 'arn_calendar_notifications', 'arn_calendar_schema' ) as $suffix ) {\n\t\t\t$dropped = $db->query( $db->prepare( 'DROP TABLE IF EXISTS %i', $prefix . $suffix ) );\n\t\t\t$drop_report[] = array( 'suffix' => $suffix, 'result' => $dropped, 'error' => $db->last_error );\n\t\t\t$dropped_all = false !== $dropped && '' === $db->last_error && $dropped_all;\n\t\t}\n\t\t$remaining = $db->get_col( $db->prepare( 'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME LIKE %s', $db->esc_like( $prefix ) . '%' ) );\n\t\tWP_CLI::log( 'F112 cleanup diagnostic: ' . json_encode( array( 'module' => $module, 'failure' => $failure?->getMessage(), 'state_before' => $state_before_cleanup, 'rollback_result' => $rollback_result, 'rollback_error' => $rollback_error, 'drops' => $drop_report, 'remaining' => $remaining, 'last_error' => $db->last_error ), JSON_THROW_ON_ERROR ) );\n\t\t$assert( $dropped_all && array() === $remaining && '' === $db->last_error, 'nenhuma tabela do prefixo exclusivo fica por remover' );"""
+          if text.count(old) != 1:
+              raise SystemExit('contexto de limpeza nao encontrado')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Activar laboratório local
+        run: node scripts/wp-env.mjs --tests run cli wp config set WP_ENVIRONMENT_TYPE local --type=constant
+      - name: Reproduzir comunicações com diagnóstico
+        run: npm run test:communications:integration
+      - if: always()
+        run: npm run env:stop:tests
