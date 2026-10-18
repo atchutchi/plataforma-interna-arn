@@ -100,13 +100,27 @@ jobs:
       - name: Obter class-wpdb da versão fixada
         run: curl -fsSL https://raw.githubusercontent.com/WordPress/WordPress/7.1.3/wp-includes/class-wpdb.php -o /tmp/class-wpdb.php
       - name: Executar prova transaccional v2
-        env:
+        env: &transaction-env
           ARN_TX_V2_USER: arn_tx
           ARN_TX_V2_PASSWORD: test
           ARN_TX_V2_NAME: arn_tx_test
           ARN_TX_V2_HOST: 127.0.0.1:3306
           ARN_TX_V2_WPDB: /tmp/class-wpdb.php
         run: php tests/integration/transaction-state-v2.php /tmp/class-wpdb.php
+      - name: Provar falha fechada sem instrumentação, consumidor ou privilégio
+        env: *transaction-env
+        run: |
+          mysql --protocol=tcp -h 127.0.0.1 -uroot -ptest -e "UPDATE performance_schema.setup_consumers SET ENABLED='NO' WHERE NAME='events_transactions_current'"
+          php tests/integration/transaction-state-v2-fail-closed.php /tmp/class-wpdb.php
+          mysql --protocol=tcp -h 127.0.0.1 -uroot -ptest -e "UPDATE performance_schema.setup_consumers SET ENABLED='YES' WHERE NAME='events_transactions_current'"
+
+          mysql --protocol=tcp -h 127.0.0.1 -uroot -ptest -e "UPDATE performance_schema.setup_instruments SET ENABLED='NO' WHERE NAME='transaction'"
+          php tests/integration/transaction-state-v2-fail-closed.php /tmp/class-wpdb.php
+          mysql --protocol=tcp -h 127.0.0.1 -uroot -ptest -e "UPDATE performance_schema.setup_instruments SET ENABLED='YES', TIMED='YES' WHERE NAME='transaction'"
+
+          mysql --protocol=tcp -h 127.0.0.1 -uroot -ptest -e "REVOKE SELECT ON performance_schema.events_transactions_current FROM 'arn_tx'@'%'; FLUSH PRIVILEGES"
+          php tests/integration/transaction-state-v2-fail-closed.php /tmp/class-wpdb.php
+          mysql --protocol=tcp -h 127.0.0.1 -uroot -ptest -e "GRANT SELECT ON performance_schema.events_transactions_current TO 'arn_tx'@'%'; FLUSH PRIVILEGES"
       - name: Executar regressão People e consumidores
         env:
           ARN_TX_TEST_USER: arn_tx
