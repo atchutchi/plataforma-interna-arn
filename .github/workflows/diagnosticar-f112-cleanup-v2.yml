@@ -22,7 +22,7 @@ jobs:
       - run: npm run env:start:tests
       - run: npm run env:check:tests
       - run: npm run composer:install
-      - name: Instrumentar limpeza e mutacao SQL no checkout efemero
+      - name: Instrumentar limpeza e erro SQL no checkout efemero
         run: |
           python3 <<'PY'
           from pathlib import Path
@@ -37,17 +37,17 @@ jobs:
           text = text.replace(old, new, 1)
 
           old = """\t\t$dropped_all = true;\n\t\tforeach ( array( 'arn_authz_grants', 'arn_authz_audit', 'arn_authz_accounts', 'arn_authz_schema', 'arn_org_header', 'arn_org_units', 'arn_org_audit', 'arn_comm_objects', 'arn_comm_versions', 'arn_comm_audit', 'arn_comm_notifications', 'arn_comm_schema', 'arn_calendar_objects', 'arn_calendar_versions', 'arn_calendar_audit', 'arn_calendar_notifications', 'arn_calendar_schema' ) as $suffix ) {\n\t\t\t$dropped     = $db->query( $db->prepare( 'DROP TABLE IF EXISTS %i', $prefix . $suffix ) );\n\t\t\t$dropped_all = false !== $dropped && '' === $db->last_error && $dropped_all;\n\t\t}\n\t\t$remaining = $db->get_col( $db->prepare( 'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME LIKE %s', $db->esc_like( $prefix ) . '%' ) );\n\t\t$assert( $dropped_all && array() === $remaining && '' === $db->last_error, 'nenhuma tabela do prefixo exclusivo fica por remover' );"""
-          new = """\t\t$dropped_all = true;\n\t\t$drop_report = array();\n\t\tforeach ( array( 'arn_authz_grants', 'arn_authz_audit', 'arn_authz_accounts', 'arn_authz_schema', 'arn_org_header', 'arn_org_units', 'arn_org_audit', 'arn_comm_objects', 'arn_comm_versions', 'arn_comm_audit', 'arn_comm_notifications', 'arn_comm_schema', 'arn_calendar_objects', 'arn_calendar_versions', 'arn_calendar_audit', 'arn_calendar_notifications', 'arn_calendar_schema' ) as $suffix ) {\n\t\t\t$dropped = $db->query( $db->prepare( 'DROP TABLE IF EXISTS %i', $prefix . $suffix ) );\n\t\t\t$drop_report[] = array( 'suffix' => $suffix, 'result' => $dropped, 'error' => $db->last_error );\n\t\t\t$dropped_all = false !== $dropped && '' === $db->last_error && $dropped_all;\n\t\t}\n\t\t$remaining = $db->get_col( $db->prepare( 'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME LIKE %s', $db->esc_like( $prefix ) . '%' ) );\n\t\tWP_CLI::log( 'F112 cleanup diagnostic: ' . json_encode( array( 'module' => $module, 'failure' => $failure?->getMessage(), 'state_before' => $state_before_cleanup, 'rollback_result' => $rollback_result, 'rollback_error' => $rollback_error, 'drops' => $drop_report, 'remaining' => $remaining, 'last_error' => $db->last_error ), JSON_THROW_ON_ERROR ) );\n\t\t$assert( $dropped_all && array() === $remaining && '' === $db->last_error, 'nenhuma tabela do prefixo exclusivo fica por remover' );"""
+          new = """\t\t$dropped_all = true;\n\t\t$drop_report = array();\n\t\tforeach ( array( 'arn_authz_grants', 'arn_authz_audit', 'arn_authz_accounts', 'arn_authz_schema', 'arn_org_header', 'arn_org_units', 'arn_org_audit', 'arn_comm_objects', 'arn_comm_versions', 'arn_comm_audit', 'arn_comm_notifications', 'arn_comm_schema', 'arn_calendar_objects', 'arn_calendar_versions', 'arn_calendar_audit', 'arn_calendar_notifications', 'arn_calendar_schema' ) as $suffix ) {\n\t\t\t$dropped = $db->query( $db->prepare( 'DROP TABLE IF EXISTS %i', $prefix . $suffix ) );\n\t\t\t$drop_report[] = array( 'suffix' => $suffix, 'result' => $dropped, 'error' => $db->last_error );\n\t\t\t$dropped_all = false !== $dropped && '' === $db->last_error && $dropped_all;\n\t\t}\n\t\t$remaining_sql = $db->prepare( 'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME LIKE %s', $db->esc_like( $prefix ) . '%' );\n\t\tWP_CLI::log( 'F112 remaining SQL: ' . $remaining_sql );\n\t\t$remaining = $db->get_col( $remaining_sql );\n\t\tWP_CLI::log( 'F112 cleanup diagnostic: ' . json_encode( array( 'module' => $module, 'failure' => $failure?->getMessage(), 'state_before' => $state_before_cleanup, 'rollback_result' => $rollback_result, 'rollback_error' => $rollback_error, 'drops' => $drop_report, 'remaining' => $remaining, 'last_error' => $db->last_error ), JSON_THROW_ON_ERROR ) );\n\t\t$assert( $dropped_all && array() === $remaining && '' === $db->last_error, 'nenhuma tabela do prefixo exclusivo fica por remover' );"""
           if text.count(old) != 1:
               raise SystemExit('contexto de limpeza nao encontrado')
           path.write_text(text.replace(old, new, 1), encoding='utf-8')
 
           path = Path('wp-content/plugins/arn-intranet-core/src/Identity/IdentityWpdb.php')
           text = path.read_text(encoding='utf-8')
-          old = """\t\t$guard = function ( $filtered ) use ( $sql ) {\n\t\t\tif ( ! is_string( $filtered ) || $filtered !== $sql ) {\n\t\t\t\t$this->pre_execution_rejection = true;"""
-          new = """\t\t$guard = function ( $filtered ) use ( $sql ) {\n\t\t\tif ( ! is_string( $filtered ) || $filtered !== $sql ) {\n\t\t\t\tif ( class_exists( 'WP_CLI' ) ) {\n\t\t\t\t\tWP_CLI::log( 'IdentityWpdb query mutation: ' . json_encode( array( 'original' => $sql, 'filtered' => $filtered ), JSON_THROW_ON_ERROR ) );\n\t\t\t\t}\n\t\t\t\t$this->pre_execution_rejection = true;"""
+          old = """\t\ttry {\n\t\t\t$result = $this->executeParentQuery( $prepared );\n\t\t} catch ( Throwable ) {\n\t\t\t--$this->query_depth;"""
+          new = """\t\ttry {\n\t\t\t$result = $this->executeParentQuery( $prepared );\n\t\t} catch ( Throwable $query_error ) {\n\t\t\tif ( class_exists( 'WP_CLI' ) ) {\n\t\t\t\tWP_CLI::log( 'IdentityWpdb execution error: ' . json_encode( array( 'sql' => $prepared, 'class' => get_class( $query_error ), 'message' => $query_error->getMessage() ), JSON_THROW_ON_ERROR ) );\n\t\t\t}\n\t\t\t--$this->query_depth;"""
           if text.count(old) != 1:
-              raise SystemExit('guarda SQL nao encontrada')
+              raise SystemExit('catch principal da query nao encontrado')
           path.write_text(text.replace(old, new, 1), encoding='utf-8')
           PY
       - name: Activar laboratório local
