@@ -89,6 +89,11 @@ jobs:
               1,
           )
           content = content.replace(
+              "\t * @param mixed  $dbh Ligação nativa.\n\t */\n\tpublic function select",
+              "\t * @param mixed  $dbh Ligação nativa.\n\t * @throws RuntimeException Depois da inicialização da ligação.\n\t */\n\tpublic function select",
+              1,
+          )
+          content = content.replace(
               "\t/**\n\t * @param string $name Propriedade alterada.",
               "\t/**\n\t * Impede a substituição externa do handle nativo.\n\t *\n\t * @param string $name Propriedade alterada.",
               1,
