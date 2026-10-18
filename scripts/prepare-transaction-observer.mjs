@@ -99,10 +99,10 @@ async function enablePerformanceSchema(run, container, wait) {
 }
 
 function configureObserver(run, container) {
-  const script = String.raw`set -eu
-: "${MYSQL_ROOT_PASSWORD:?}"
-: "${MYSQL_USER:?}"
-: "${MYSQL_PASSWORD:?}"
+  const script = `set -eu
+: "\${MYSQL_ROOT_PASSWORD:?}"
+: "\${MYSQL_USER:?}"
+: "\${MYSQL_PASSWORD:?}"
 case "$MYSQL_USER" in
   *[!A-Za-z0-9_]*|'') exit 64 ;;
 esac
