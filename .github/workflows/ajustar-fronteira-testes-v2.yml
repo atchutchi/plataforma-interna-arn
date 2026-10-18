@@ -98,7 +98,7 @@ jobs:
           \t}
 
           \t/** Fecha a ligação simulada e permite testar a invalidação da fronteira. */
-          \tpublic function close(): bool {
+          \tpublic function close() {
           \t\t$this->ready = false;
           \t\t$this->dbh   = null;
           \t\treturn true;
