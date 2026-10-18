@@ -104,7 +104,7 @@ final class IdentityWpdb extends \wpdb {
 			return false;
 		}
 
-		if ( self::changesAutocommit( $normalized ) || self::manipulatesSavepoints( $normalized ) || self::releasesConnection( $normalized ) ) {
+		if ( self::changesAutocommit( $normalized ) || self::changesCompletionType( $normalized ) || self::manipulatesSavepoints( $normalized ) || self::releasesConnection( $normalized ) ) {
 			return $this->refuseTransactionCommand();
 		}
 
@@ -112,22 +112,7 @@ final class IdentityWpdb extends \wpdb {
 			return $this->refuseTransactionCommand();
 		}
 
-		if ( 'begin' === $command ) {
-			if ( null !== $this->transaction_guard ) {
-				return $this->refuseTransactionCommand();
-			}
-			if ( $this->hasDedicatedConnection() ) {
-				try {
-					if ( $this->inTransaction() ) {
-						return $this->refuseTransactionCommand();
-					}
-				} catch ( RuntimeException ) {
-					return $this->refuseTransactionCommand();
-				}
-			}
-		}
-
-		if ( in_array( $command, array( 'commit', 'rollback' ), true ) && null === $this->transaction_guard && $this->hasDedicatedConnection() ) {
+		if ( null === $this->transaction_guard && $this->hasDedicatedConnection() ) {
 			try {
 				if ( $this->inTransaction() ) {
 					return $this->refuseTransactionCommand();
@@ -137,7 +122,12 @@ final class IdentityWpdb extends \wpdb {
 			}
 		}
 
-		$result = parent::query( $query );
+		$server_query = $query;
+		if ( in_array( $command, array( 'commit', 'rollback' ), true ) && ! self::chainsTransaction( $normalized ) ) {
+			$server_query = 'commit' === $command ? 'COMMIT NO CHAIN' : 'ROLLBACK NO CHAIN';
+		}
+
+		$result = parent::query( $server_query );
 		if ( false === $result || '' !== $this->last_error ) {
 			if ( in_array( $command, array( 'commit', 'rollback' ), true ) ) {
 				$this->transaction_guard = null;
@@ -147,7 +137,7 @@ final class IdentityWpdb extends \wpdb {
 
 		if ( 'begin' === $command ) {
 			if ( ! $this->installTransactionGuard() ) {
-				$this->directStatement( 'ROLLBACK' );
+				$this->directStatement( 'ROLLBACK NO CHAIN' );
 				$this->transaction_guard = null;
 				$this->last_error        = 'Operação transaccional não confirmada.';
 				return false;
@@ -158,7 +148,7 @@ final class IdentityWpdb extends \wpdb {
 		if ( in_array( $command, array( 'commit', 'rollback' ), true ) ) {
 			$this->transaction_guard = null;
 			if ( self::chainsTransaction( $normalized ) && ! $this->installTransactionGuard() ) {
-				$this->directStatement( 'ROLLBACK' );
+				$this->directStatement( 'ROLLBACK NO CHAIN' );
 				$this->last_error = 'Operação transaccional não confirmada.';
 				return false;
 			}
@@ -342,7 +332,7 @@ final class IdentityWpdb extends \wpdb {
 				'errno'   => (int) $this->dbh->errno,
 				'result'  => $result,
 			);
-		} catch ( \mysqli_sql_exception $exception ) {
+		} catch ( Throwable $exception ) {
 			return array(
 				'success' => false,
 				'errno'   => (int) $exception->getCode(),
@@ -412,6 +402,15 @@ final class IdentityWpdb extends \wpdb {
 	 */
 	private static function changesAutocommit( string $normalized ): bool {
 		return 1 === preg_match( '/^SET\s+(?:(?:SESSION|LOCAL)\s+|@@SESSION\.)?AUTOCOMMIT\s*=/', $normalized );
+	}
+
+	/**
+	 * A ligação força NO CHAIN e não aceita defaults de conclusão externos.
+	 *
+	 * @param string $normalized SQL normalizado.
+	 */
+	private static function changesCompletionType( string $normalized ): bool {
+		return 1 === preg_match( '/^SET\s+(?:(?:SESSION|LOCAL)\s+|@@SESSION\.)?COMPLETION_TYPE\s*=/', $normalized );
 	}
 
 	/**
