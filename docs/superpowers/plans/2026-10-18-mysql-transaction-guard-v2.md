@@ -35,18 +35,18 @@
 **Ficheiros:**
 - Criar: `tests/integration/mysql-transaction-guard-v2.php`
 - Criar: `tests/phpunit/IdentityWpdbTransactionGuardTest.php`
-- Modificar: `.github/workflows/mysql-transactions.yml`
+- Criar: `.github/workflows/mysql-transactions-v2.yml`
 
 **Interfaces:**
 - Consome: `IdentityWpdb::query()` e o futuro `IdentityWpdb::inTransaction()`.
 - Produz: cenários RED determinísticos para a implementação da Tarefa 2.
 
-- [ ] Criar teste PHPUnit que exige recusa sem ligação e ausência de reconexão.
-- [ ] Criar integração MySQL com prefixo exclusivo e sentinelas transacionais.
-- [ ] Demonstrar RED para `START TRANSACTION` repetido, DDL por `query()`, DDL pelo handle, `COMMIT AND CHAIN`, `CREATE TEMPORARY TABLE`, `SET autocommit=0` e ligação fechada.
-- [ ] Ligar o teste à workflow MySQL isolada.
-- [ ] Executar a workflow e confirmar falha pelos comportamentos ausentes, não por erro de sintaxe ou configuração.
-- [ ] Commit: `test: reproduzir fronteiras transaccionais inseguras`.
+- [x] Criar teste PHPUnit que exige recusa sem ligação e ausência de reconexão.
+- [x] Criar integração MySQL com prefixo exclusivo e sentinelas transacionais.
+- [x] Demonstrar RED para `START TRANSACTION` repetido, DDL por `query()`, DDL pelo handle, `COMMIT AND CHAIN`, `CREATE TEMPORARY TABLE`, `SET autocommit=0` e ligação fechada.
+- [x] Ligar o teste à workflow MySQL isolada.
+- [x] Executar a workflow e confirmar falha pelos comportamentos ausentes, não por erro de sintaxe ou configuração.
+- [x] Commit RED publicado na branch.
 
 ### Tarefa 2: Implementar a guarda de savepoint
 
@@ -59,16 +59,18 @@
 - Produz: `public function inTransaction(): bool`.
 - Produz: tracking interno da guarda privada criada em `START TRANSACTION` e após `AND CHAIN`.
 
-- [ ] Executar os testes da Tarefa 1 e registar RED.
-- [ ] Implementar sonda de savepoint com nome privado seguro.
-- [ ] Implementar criação, validação e remoção da guarda.
-- [ ] Recusar `START TRANSACTION` aninhado antes da execução.
-- [ ] Recusar dentro da transação controlada DDL e comandos conhecidos por commit implícito.
-- [ ] Recusar alterações de `autocommit` nesta ligação dedicada.
-- [ ] Suportar `COMMIT AND CHAIN` e `ROLLBACK AND CHAIN` com nova guarda.
-- [ ] Tratar erro 1305 da sonda como ausência de savepoint apenas no contexto esperado.
-- [ ] Executar testes focados e suite completa.
-- [ ] Commit: `fix: controlar transaccoes por guarda de savepoint`.
+- [x] Executar os testes da Tarefa 1 e registar RED.
+- [x] Implementar sonda de savepoint com nome privado seguro.
+- [x] Implementar criação, validação e remoção da guarda.
+- [x] Recusar `START TRANSACTION` aninhado antes da execução.
+- [x] Recusar dentro da transação controlada DDL e comandos conhecidos por commit implícito.
+- [x] Recusar alterações de `autocommit` nesta ligação dedicada.
+- [x] Validar `completion_type` e recusar alterações pela API.
+- [x] Suportar `COMMIT AND CHAIN` e `ROLLBACK AND CHAIN` com nova guarda.
+- [x] Tratar erro 1305 da sonda como ausência de savepoint apenas no contexto esperado.
+- [x] Normalizar perda de ligação e falhas mysqli para erro controlado.
+- [x] Preservar a instrução original nos hooks `query` do WordPress.
+- [x] Executar testes focados e suite completa.
 
 ### Tarefa 3: Migrar consumidores para a API única
 
@@ -80,22 +82,23 @@
 - Consome: `IdentityWpdb::inTransaction(): bool`.
 - Produz: nenhuma consulta direta a variável específica de MariaDB.
 
-- [ ] Substituir cada leitura SQL pelo método `inTransaction()`.
-- [ ] Manter mensagens públicas constantes e sem dados SQL.
-- [ ] Executar os testes de cada módulo afetado.
-- [ ] Confirmar por pesquisa que não resta uso de `@@session.in_transaction` no produto.
-- [ ] Commit: `refactor: centralizar estado transaccional na ligacao dedicada`.
+- [x] Substituir cada leitura SQL pelo método `inTransaction()`.
+- [x] Manter mensagens públicas constantes e sem dados SQL.
+- [x] Executar os testes de cada módulo afetado.
+- [x] Confirmar por pesquisa que não resta uso de `@@session.in_transaction` ou `@@in_transaction` no produto.
+- [x] Commit de migração publicado na branch.
 
 ### Tarefa 4: Verificação transversal e entrega
 
 **Ficheiros:**
-- Modificar: `docs/revisao-pr39-e-issues36-37-2026-10-16.md`, apenas com um aditamento da entrega V2.
-- Modificar: `README.md`, apenas o estado da Issue #36 e próximo passo.
+- Criar: `docs/correcao-transaccional-v2-2026-10-18.md`.
+- Atualizar `README.md` apenas depois da integração, para não apresentar o candidato como concluído antes da revisão.
 
-- [ ] Executar Node, lint, build, PHPUnit e PHPCS.
-- [ ] Executar integrações MariaDB existentes e workflow MySQL 8.0.
-- [ ] Confirmar que os seis contraexemplos da revisão anterior estão cobertos.
-- [ ] Confirmar limpeza de tabelas e prefixos exclusivos.
+- [x] Executar Node, lint, build, PHPUnit e PHPCS.
+- [x] Executar integrações MariaDB existentes e workflow MySQL 8.0.
+- [x] Confirmar que os seis contraexemplos da revisão anterior estão cobertos.
+- [x] Confirmar limpeza de tabelas e prefixos exclusivos.
+- [x] Registar evidência e limites no documento da entrega V2.
 - [ ] Abrir PR contra `main`, ligada à Issue #36.
-- [ ] Exigir CI verde no SHA exato e revisão independente antes do merge.
-- [ ] Commit: `docs: registar correcao transaccional v2`.
+- [ ] Exigir CI verde no SHA exato da PR e revisão independente antes do merge.
+- [ ] Atualizar o README depois da integração revista.
