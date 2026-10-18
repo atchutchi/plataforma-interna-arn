@@ -111,7 +111,7 @@ final class IdentityWpdb extends \wpdb {
 				throw new RuntimeException( 'Estado transaccional indisponível.' );
 			}
 
-			$sql = <<<'SQL'
+			$sql       = <<<'SQL'
 SELECT
     target.INSTRUMENTED,
     instrument.ENABLED,
@@ -208,9 +208,10 @@ SQL;
 			return $this->transaction_observer;
 		}
 
-		$observer        = null;
-		$reporting       = ( new \mysqli_driver() )->report_mode; // phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_driver -- Preserva configuração global.
-		$previous_errors = set_error_handler(
+		$observer  = null;
+		$reporting = ( new \mysqli_driver() )->report_mode; // phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_driver -- Preserva configuração global.
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Converte warnings da ligação observadora em erro estático.
+		set_error_handler(
 			static function (): never {
 				throw new RuntimeException( 'Estado transaccional indisponível.' );
 			}
@@ -252,9 +253,6 @@ SQL;
 		} finally {
 			mysqli_report( $reporting ); // phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_report -- Restaura configuração global.
 			restore_error_handler();
-			if ( null !== $previous_errors ) {
-				set_error_handler( $previous_errors );
-			}
 		}
 	}
 
