@@ -168,7 +168,7 @@ final class WpdbIdentityLinkRepositoryTest extends TestCase {
 		self::assertStringStartsWith( 'INSERT INTO `wp_arn_identity_audit`', $queries[ $start + 2 ] );
 		self::assertStringNotContainsString( 'opaque-sub', $queries[ $start + 2 ] );
 		self::assertStringNotContainsString( 'accounts.google.com', $queries[ $start + 2 ] );
-		self::assertSame( 'COMMIT', $queries[ $start + 3 ] );
+		self::assertSame( 'COMMIT AND NO CHAIN NO RELEASE', $queries[ $start + 3 ] );
 		self::assertFalse( $this->database->suppressed );
 	}
 
@@ -185,8 +185,8 @@ final class WpdbIdentityLinkRepositoryTest extends TestCase {
 			self::assertStringNotContainsString( 'privado', $error->getMessage() );
 			self::assertNull( $error->getPrevious() );
 		}
-		self::assertSame( 'ROLLBACK', end( $this->database->queries ) );
-		self::assertNotContains( 'COMMIT', $this->database->queries );
+		self::assertSame( 'ROLLBACK AND NO CHAIN NO RELEASE', end( $this->database->queries ) );
+		self::assertNotContains( 'COMMIT AND NO CHAIN NO RELEASE', $this->database->queries );
 		self::assertFalse( $this->database->suppressed );
 	}
 
@@ -200,7 +200,7 @@ final class WpdbIdentityLinkRepositoryTest extends TestCase {
 			$repository->create( new LocalIdentityLink( 12, 'accounts.google.com', 'opaque-sub', false, false ), 7 );
 			self::fail( 'O conflito foi aceite.' );
 		} catch ( RuntimeException ) {
-			self::assertSame( 'ROLLBACK', end( $this->database->queries ) );
+			self::assertSame( 'ROLLBACK AND NO CHAIN NO RELEASE', end( $this->database->queries ) );
 			self::assertStringNotContainsString( 'INSERT INTO `wp_arn_identity_audit`', implode( '\n', $this->database->queries ) );
 		}
 	}
@@ -215,7 +215,7 @@ final class WpdbIdentityLinkRepositoryTest extends TestCase {
 		$sql = implode( '\n', $this->database->queries );
 		self::assertStringContainsString( 'FOR UPDATE', $sql );
 		self::assertStringContainsString( "'activate', 0, 0, 1, 1", $sql );
-		self::assertSame( 'COMMIT', end( $this->database->queries ) );
+		self::assertSame( 'COMMIT AND NO CHAIN NO RELEASE', end( $this->database->queries ) );
 	}
 
 	/**
@@ -227,7 +227,7 @@ final class WpdbIdentityLinkRepositoryTest extends TestCase {
 			$repository->changeState( 12, true, true, 7 );
 			self::fail( 'Foi activado um vínculo ausente.' );
 		} catch ( RuntimeException ) {
-			self::assertSame( 'ROLLBACK', end( $this->database->queries ) );
+			self::assertSame( 'ROLLBACK AND NO CHAIN NO RELEASE', end( $this->database->queries ) );
 			self::assertStringNotContainsString( 'UPDATE ', implode( '\n', $this->database->queries ) );
 		}
 	}
@@ -243,8 +243,8 @@ final class WpdbIdentityLinkRepositoryTest extends TestCase {
 			$repository->changeState( 12, true, true, 7 );
 			self::fail( 'A alteração foi confirmada sem auditoria.' );
 		} catch ( RuntimeException ) {
-			self::assertSame( 'ROLLBACK', end( $this->database->queries ) );
-			self::assertNotContains( 'COMMIT', $this->database->queries );
+			self::assertSame( 'ROLLBACK AND NO CHAIN NO RELEASE', end( $this->database->queries ) );
+			self::assertNotContains( 'COMMIT AND NO CHAIN NO RELEASE', $this->database->queries );
 		}
 	}
 
@@ -259,7 +259,7 @@ final class WpdbIdentityLinkRepositoryTest extends TestCase {
 			$repository->changeState( 12, true, true, 7 );
 			self::fail( 'Uma escrita falhada foi confirmada.' );
 		} catch ( RuntimeException ) {
-			self::assertSame( 'ROLLBACK', end( $this->database->queries ) );
+			self::assertSame( 'ROLLBACK AND NO CHAIN NO RELEASE', end( $this->database->queries ) );
 			self::assertStringNotContainsString( 'INSERT INTO `wp_arn_identity_audit`', implode( '\n', $this->database->queries ) );
 		}
 	}
@@ -274,7 +274,7 @@ final class WpdbIdentityLinkRepositoryTest extends TestCase {
 			$repository->create( new LocalIdentityLink( 12, 'accounts.google.com', 'opaque-sub', false, false ), 7 );
 			self::fail( 'COMMIT falhado foi apresentado como sucesso.' );
 		} catch ( RuntimeException ) {
-			self::assertSame( 'ROLLBACK', end( $this->database->queries ) );
+			self::assertSame( 'ROLLBACK AND NO CHAIN NO RELEASE', end( $this->database->queries ) );
 		}
 	}
 
@@ -289,8 +289,8 @@ final class WpdbIdentityLinkRepositoryTest extends TestCase {
 			self::fail( 'Uma transacção prévia não foi respeitada.' );
 		} catch ( RuntimeException ) {
 			self::assertNotContains( 'START TRANSACTION', $this->database->queries );
-			self::assertNotContains( 'COMMIT', $this->database->queries );
-			self::assertNotContains( 'ROLLBACK', $this->database->queries );
+			self::assertNotContains( 'COMMIT AND NO CHAIN NO RELEASE', $this->database->queries );
+			self::assertNotContains( 'ROLLBACK AND NO CHAIN NO RELEASE', $this->database->queries );
 		}
 	}
 
@@ -305,7 +305,7 @@ final class WpdbIdentityLinkRepositoryTest extends TestCase {
 			self::fail( 'Foi escrita identidade sem transacção iniciada.' );
 		} catch ( RuntimeException ) {
 			self::assertStringNotContainsString( 'INSERT ', implode( '\n', $this->database->queries ) );
-			self::assertNotContains( 'ROLLBACK', $this->database->queries );
+			self::assertNotContains( 'ROLLBACK AND NO CHAIN NO RELEASE', $this->database->queries );
 		}
 	}
 
@@ -319,7 +319,7 @@ final class WpdbIdentityLinkRepositoryTest extends TestCase {
 		$sql = implode( '\n', $this->database->queries );
 		self::assertStringContainsString( "'revoke', 1, 1, 0, 0", $sql );
 		self::assertStringNotContainsString( 'DELETE ', $sql );
-		self::assertSame( 'COMMIT', end( $this->database->queries ) );
+		self::assertSame( 'COMMIT AND NO CHAIN NO RELEASE', end( $this->database->queries ) );
 	}
 
 	/**
@@ -332,7 +332,7 @@ final class WpdbIdentityLinkRepositoryTest extends TestCase {
 		$sql = implode( '\n', $this->database->queries );
 		self::assertStringNotContainsString( 'UPDATE ', $sql );
 		self::assertStringNotContainsString( 'INSERT INTO `wp_arn_identity_audit`', $sql );
-		self::assertSame( 'COMMIT', end( $this->database->queries ) );
+		self::assertSame( 'COMMIT AND NO CHAIN NO RELEASE', end( $this->database->queries ) );
 	}
 
 	/**

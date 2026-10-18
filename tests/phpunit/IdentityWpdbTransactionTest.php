@@ -25,9 +25,11 @@ final class IdentityWpdbTransactionTest extends TestCase {
 		self::assertFalse( $database->check_connection( false ) );
 	}
 
-	/** Estado sem ligação nunca é apresentado como seguro. */
-	public function testStateRefusesWithoutDedicatedConnection(): void {
+	/** Estado depois do fecho nunca é apresentado como seguro. */
+	public function testStateRefusesAfterDedicatedConnectionCloses(): void {
 		$database = new IdentityWpdb( '', '', '', '' );
+		self::assertFalse( $database->inTransaction() );
+		self::assertTrue( $database->close() );
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionMessage( 'Estado transaccional indisponível.' );
 		$database->inTransaction();

@@ -75,8 +75,8 @@ final class IdentityWpdb extends \wpdb {
 		$this->connection_attempted    = true;
 		$this->connection_initializing = true;
 
-		$show_errors      = $this->hide_errors();
-		$suppress_errors  = $this->suppress_errors( true );
+		$show_errors     = $this->hide_errors();
+		$suppress_errors = $this->suppress_errors( true );
 		// phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_driver -- Preserva o modo global.
 		$mysqli_reporting = ( new \mysqli_driver() )->report_mode;
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Impede warnings com dados da ligação.
@@ -99,6 +99,7 @@ final class IdentityWpdb extends \wpdb {
 			$this->boundary()->markUnavailable();
 			try {
 				parent::close();
+			// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Limpeza sem propagar detalhes.
 			} catch ( Throwable ) {
 				// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Limpeza sem propagar detalhes.
 				// Não propagar detalhes de uma ligação parcialmente aberta.
@@ -211,7 +212,7 @@ final class IdentityWpdb extends \wpdb {
 	 */
 	public function close() {
 		$this->boundary()->markUnavailable();
-		$closed       = parent::close();
+		$closed      = parent::close();
 		$this->ready = false;
 		return $closed;
 	}
@@ -222,6 +223,7 @@ final class IdentityWpdb extends \wpdb {
 	 * @param mixed       $dbh Ligação nativa usada pelo construtor WordPress.
 	 * @param string|null $charset Charset.
 	 * @param string|null $collate Collation.
+	 * @throws RuntimeException Depois da inicialização da ligação.
 	 */
 	public function set_charset( $dbh, $charset = null, $collate = null ) {
 		$this->assertConnectionInitialization();
@@ -244,6 +246,7 @@ final class IdentityWpdb extends \wpdb {
 	 *
 	 * @param string $db Base seleccionada.
 	 * @param mixed  $dbh Ligação nativa.
+	 * @throws RuntimeException Depois da inicialização da ligação.
 	 */
 	public function select( $db, $dbh = null ) {
 		$this->assertConnectionInitialization();
@@ -255,6 +258,7 @@ final class IdentityWpdb extends \wpdb {
 	 *
 	 * @param string $name Propriedade pedida.
 	 * @return mixed Valor permitido.
+	 * @throws RuntimeException Quando o handle nativo é pedido.
 	 */
 	public function __get( $name ) {
 		if ( 'dbh' === $name ) {
@@ -275,8 +279,11 @@ final class IdentityWpdb extends \wpdb {
 	}
 
 	/**
+	 * Impede a substituição externa do handle nativo.
+	 *
 	 * @param string $name Propriedade alterada.
 	 * @param mixed  $value Valor delegado quando permitido.
+	 * @throws RuntimeException Quando o handle nativo é alterado.
 	 */
 	public function __set( $name, $value ) {
 		if ( 'dbh' === $name ) {
@@ -290,6 +297,7 @@ final class IdentityWpdb extends \wpdb {
 	 * Impede a remoção externa do handle nativo.
 	 *
 	 * @param string $name Propriedade removida.
+	 * @throws RuntimeException Quando o handle nativo é removido.
 	 */
 	public function __unset( $name ) {
 		if ( 'dbh' === $name ) {
@@ -440,46 +448,35 @@ final class IdentityWpdb extends \wpdb {
 	}
 
 	/**
-	 * Executa uma fronteira canónica sem filtros SQL.
+	 * Executa uma fronteira canónica com a mesma guarda de imutabilidade SQL.
 	 *
 	 * @param string $sql Fronteira ou savepoint canónico.
 	 * @return int|false Zero quando confirmada, false quando recusada.
 	 */
 	private function executeBoundaryCommand( string $sql ): int|false {
-		$this->flush();
-		$this->last_query = $sql;
-		$this->func_call  = "\$db->query(\"$sql\")";
-		++$this->num_queries;
-
-		if ( ! $this->ready || ! $this->dbh instanceof \mysqli ) {
+		$this->pre_execution_rejection = false;
+		++$this->query_depth;
+		try {
+			$result = $this->executeParentQuery( $sql );
+		} catch ( Throwable ) {
+			--$this->query_depth;
+			if ( $this->pre_execution_rejection ) {
+				$this->pre_execution_rejection = false;
+				try {
+					$this->boundary()->cancelPrepared();
+				} catch ( Throwable ) {
+					$this->boundary()->markUnavailable();
+				}
+				$this->last_error = 'Alteração da consulta dedicada recusada.';
+				return false;
+			}
 			$this->confirmQuery( false );
-			$this->last_error = 'Ligação dedicada indisponível.';
+			$this->last_error = 'Fronteira transaccional não confirmada.';
 			return false;
 		}
+		--$this->query_depth;
 
-		// phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_driver -- Isola o modo global.
-		$reporting = ( new \mysqli_driver() )->report_mode;
-		// phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_report -- Falha convertida em resultado wpdb.
-		mysqli_report( MYSQLI_REPORT_OFF );
-		try {
-			$result = match ( $sql ) {
-				'START TRANSACTION'                => $this->dbh->begin_transaction(),
-				'COMMIT AND NO CHAIN NO RELEASE' => $this->dbh->commit(
-					MYSQLI_TRANS_COR_AND_NO_CHAIN | MYSQLI_TRANS_COR_NO_RELEASE
-				),
-				'ROLLBACK AND NO CHAIN NO RELEASE' => $this->dbh->rollback(
-					MYSQLI_TRANS_COR_AND_NO_CHAIN | MYSQLI_TRANS_COR_NO_RELEASE
-				),
-				default                             => $this->dbh->query( $sql ),
-			};
-		} catch ( Throwable ) {
-			$result = false;
-		} finally {
-			// phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_report -- Restaura o modo global.
-			mysqli_report( $reporting );
-		}
-
-		$success = true === $result;
+		$success = false !== $result && '' === $this->last_error;
 		$this->confirmQuery( $success );
 		$this->last_error = $success ? '' : 'Fronteira transaccional não confirmada.';
 		return $success ? 0 : false;
@@ -492,7 +489,7 @@ final class IdentityWpdb extends \wpdb {
 	 */
 	private function confirmQuery( bool $success ): void {
 		try {
-			$this->boundary()->confirm( $success, $this->connectionLost() );
+			$this->boundary()->confirm( $success, $success ? false : $this->connectionLost() );
 		} catch ( Throwable ) {
 			$this->boundary()->markUnavailable();
 		}

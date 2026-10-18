@@ -11,6 +11,9 @@ declare(strict_types=1);
 // phpcs:disable WordPress.NamingConventions.ValidVariableName.PropertyNotSnakeCase
 // O nome corresponde ao core WordPress.
 // phpcs:disable PEAR.NamingConventions.ValidClassName.StartWithCapital
+// phpcs:disable Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+// phpcs:disable WordPress.DB.RestrictedFunctions.mysql_mysqli_report
+// phpcs:disable WordPress.DB.RestrictedFunctions.mysql_mysqli_init
 
 /**
  * Não representa uma base de dados nem prova as constraints do servidor.
@@ -133,7 +136,29 @@ class wpdb {
 	 * @param string $database Nome fictício.
 	 * @param string $host Host fictício.
 	 */
-	public function __construct( string $user = '', string $password = '', string $database = '', string $host = '' ) {}
+	public function __construct( string $user = '', string $password = '', string $database = '', string $host = '' ) {
+		$this->ready = true;
+		if ( function_exists( 'mysqli_init' ) ) {
+			$reporting = ( new mysqli_driver() )->report_mode;
+			mysqli_report( MYSQLI_REPORT_OFF );
+			try {
+				$this->dbh = mysqli_init();
+			} finally {
+				mysqli_report( $reporting );
+			}
+		}
+		$boundary = new \Arn\Intranet\Identity\TransactionBoundary();
+		$boundary->markReady();
+		$property = new ReflectionProperty( \Arn\Intranet\Identity\IdentityWpdb::class, 'transaction_boundary' );
+		$property->setValue( $this, $boundary );
+	}
+
+	/** Fecha a ligação simulada e permite testar a invalidação da fronteira. */
+	public function close() {
+		$this->ready = false;
+		$this->dbh   = null;
+		return true;
+	}
 
 	/**
 	 * Preparação mínima para verificar os bindings emitidos pelo adaptador.
