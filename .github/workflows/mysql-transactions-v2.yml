@@ -48,3 +48,11 @@ jobs:
           ARN_TX_TEST_HOST: 127.0.0.1:3306
           ARN_TX_WPDB: /tmp/class-wpdb.php
         run: php tests/integration/mysql-transaction-guard-v2.php /tmp/class-wpdb.php
+      - name: Executar persistência People exclusiva
+        env:
+          ARN_TX_TEST_USER: arn_tx
+          ARN_TX_TEST_PASSWORD: test
+          ARN_TX_TEST_NAME: arn_tx_test
+          ARN_TX_TEST_HOST: 127.0.0.1:3306
+          ARN_TX_WPDB: /tmp/class-wpdb.php
+        run: php tests/integration/mysql-people-transaction.php /tmp/class-wpdb.php
