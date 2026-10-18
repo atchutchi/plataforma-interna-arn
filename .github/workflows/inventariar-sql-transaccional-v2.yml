@@ -1,0 +1,21 @@
+name: Inventariar SQL transaccional v2
+
+on:
+  push:
+    branches:
+      - fix/atchutchi-mysql-transaction-boundary-v2
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Listar comandos relevantes
+        shell: bash
+        run: |
+          set -euo pipefail
+          rg -n --glob '*.php' "SET (SESSION )?(TRANSACTION|innodb_lock_wait_timeout)|START TRANSACTION|BEGIN( WORK)?|COMMIT|ROLLBACK|SAVEPOINT|CREATE TRIGGER|DROP TRIGGER|LOCK TABLES|UNLOCK TABLES|CALL |PREPARE |EXECUTE |DEALLOCATE" wp-content tests || true
