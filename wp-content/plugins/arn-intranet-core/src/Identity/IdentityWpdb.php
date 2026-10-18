@@ -96,12 +96,45 @@ final class IdentityWpdb extends \wpdb {
 	 * @return bool|int
 	 */
 	public function query( $query ) {
-		$sql     = is_string( $query ) ? $query : '';
-		$command = self::transactionCommand( $sql );
+		$sql        = is_string( $query ) ? $query : '';
+		$normalized = self::normalizeStatement( $sql );
+		$command    = self::transactionCommand( $normalized );
 
-		if ( 'begin' === $command && null !== $this->transaction_guard ) {
-			$this->last_error = 'Operação transaccional recusada.';
+		if ( null !== $this->transaction_guard && ! $this->verifyOwnedTransaction() ) {
 			return false;
+		}
+
+		if ( self::changesAutocommit( $normalized ) || self::manipulatesSavepoints( $normalized ) || self::releasesConnection( $normalized ) ) {
+			return $this->refuseTransactionCommand();
+		}
+
+		if ( null !== $this->transaction_guard && self::causesImplicitCommit( $normalized ) ) {
+			return $this->refuseTransactionCommand();
+		}
+
+		if ( 'begin' === $command ) {
+			if ( null !== $this->transaction_guard ) {
+				return $this->refuseTransactionCommand();
+			}
+			if ( $this->hasDedicatedConnection() ) {
+				try {
+					if ( $this->inTransaction() ) {
+						return $this->refuseTransactionCommand();
+					}
+				} catch ( RuntimeException ) {
+					return $this->refuseTransactionCommand();
+				}
+			}
+		}
+
+		if ( in_array( $command, array( 'commit', 'rollback' ), true ) && null === $this->transaction_guard && $this->hasDedicatedConnection() ) {
+			try {
+				if ( $this->inTransaction() ) {
+					return $this->refuseTransactionCommand();
+				}
+			} catch ( RuntimeException ) {
+				return $this->refuseTransactionCommand();
+			}
 		}
 
 		$result = parent::query( $query );
@@ -124,7 +157,7 @@ final class IdentityWpdb extends \wpdb {
 
 		if ( in_array( $command, array( 'commit', 'rollback' ), true ) ) {
 			$this->transaction_guard = null;
-			if ( self::chainsTransaction( $sql ) && ! $this->installTransactionGuard() ) {
+			if ( self::chainsTransaction( $normalized ) && ! $this->installTransactionGuard() ) {
 				$this->directStatement( 'ROLLBACK' );
 				$this->last_error = 'Operação transaccional não confirmada.';
 				return false;
@@ -156,6 +189,32 @@ final class IdentityWpdb extends \wpdb {
 	}
 
 	/**
+	 * Verifica a guarda antes de qualquer operação dentro da transacção.
+	 */
+	private function verifyOwnedTransaction(): bool {
+		if ( ! $this->hasDedicatedConnection() ) {
+			return true;
+		}
+		try {
+			$this->validateTransactionGuard();
+			return true;
+		} catch ( RuntimeException ) {
+			$this->last_error = 'Estado transaccional indisponível.';
+			return false;
+		}
+	}
+
+	/**
+	 * Recusa uma instrução sem a enviar ao motor.
+	 *
+	 * @return false
+	 */
+	private function refuseTransactionCommand(): bool {
+		$this->last_error = 'Operação transaccional recusada.';
+		return false;
+	}
+
+	/**
 	 * Instala o savepoint privado depois de START ou de AND CHAIN.
 	 */
 	private function installTransactionGuard(): bool {
@@ -178,6 +237,9 @@ final class IdentityWpdb extends \wpdb {
 	 * @throws RuntimeException Quando a guarda desapareceu ou não pode ser recriada.
 	 */
 	private function validateTransactionGuard(): void {
+		if ( ! $this->hasDedicatedConnection() ) {
+			return;
+		}
 		$name    = (string) $this->transaction_guard;
 		$release = $this->directStatement( 'RELEASE SAVEPOINT `' . $name . '`' );
 		if ( ! $release['success'] ) {
@@ -310,30 +372,88 @@ final class IdentityWpdb extends \wpdb {
 	}
 
 	/**
-	 * Identifica apenas início e fim explícitos da transacção.
+	 * Remove comentários comuns e expõe comentários executáveis MySQL.
 	 *
-	 * @param string $sql SQL.
+	 * @param string $sql SQL original.
 	 */
-	private static function transactionCommand( string $sql ): string {
-		$normalized = strtoupper( trim( (string) preg_replace( '/\s+/', ' ', $sql ) ) );
-		if ( 1 === preg_match( '/^(START\s+TRANSACTION|BEGIN)(\s|$)/', $normalized ) ) {
+	private static function normalizeStatement( string $sql ): string {
+		$sql = (string) preg_replace_callback(
+			'/\/\*!\s*\d{0,6}\s*(.*?)\*\//s',
+			static fn( array $match ): string => ' ' . $match[1] . ' ',
+			$sql
+		);
+		$sql = (string) preg_replace( '/\/\*(?!\!).*?\*\//s', ' ', $sql );
+		$sql = (string) preg_replace( '/(^|\R)\s*(?:--[ \t].*|#.*)(?=\R|$)/', ' ', $sql );
+		return strtoupper( trim( (string) preg_replace( '/\s+/', ' ', $sql ) ) );
+	}
+
+	/**
+	 * Identifica início e fim explícitos da transacção.
+	 *
+	 * @param string $normalized SQL normalizado.
+	 */
+	private static function transactionCommand( string $normalized ): string {
+		if ( 1 === preg_match( '/^(START\s+TRANSACTION|BEGIN)(?:\s+WORK)?(\s|$)/', $normalized ) ) {
 			return 'begin';
 		}
-		if ( 1 === preg_match( '/^COMMIT(\s|$)/', $normalized ) ) {
+		if ( 1 === preg_match( '/^COMMIT(?:\s+WORK)?(\s|$)/', $normalized ) ) {
 			return 'commit';
 		}
-		if ( 1 === preg_match( '/^ROLLBACK(?!\s+TO\b)(\s|$)/', $normalized ) ) {
+		if ( 1 === preg_match( '/^ROLLBACK(?:\s+WORK)?(?!\s+TO\b)(\s|$)/', $normalized ) ) {
 			return 'rollback';
 		}
 		return 'other';
 	}
 
 	/**
+	 * A ligação dedicada mantém autocommit activo e explícito.
+	 *
+	 * @param string $normalized SQL normalizado.
+	 */
+	private static function changesAutocommit( string $normalized ): bool {
+		return 1 === preg_match( '/^SET\s+(?:(?:SESSION|LOCAL)\s+|@@SESSION\.)?AUTOCOMMIT\s*=/', $normalized );
+	}
+
+	/**
+	 * Savepoints de chamadores são recusados para preservar a guarda privada.
+	 *
+	 * @param string $normalized SQL normalizado.
+	 */
+	private static function manipulatesSavepoints( string $normalized ): bool {
+		return 1 === preg_match( '/^(?:SAVEPOINT|RELEASE\s+SAVEPOINT|ROLLBACK(?:\s+WORK)?\s+TO(?:\s+SAVEPOINT)?)\b/', $normalized );
+	}
+
+	/**
+	 * COMMIT/ROLLBACK RELEASE terminaria a ligação dedicada.
+	 *
+	 * @param string $normalized SQL normalizado.
+	 */
+	private static function releasesConnection( string $normalized ): bool {
+		return 1 === preg_match( '/^(?:COMMIT|ROLLBACK)(?:\s+WORK)?(?:\s+AND)?\s+RELEASE\b/', $normalized );
+	}
+
+	/**
+	 * Comandos conhecidos por confirmar implicitamente ou esconder SQL dinâmico.
+	 * CREATE/DROP TEMPORARY TABLE são excepções documentadas pelo motor.
+	 *
+	 * @param string $normalized SQL normalizado.
+	 */
+	private static function causesImplicitCommit( string $normalized ): bool {
+		if ( 1 === preg_match( '/^(?:CREATE|DROP)\s+TEMPORARY\s+TABLE\b/', $normalized ) ) {
+			return false;
+		}
+		return 1 === preg_match(
+			'/^(?:ALTER\b|CREATE\b|DROP\b|RENAME\b|TRUNCATE\b|GRANT\b|REVOKE\b|INSTALL\b|UNINSTALL\b|LOCK\b|UNLOCK\b|FLUSH\b|RESET\b|ANALYZE\s+TABLE\b|CHECK\s+TABLE\b|OPTIMIZE\s+TABLE\b|REPAIR\s+TABLE\b|CACHE\s+INDEX\b|LOAD\s+INDEX\s+INTO\s+CACHE\b|LOAD\s+DATA\b|SET\s+PASSWORD\b|CHANGE\s+(?:MASTER|REPLICATION\s+SOURCE)\b|START\s+(?:SLAVE|REPLICA)\b|STOP\s+(?:SLAVE|REPLICA)\b|XA\b|CALL\b|PREPARE\b|EXECUTE\b|DEALLOCATE\s+PREPARE\b)/',
+			$normalized
+		);
+	}
+
+	/**
 	 * COMMIT/ROLLBACK AND CHAIN inicia outra transacção na mesma sessão.
 	 *
-	 * @param string $sql SQL.
+	 * @param string $normalized SQL normalizado.
 	 */
-	private static function chainsTransaction( string $sql ): bool {
-		return 1 === preg_match( '/\bAND\s+(?:NO\s+)?CHAIN\b/i', $sql );
+	private static function chainsTransaction( string $normalized ): bool {
+		return 1 === preg_match( '/\bAND\s+CHAIN\b/', $normalized );
 	}
 }
