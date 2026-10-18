@@ -52,6 +52,29 @@ if ( ! function_exists( 'remove_filter' ) ) {
 		return true;
 	}
 }
+if ( ! function_exists( 'has_filter' ) ) {
+	/**
+	 * Confirma a presença de um filtro no ensaio isolado.
+	 *
+	 * @param string         $hook Gancho.
+	 * @param callable|false $callback Função opcional.
+	 * @return bool|int Prioridade ou falso.
+	 */
+	function has_filter( $hook, $callback = false ) {
+		if ( empty( $GLOBALS['arn_tx_filters'][ $hook ] ) ) {
+			return false;
+		}
+		if ( false === $callback ) {
+			return true;
+		}
+		foreach ( $GLOBALS['arn_tx_filters'][ $hook ] as $priority => $callbacks ) {
+			if ( in_array( $callback, $callbacks, true ) ) {
+				return (int) $priority;
+			}
+		}
+		return false;
+	}
+}
 if ( ! function_exists( 'apply_filters' ) ) {
 	/**
 	 * Aplica os filtros registados.
@@ -183,7 +206,7 @@ function arn_tx_connect(): IdentityWpdb {
  * @throws RuntimeException Quando a password de ensaio não foi fornecida.
  */
 function arn_tx_connect_root(): IdentityWpdb {
-	$pass = getenv( 'ARN_TX_TEST_ROOT_PASSWORD' );
+	$pass = getenv( 'ARN_TX_ROOT_PASSWORD' );
 	$name = getenv( 'ARN_TX_TEST_NAME' );
 	$host = getenv( 'ARN_TX_TEST_HOST' );
 	if (
@@ -193,7 +216,7 @@ function arn_tx_connect_root(): IdentityWpdb {
 		! is_string( $host ) ||
 		'' === $host
 	) {
-		throw new RuntimeException( 'ARN_TX_TEST_ROOT_PASSWORD incompleto.' );
+		throw new RuntimeException( 'ARN_TX_ROOT_PASSWORD incompleto.' );
 	}
 	$database = new IdentityWpdb( 'root', $pass, $name, $host );
 	$database->suppress_errors( true );
