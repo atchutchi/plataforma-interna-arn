@@ -101,9 +101,9 @@ async function enablePerformanceSchema(run, container, wait) {
 function configureObserver(run, container) {
   const script = `set -eu
 : "\${MYSQL_ROOT_PASSWORD:?}"
-: "\${MYSQL_USER:?}"
-: "\${MYSQL_PASSWORD:?}"
-case "$MYSQL_USER" in
+APP_USER="\${MYSQL_USER:-root}"
+APP_PASSWORD="\${MYSQL_PASSWORD:-$MYSQL_ROOT_PASSWORD}"
+case "$APP_USER" in
   *[!A-Za-z0-9_]*|'') exit 64 ;;
 esac
 mariadb -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
@@ -113,16 +113,20 @@ UPDATE performance_schema.setup_instruments
 UPDATE performance_schema.setup_consumers
    SET ENABLED = 'YES'
  WHERE NAME = 'events_transactions_current';
-GRANT SELECT ON performance_schema.threads TO '$MYSQL_USER'@'%';
-GRANT SELECT ON performance_schema.setup_instruments TO '$MYSQL_USER'@'%';
-GRANT SELECT ON performance_schema.setup_consumers TO '$MYSQL_USER'@'%';
-GRANT SELECT ON performance_schema.events_transactions_current TO '$MYSQL_USER'@'%';
+SQL
+if [ "$APP_USER" != 'root' ]; then
+  mariadb -uroot -p"$MYSQL_ROOT_PASSWORD" <<SQL
+GRANT SELECT ON performance_schema.threads TO '$APP_USER'@'%';
+GRANT SELECT ON performance_schema.setup_instruments TO '$APP_USER'@'%';
+GRANT SELECT ON performance_schema.setup_consumers TO '$APP_USER'@'%';
+GRANT SELECT ON performance_schema.events_transactions_current TO '$APP_USER'@'%';
 FLUSH PRIVILEGES;
 SQL
-test "$(mariadb -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" -Nse "SELECT COUNT(*) FROM performance_schema.setup_instruments WHERE NAME='transaction' AND ENABLED='YES'")" = '1'
-test "$(mariadb -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" -Nse "SELECT COUNT(*) FROM performance_schema.setup_consumers WHERE NAME='events_transactions_current' AND ENABLED='YES'")" = '1'
-test "$(mariadb -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" -Nse 'SELECT COUNT(*) FROM performance_schema.threads')" -ge 1
-mariadb -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" -Nse 'SELECT COUNT(*) FROM performance_schema.events_transactions_current' >/dev/null`;
+fi
+test "$(mariadb -u"$APP_USER" -p"$APP_PASSWORD" -Nse "SELECT COUNT(*) FROM performance_schema.setup_instruments WHERE NAME='transaction' AND ENABLED='YES'")" = '1'
+test "$(mariadb -u"$APP_USER" -p"$APP_PASSWORD" -Nse "SELECT COUNT(*) FROM performance_schema.setup_consumers WHERE NAME='events_transactions_current' AND ENABLED='YES'")" = '1'
+test "$(mariadb -u"$APP_USER" -p"$APP_PASSWORD" -Nse 'SELECT COUNT(*) FROM performance_schema.threads')" -ge 1
+mariadb -u"$APP_USER" -p"$APP_PASSWORD" -Nse 'SELECT COUNT(*) FROM performance_schema.events_transactions_current' >/dev/null`;
 
   inContainer(
     run,
