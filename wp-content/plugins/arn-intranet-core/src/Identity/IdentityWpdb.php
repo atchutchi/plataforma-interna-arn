@@ -128,7 +128,7 @@ final class IdentityWpdb extends \wpdb {
 
 		$server_query = $query;
 		if ( in_array( $command, array( 'commit', 'rollback' ), true ) && ! self::chainsTransaction( $normalized ) ) {
-			$server_query = 'commit' === $command ? 'COMMIT NO CHAIN' : 'ROLLBACK NO CHAIN';
+			$server_query = 'commit' === $command ? 'COMMIT AND NO CHAIN' : 'ROLLBACK AND NO CHAIN';
 		}
 
 		$result = parent::query( $server_query );
@@ -141,7 +141,7 @@ final class IdentityWpdb extends \wpdb {
 
 		if ( 'begin' === $command ) {
 			if ( ! $this->installTransactionGuard() ) {
-				$this->directStatement( 'ROLLBACK NO CHAIN' );
+				$this->directStatement( 'ROLLBACK AND NO CHAIN' );
 				$this->transaction_guard = null;
 				$this->last_error        = 'Operação transaccional não confirmada.';
 				return false;
@@ -152,7 +152,7 @@ final class IdentityWpdb extends \wpdb {
 		if ( in_array( $command, array( 'commit', 'rollback' ), true ) ) {
 			$this->transaction_guard = null;
 			if ( self::chainsTransaction( $normalized ) && ! $this->installTransactionGuard() ) {
-				$this->directStatement( 'ROLLBACK NO CHAIN' );
+				$this->directStatement( 'ROLLBACK AND NO CHAIN' );
 				$this->last_error = 'Operação transaccional não confirmada.';
 				return false;
 			}
