@@ -7,9 +7,9 @@
     "node": ">=24.21.0 <25"
   },
   "scripts": {
-    "env:start": "node scripts/wp-env.mjs start",
+    "env:start": "node scripts/wp-env.mjs start && node scripts/prepare-transaction-observer.mjs",
     "env:stop": "node scripts/wp-env.mjs stop",
-    "env:start:tests": "node scripts/wp-env.mjs --tests start",
+    "env:start:tests": "node scripts/wp-env.mjs --tests start && node scripts/prepare-transaction-observer.mjs --tests",
     "env:stop:tests": "node scripts/wp-env.mjs --tests stop",
     "env:status": "node scripts/wp-env.mjs status",
     "env:check": "node scripts/check-env.mjs",
