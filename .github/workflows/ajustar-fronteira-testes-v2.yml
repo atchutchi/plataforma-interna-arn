@@ -75,6 +75,34 @@ jobs:
               ' * Executa uma fronteira canónica sem filtros SQL.',
               ' * Executa uma fronteira canónica com a mesma guarda de imutabilidade SQL.'
           )
+          content = content.replace('$show_errors      =', '$show_errors     =', 1)
+          content = content.replace('$suppress_errors  =', '$suppress_errors =', 1)
+          content = content.replace('$closed       = parent::close();', '$closed      = parent::close();', 1)
+          content = content.replace(
+              "\t\t\ttry {\n\t\t\t\tparent::close();\n\t\t\t} catch ( Throwable ) {",
+              "\t\t\ttry {\n\t\t\t\tparent::close();\n\t\t\t// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Limpeza sem propagar detalhes.\n\t\t\t} catch ( Throwable ) {",
+              1,
+          )
+          content = content.replace(
+              "\t * @param string|null $collate Collation.\n\t */\n\tpublic function set_charset",
+              "\t * @param string|null $collate Collation.\n\t * @throws RuntimeException Depois da inicialização da ligação.\n\t */\n\tpublic function set_charset",
+              1,
+          )
+          content = content.replace(
+              "\t/**\n\t * @param string $name Propriedade alterada.",
+              "\t/**\n\t * Impede a substituição externa do handle nativo.\n\t *\n\t * @param string $name Propriedade alterada.",
+              1,
+          )
+          content = content.replace(
+              "\t * @param mixed  $value Valor delegado quando permitido.\n\t */\n\tpublic function __set",
+              "\t * @param mixed  $value Valor delegado quando permitido.\n\t * @throws RuntimeException Quando o handle nativo é alterado.\n\t */\n\tpublic function __set",
+              1,
+          )
+          content = content.replace(
+              "\t * @param string $name Propriedade removida.\n\t */\n\tpublic function __unset",
+              "\t * @param string $name Propriedade removida.\n\t * @throws RuntimeException Quando o handle nativo é removido.\n\t */\n\tpublic function __unset",
+              1,
+          )
           identity.write_text(content, encoding='utf-8')
 
           double = Path('tests/phpunit/doubles/IdentityWpdbDouble.php')
@@ -105,7 +133,17 @@ jobs:
           \t}'''
           if content.count(old_constructor) != 1:
               raise SystemExit('construtor do double não localizado')
-          double.write_text(content.replace(old_constructor, new_constructor, 1), encoding='utf-8')
+          content = content.replace(old_constructor, new_constructor, 1)
+          marker = '// phpcs:disable PEAR.NamingConventions.ValidClassName.StartWithCapital\n'
+          additions = (
+              '// phpcs:disable Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed\n'
+              '// phpcs:disable WordPress.DB.RestrictedFunctions.mysql_mysqli_report\n'
+              '// phpcs:disable WordPress.DB.RestrictedFunctions.mysql_mysqli_init\n'
+          )
+          if marker not in content:
+              raise SystemExit('marcador PHPCS do double não localizado')
+          content = content.replace(marker, marker + additions, 1)
+          double.write_text(content, encoding='utf-8')
 
           transaction_test = Path('tests/phpunit/IdentityWpdbTransactionTest.php')
           content = transaction_test.read_text(encoding='utf-8')
