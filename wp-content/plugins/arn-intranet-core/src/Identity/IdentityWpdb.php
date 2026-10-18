@@ -93,9 +93,9 @@ final class IdentityWpdb extends \wpdb {
 	 * Observa apenas as fronteiras que esta ligação controla directamente.
 	 *
 	 * @param string $query SQL.
-	 * @return int|false
+	 * @return bool|int
 	 */
-	public function query( $query ): int|false {
+	public function query( $query ) {
 		$sql     = is_string( $query ) ? $query : '';
 		$command = self::transactionCommand( $sql );
 
