@@ -56,8 +56,9 @@ jobs:
               raise SystemExit('Estado inesperado do IdentityWpdb antes da aplicação')
           path.write_text(content.replace(redundant, '', 1), encoding='utf-8')
           PY
-          patch --batch --forward --fuzz=0 -p1 --dry-run < /tmp/arn-mysql-v2-effective.patch
-          patch --batch --forward --fuzz=0 -p1 < /tmp/arn-mysql-v2-effective.patch
+          patch --batch --forward --fuzz=0 --no-backup-if-mismatch -p1 --dry-run < /tmp/arn-mysql-v2-effective.patch
+          patch --batch --forward --fuzz=0 --no-backup-if-mismatch -p1 < /tmp/arn-mysql-v2-effective.patch
+          test -z "$(find . -type f -name '*.orig' -print -quit)"
           git add -A
           git diff --cached --check
           count="$(git diff --cached --name-only | wc -l | tr -d ' ')"
