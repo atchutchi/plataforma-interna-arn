@@ -26,7 +26,32 @@ jobs:
 
       - name: Confirmar regressao RED
         run: |
-          php -r 'require "wp-content/plugins/arn-intranet-core/src/Identity/TransactionBoundary.php"; $cases = array("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ", "START TRANSACTION WITH CONSISTENT SNAPSHOT", "SET SESSION innodb_lock_wait_timeout=1", "CREATE TRIGGER arn_probe BEFORE INSERT ON arn_table FOR EACH ROW BEGIN IF NEW.id=1 THEN SIGNAL SQLSTATE \'45000\' SET MESSAGE_TEXT=\'probe\'; END IF; END"); foreach ($cases as $sql) { $boundary = new Arn\Intranet\Identity\TransactionBoundary(); $boundary->markReady(); try { $boundary->prepare($sql); fwrite(STDERR, "O caso RED foi aceite: {$sql}\n"); exit(1); } catch (RuntimeException) {} } echo "RED confirmado.\n";'
+          cat > /tmp/red-fronteira.php <<'PHP'
+          <?php
+          require 'wp-content/plugins/arn-intranet-core/src/Identity/TransactionBoundary.php';
+
+          $cases = array(
+              'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ',
+              'START TRANSACTION WITH CONSISTENT SNAPSHOT',
+              'SET SESSION innodb_lock_wait_timeout=1',
+              "CREATE TRIGGER arn_probe BEFORE INSERT ON arn_table FOR EACH ROW BEGIN IF NEW.id=1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='probe'; END IF; END",
+          );
+
+          foreach ($cases as $sql) {
+              $boundary = new Arn\Intranet\Identity\TransactionBoundary();
+              $boundary->markReady();
+              try {
+                  $boundary->prepare($sql);
+                  fwrite(STDERR, "O caso RED foi aceite: {$sql}\n");
+                  exit(1);
+              } catch (RuntimeException) {
+                  // Falha esperada antes da correcao.
+              }
+          }
+
+          echo "RED confirmado.\n";
+          PHP
+          php /tmp/red-fronteira.php
 
       - name: Aplicar correcao
         run: python3 .github/scripts/apply_transaction_boundary_v2.py
@@ -38,7 +63,29 @@ jobs:
           php -l tests/phpunit/TransactionBoundaryTest.php
           php -l tests/integration/mysql-transaction-state.php
           php -l tests/integration/news-editorial.php
-          php -r 'require "wp-content/plugins/arn-intranet-core/src/Identity/TransactionBoundary.php"; $boundary = new Arn\Intranet\Identity\TransactionBoundary(); $boundary->markReady(); if ("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ" !== $boundary->prepare("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")) exit(1); $boundary->confirm(true); if ("SET SESSION innodb_lock_wait_timeout = 1" !== $boundary->prepare("SET SESSION innodb_lock_wait_timeout=1")) exit(1); $boundary->confirm(true); if ("START TRANSACTION WITH CONSISTENT SNAPSHOT" !== $boundary->prepare("START TRANSACTION WITH CONSISTENT SNAPSHOT")) exit(1); $boundary->confirm(true); if (!$boundary->inTransaction()) exit(1); if ("ROLLBACK AND NO CHAIN NO RELEASE" !== $boundary->prepare("ROLLBACK")) exit(1); $boundary->confirm(true); $trigger = "CREATE TRIGGER arn_compound BEFORE INSERT ON arn_table FOR EACH ROW BEGIN IF NEW.id=1 THEN SIGNAL SQLSTATE \'45000\' SET MESSAGE_TEXT=\'compound\'; END IF; END"; if ($trigger !== $boundary->prepare($trigger)) exit(1); $boundary->confirm(true); echo "GREEN confirmado.\n";'
+
+          cat > /tmp/green-fronteira.php <<'PHP'
+          <?php
+          require 'wp-content/plugins/arn-intranet-core/src/Identity/TransactionBoundary.php';
+
+          $boundary = new Arn\Intranet\Identity\TransactionBoundary();
+          $boundary->markReady();
+          if ('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ' !== $boundary->prepare('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ')) exit(1);
+          $boundary->confirm(true);
+          if ('SET SESSION innodb_lock_wait_timeout = 1' !== $boundary->prepare('SET SESSION innodb_lock_wait_timeout=1')) exit(1);
+          $boundary->confirm(true);
+          if ('START TRANSACTION WITH CONSISTENT SNAPSHOT' !== $boundary->prepare('START TRANSACTION WITH CONSISTENT SNAPSHOT')) exit(1);
+          $boundary->confirm(true);
+          if (!$boundary->inTransaction()) exit(1);
+          if ('ROLLBACK AND NO CHAIN NO RELEASE' !== $boundary->prepare('ROLLBACK')) exit(1);
+          $boundary->confirm(true);
+
+          $trigger = "CREATE TRIGGER arn_compound BEFORE INSERT ON arn_table FOR EACH ROW BEGIN IF NEW.id=1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='compound'; END IF; END";
+          if ($trigger !== $boundary->prepare($trigger)) exit(1);
+          $boundary->confirm(true);
+          echo "GREEN confirmado.\n";
+          PHP
+          php /tmp/green-fronteira.php
 
       - name: Executar testes focados
         run: |
