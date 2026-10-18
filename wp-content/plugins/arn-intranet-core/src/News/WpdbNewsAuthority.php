@@ -35,9 +35,7 @@ final class WpdbNewsAuthority implements NewsAuthority, EditorialAuthority {
 
 	/** Locks actor, author and server-selected reviewers in ascending account ID order. */
 	public function lockAndAssert( int $author_id, Scope $review_scope, string $operation ): array {
-		$row = $this->database->get_row( 'SELECT @@session.in_transaction AS active' );
-		if ( ! is_object( $row ) || '' !== $this->database->last_error || '1' !== (string) $row->active
-			|| $author_id < 1 || ScopeType::Queues !== $review_scope->type || 1 !== count( $review_scope->targets )
+		if ( ! $this->database->inTransaction() || $author_id < 1 || ScopeType::Queues !== $review_scope->type || 1 !== count( $review_scope->targets )
 			|| ! in_array( $operation, array( 'create', 'revise', 'submit', 'read_notification', 'approve', 'reject', 'return', 'archive' ), true ) ) {
 			throw new RuntimeException( self::ERROR );
 		}
@@ -171,7 +169,7 @@ final class WpdbNewsAuthority implements NewsAuthority, EditorialAuthority {
 	private function revalidate( array $locked ): void {
 		$actor = $locked['actor_id'];
 		$fresh = $this->current->sessionFor( $actor );
-		if ( '1' !== (string) $this->database->get_var( 'SELECT @@session.in_transaction' ) || '' !== $this->database->last_error || $fresh !== $locked['session'] || ! LocalAccountSessionPolicy::valid( $locked['snapshots'][ $actor ], $actor, $fresh, true ) || $locked['participants'] !== $this->participants() ) {
+		if ( ! $this->database->inTransaction() || $fresh !== $locked['session'] || ! LocalAccountSessionPolicy::valid( $locked['snapshots'][ $actor ], $actor, $fresh, true ) || $locked['participants'] !== $this->participants() ) {
 			throw new RuntimeException( self::ERROR );
 		}
 	}

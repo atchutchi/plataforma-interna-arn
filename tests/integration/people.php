@@ -107,11 +107,11 @@ try {
 	$db->query( 'START TRANSACTION' );
 	$db->query( $db->prepare( 'UPDATE %i SET payload=%s WHERE id=%s', $prefix . 'arn_org_units', json_encode( $marked, JSON_THROW_ON_ERROR ), 'LAB-B' ) );
 	$locked    = $units->snapshotInTransaction();
-	$active_tx = $db->get_var( 'SELECT @@session.in_transaction' );
+	$active_tx = $db->inTransaction();
 	$db->query( 'ROLLBACK' );
 	$rolled_b = array_column( $units->snapshot()->units, null, 'id' )['LAB-B'];
 	$locked_b = array_column( $locked->units, null, 'id' )['LAB-B'];
-	$assert( 1 === $locked->revision && '1' === (string) $active_tx && 1 === $units->snapshot()->revision && $locked_b->name === $marked['name'] && get_object_vars( $rolled_b ) === get_object_vars( $original_b ), 'snapshotInTransaction não confirma marcador e rollback do chamador reverte-o' );
+	$assert( 1 === $locked->revision && true === $active_tx && 1 === $units->snapshot()->revision && $locked_b->name === $marked['name'] && get_object_vars( $rolled_b ) === get_object_vars( $original_b ), 'snapshotInTransaction não confirma marcador e rollback do chamador reverte-o' );
 	$context  = new LocalUnitContext( get_current_user_id(), 'Ensaio exclusivo People', time() );
 	$before_b = array_column( $units->snapshot()->units, null, 'id' )['LAB-B'];
 	$units->apply( 'deactivate-b', 1, $context );

@@ -235,8 +235,7 @@ final class WpdbDocumentRepository {
 	}
 
 	private function transaction( callable $operation ): Document {
-		$row = $this->database->get_row( 'SELECT @@session.in_transaction AS active' );
-		if ( ! is_object( $row ) || '' !== $this->database->last_error || '0' !== (string) $row->active ) {
+		if ( $this->database->inTransaction() ) {
 			throw new RuntimeException( self::ERROR );
 		}
 		$this->schema->assertReady();
