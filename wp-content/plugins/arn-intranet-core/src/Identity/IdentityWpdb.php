@@ -379,7 +379,7 @@ final class IdentityWpdb extends \wpdb {
 	private static function normalizeStatement( string $sql ): string {
 		$sql = (string) preg_replace_callback(
 			'/\/\*!\s*\d{0,6}\s*(.*?)\*\//s',
-			static fn( array $match ): string => ' ' . $match[1] . ' ',
+			static fn( array $matches ): string => ' ' . $matches[1] . ' ',
 			$sql
 		);
 		$sql = (string) preg_replace( '/\/\*(?!\!).*?\*\//s', ' ', $sql );
