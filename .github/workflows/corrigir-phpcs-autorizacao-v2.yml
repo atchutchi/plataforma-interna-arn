@@ -44,6 +44,21 @@ jobs:
 
           auth = Path('tests/integration/authorization-persistence.php')
           content = auth.read_text(encoding='utf-8')
+          old = """\tadd_filter( 'query', $query_filter );
+          \t$assert( 10 === $repository->find( $user_id )->revision );
+          \tremove_filter( 'query', $query_filter );
+          \t$query_filter = null;
+          """
+          new = """\tadd_filter( 'query', $query_filter );
+          \t$refused( static fn() => $repository->find( $user_id ) );
+          \tremove_filter( 'query', $query_filter );
+          \t$query_filter = null;
+          \t$assert( 10 === $repository->find( $user_id )->revision );
+          """
+          if content.count(old) != 1:
+              raise SystemExit('cenário ENFORCED simulado não localizado')
+          content = content.replace(old, new, 1)
+
           old = """\t$connection_id = (int) $database->get_var( 'SELECT CONNECTION_ID()' );
           \t$query_filter  = static function ( string $query ) use ( $audit_table, $second, $connection_id ): string {
           \t\tif ( str_starts_with( $query, 'INSERT INTO `' . $audit_table . '`' ) ) {
