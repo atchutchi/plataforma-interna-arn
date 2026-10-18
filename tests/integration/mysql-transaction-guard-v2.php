@@ -18,7 +18,7 @@ $assert = static function ( bool $condition, string $name ) use ( &$checks ): vo
 	}
 	++$checks;
 };
-$deny = static function ( callable $operation, string $name ) use ( $assert ): void {
+$deny   = static function ( callable $operation, string $name ) use ( $assert ): void {
 	try {
 		$operation();
 	} catch ( Throwable ) {
@@ -28,15 +28,15 @@ $deny = static function ( callable $operation, string $name ) use ( $assert ): v
 	$assert( false, $name );
 };
 
-$db       = arn_tx_connect();
-$suffix   = bin2hex( random_bytes( 4 ) );
-$base     = 'arn_guard_' . $suffix;
-$ddl      = 'arn_guard_ddl_' . $suffix;
-$comment  = 'arn_guard_comment_' . $suffix;
-$direct   = 'arn_guard_direct_' . $suffix;
-$temp     = 'arn_guard_temp_' . $suffix;
-$tables   = array( $base, $ddl, $comment, $direct );
-$clean_id = static fn( int $id ): string => 'DELETE FROM `' . $base . '` WHERE id = ' . $id;
+$db            = arn_tx_connect();
+$suffix        = bin2hex( random_bytes( 4 ) );
+$base          = 'arn_guard_' . $suffix;
+$ddl           = 'arn_guard_ddl_' . $suffix;
+$comment_table = 'arn_guard_comment_' . $suffix;
+$direct        = 'arn_guard_direct_' . $suffix;
+$temp          = 'arn_guard_temp_' . $suffix;
+$tables        = array( $base, $ddl, $comment_table, $direct );
+$clean_id      = static fn( int $id ): string => 'DELETE FROM `' . $base . '` WHERE id = ' . $id;
 
 try {
 	$assert( method_exists( $db, 'inTransaction' ), 'API inTransaction existe' );
@@ -61,11 +61,11 @@ try {
 
 	$assert( false !== $db->query( 'START TRANSACTION' ), 'START antes de comentário executável' );
 	$assert( false !== $db->query( 'INSERT INTO `' . $base . '` VALUES (3, 3)' ), 'sentinela comentário criada' );
-	$assert( false === $db->query( '/*!40101 CREATE TABLE `' . $comment . '` (id INT PRIMARY KEY) ENGINE=InnoDB */' ), 'DDL em comentário executável recusado' );
+	$assert( false === $db->query( '/*!40101 CREATE TABLE `' . $comment_table . '` (id INT PRIMARY KEY) ENGINE=InnoDB */' ), 'DDL em comentário executável recusado' );
 	$assert( $db->inTransaction(), 'comentário recusado conserva guarda' );
 	$assert( false !== $db->query( 'ROLLBACK' ), 'ROLLBACK comentário' );
 	$assert( '0' === (string) $db->get_var( 'SELECT COUNT(*) FROM `' . $base . '` WHERE id = 3' ), 'comentário não confirmou sentinela' );
-	$assert( null === $db->get_var( $db->prepare( 'SHOW TABLES LIKE %s', $comment ) ), 'comentário não criou tabela' );
+	$assert( null === $db->get_var( $db->prepare( 'SHOW TABLES LIKE %s', $comment_table ) ), 'comentário não criou tabela' );
 
 	$assert( false === $db->query( 'SET autocommit=0' ), 'autocommit off recusado fora de transacção' );
 	$assert( '1' === (string) $db->get_var( 'SELECT @@session.autocommit' ), 'autocommit permanece activo' );
