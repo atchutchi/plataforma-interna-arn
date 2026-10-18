@@ -176,7 +176,8 @@ final class IdentityWpdb extends \wpdb {
 	 * @throws RuntimeException Quando a ligação ou a sessão foram alteradas.
 	 */
 	private function assertSessionDefaults(): void {
-		if ( ! $this->hasDedicatedConnection() || ! $this->sessionAutocommit() || 0 !== $this->sessionCompletionType() ) {
+		$completion_type = $this->hasDedicatedConnection() ? $this->sessionCompletionType() : '';
+		if ( ! $this->hasDedicatedConnection() || ! $this->sessionAutocommit() || ! in_array( $completion_type, array( '0', 'NO_CHAIN' ), true ) ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Mensagem constante.
 			throw new RuntimeException( 'Estado transaccional indisponível.' );
 		}
@@ -282,12 +283,12 @@ final class IdentityWpdb extends \wpdb {
 	 * @throws RuntimeException Quando a leitura falha.
 	 */
 	private function sessionAutocommit(): bool {
-		$value = $this->sessionInteger( 'SELECT @@session.autocommit' );
-		if ( ! in_array( $value, array( 0, 1 ), true ) ) {
+		$value = $this->sessionScalar( 'SELECT @@session.autocommit' );
+		if ( ! in_array( $value, array( '0', '1' ), true ) ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Mensagem constante.
 			throw new RuntimeException( 'Estado transaccional indisponível.' );
 		}
-		return 1 === $value;
+		return '1' === $value;
 	}
 
 	/**
@@ -295,9 +296,9 @@ final class IdentityWpdb extends \wpdb {
 	 *
 	 * @throws RuntimeException Quando a leitura falha.
 	 */
-	private function sessionCompletionType(): int {
-		$value = $this->sessionInteger( 'SELECT @@session.completion_type' );
-		if ( ! in_array( $value, array( 0, 1, 2 ), true ) ) {
+	private function sessionCompletionType(): string {
+		$value = strtoupper( $this->sessionScalar( 'SELECT @@session.completion_type' ) );
+		if ( ! in_array( $value, array( '0', '1', '2', 'NO_CHAIN', 'CHAIN', 'RELEASE' ), true ) ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Mensagem constante.
 			throw new RuntimeException( 'Estado transaccional indisponível.' );
 		}
@@ -305,12 +306,12 @@ final class IdentityWpdb extends \wpdb {
 	}
 
 	/**
-	 * Lê um inteiro de sessão numa ligação que não pode reconectar.
+	 * Lê um valor escalar de sessão numa ligação que não pode reconectar.
 	 *
 	 * @param string $sql Consulta interna sem dados externos.
 	 * @throws RuntimeException Quando a leitura não é íntegra.
 	 */
-	private function sessionInteger( string $sql ): int {
+	private function sessionScalar( string $sql ): string {
 		$result = $this->directQuery( $sql );
 		if ( ! $result['success'] || ! $result['result'] instanceof \mysqli_result ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Mensagem constante.
@@ -318,11 +319,11 @@ final class IdentityWpdb extends \wpdb {
 		}
 		$row = $result['result']->fetch_row();
 		$result['result']->free();
-		if ( ! is_array( $row ) || ! isset( $row[0] ) || ! preg_match( '/^\d+$/', (string) $row[0] ) ) {
+		if ( ! is_array( $row ) || ! isset( $row[0] ) || '' === trim( (string) $row[0] ) ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Mensagem constante.
 			throw new RuntimeException( 'Estado transaccional indisponível.' );
 		}
-		return (int) $row[0];
+		return trim( (string) $row[0] );
 	}
 
 	/**
