@@ -97,16 +97,23 @@ jobs:
           from pathlib import Path
           path = Path('wp-content/plugins/arn-intranet-core/src/Identity/IdentityWpdb.php')
           content = path.read_text(encoding='utf-8')
-          old = "\t\t} catch ( Throwable ) {\n\t\t\t$this->boundary()->markUnavailable();"
-          new = "\t\t} catch ( Throwable $connection_error ) {\n\t\t\t$this->boundary()->markUnavailable();"
-          if content.count(old) != 1:
-              raise SystemExit('catch de ligação não localizado')
-          content = content.replace(old, new, 1)
-          old_throw = "\t\t\t// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Mensagem constante.\n\t\t\tthrow new RuntimeException( 'Ligação dedicada indisponível.' );\n\t\t} finally {"
-          new_throw = "\t\t\tif ( '1' === getenv( 'ARN_TX_DIAGNOSTIC' ) ) {\n\t\t\t\tthrow new RuntimeException( 'Diagnóstico ligação: ' . get_class( $connection_error ) . '@' . basename( $connection_error->getFile() ) . ':' . $connection_error->getLine() );\n\t\t\t}\n\t\t\t// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Mensagem constante.\n\t\t\tthrow new RuntimeException( 'Ligação dedicada indisponível.' );\n\t\t} finally {"
-          if content.count(old_throw) != 1:
+          method = content.index('\tpublic function db_connect(')
+          catch_start = content.index('\t\t} catch ( Throwable ) {', method)
+          finally_start = content.index('\t\t} finally {', catch_start)
+          block = content[catch_start:finally_start]
+          block = block.replace('catch ( Throwable )', 'catch ( Throwable $connection_error )', 1)
+          needle = "\t\t\tthrow new RuntimeException( 'Ligação dedicada indisponível.' );\n"
+          throw_pos = block.rfind(needle)
+          if throw_pos < 0:
               raise SystemExit('throw de ligação não localizado')
-          path.write_text(content.replace(old_throw, new_throw, 1), encoding='utf-8')
+          diagnostic = (
+              "\t\t\tif ( '1' === getenv( 'ARN_TX_DIAGNOSTIC' ) ) {\n"
+              "\t\t\t\tthrow new RuntimeException( 'Diagnóstico ligação: ' . get_class( $connection_error ) . '@' . basename( $connection_error->getFile() ) . ':' . $connection_error->getLine() );\n"
+              "\t\t\t}\n"
+          )
+          block = block[:throw_pos] + diagnostic + block[throw_pos:]
+          content = content[:catch_start] + block + content[finally_start:]
+          path.write_text(content, encoding='utf-8')
           PY
           php -l wp-content/plugins/arn-intranet-core/src/Identity/IdentityWpdb.php
       - name: Fronteiras transaccionais
