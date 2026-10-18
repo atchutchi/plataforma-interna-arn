@@ -27,6 +27,18 @@ $deny   = static function ( callable $operation, string $name ) use ( $assert ):
 	}
 	$assert( false, $name );
 };
+$deny_runtime = static function ( callable $operation, string $name ) use ( $assert ): void {
+	try {
+		$operation();
+	} catch ( RuntimeException ) {
+		$assert( true, $name );
+		return;
+	} catch ( Throwable ) {
+		$assert( false, $name . ' devolve erro técnico não normalizado' );
+		return;
+	}
+	$assert( false, $name );
+};
 
 $db            = arn_tx_connect();
 $suffix        = bin2hex( random_bytes( 4 ) );
@@ -48,6 +60,8 @@ try {
 	$assert( false !== $db->query( 'INSERT INTO `' . $base . '` VALUES (1, 1)' ), 'sentinela nested criada' );
 	$assert( false === $db->query( 'START TRANSACTION' ), 'START aninhado recusado antes do servidor' );
 	$assert( $db->inTransaction(), 'recusa nested conserva transacção' );
+	$assert( false === $db->query( 'SAVEPOINT caller_guard' ), 'savepoint externo recusado' );
+	$assert( false === $db->query( 'ROLLBACK WORK TO SAVEPOINT caller_guard' ), 'rollback externo para savepoint recusado' );
 	$assert( false !== $db->query( 'ROLLBACK' ), 'ROLLBACK nested aceite' );
 	$assert( '0' === (string) $db->get_var( 'SELECT COUNT(*) FROM `' . $base . '` WHERE id = 1' ), 'nested não confirmou sentinela' );
 
@@ -75,6 +89,16 @@ try {
 	$assert( $db->inTransaction(), 'autocommit recusado conserva guarda' );
 	$assert( false !== $db->query( 'ROLLBACK' ), 'ROLLBACK autocommit' );
 	$assert( '0' === (string) $db->get_var( 'SELECT COUNT(*) FROM `' . $base . '` WHERE id = 4' ), 'autocommit não confirmou sentinela' );
+
+	$assert( false === $db->query( 'SET SESSION completion_type=1' ), 'completion_type recusado pela API' );
+	$assert( $db->dbh instanceof mysqli && true === $db->dbh->query( 'SET SESSION completion_type=1' ), 'completion_type externo preparado' );
+	$assert( false !== $db->query( 'START TRANSACTION' ), 'START com completion_type externo' );
+	$assert( false !== $db->query( 'INSERT INTO `' . $base . '` VALUES (10, 10)' ), 'sentinela completion_type criada' );
+	$assert( false !== $db->query( 'COMMIT' ), 'COMMIT explícito não herda chain da sessão' );
+	$assert( ! $db->inTransaction(), 'COMMIT simples termina apesar de completion_type' );
+	$assert( '1' === (string) $db->get_var( 'SELECT COUNT(*) FROM `' . $base . '` WHERE id = 10' ), 'sentinela completion_type confirmada uma vez' );
+	$db->query( $clean_id( 10 ) );
+	$assert( $db->dbh instanceof mysqli && true === $db->dbh->query( 'SET SESSION completion_type=0' ), 'completion_type restaurado' );
 
 	$assert( false !== $db->query( 'START TRANSACTION' ), 'START antes de temporária' );
 	$assert( false !== $db->query( 'CREATE TEMPORARY TABLE `' . $temp . '` (id INT PRIMARY KEY) ENGINE=InnoDB' ), 'tabela temporária permitida' );
@@ -105,20 +129,36 @@ try {
 	$assert( false !== $db->query( 'START TRANSACTION' ), 'START antes de DDL directo' );
 	$assert( false !== $db->query( 'INSERT INTO `' . $base . '` VALUES (9, 9)' ), 'sentinela DDL directo criada' );
 	$assert( $db->dbh instanceof mysqli && true === $db->dbh->query( 'CREATE TABLE `' . $direct . '` (id INT PRIMARY KEY) ENGINE=InnoDB' ), 'DDL directo executado para provar detecção' );
-	$deny( static fn() => $db->inTransaction(), 'guarda desaparecida por DDL directo é recusada' );
+	$deny_runtime( static fn() => $db->inTransaction(), 'guarda desaparecida por DDL directo é recusada' );
 	$assert( '1' === (string) $db->get_var( 'SELECT COUNT(*) FROM `' . $base . '` WHERE id = 9' ), 'sentinela prova commit implícito directo' );
 	$db->query( $clean_id( 9 ) );
 
 	$assert( $db->dbh instanceof mysqli && true === $db->dbh->query( 'START TRANSACTION' ), 'transacção externa criada' );
-	$deny( static fn() => $db->inTransaction(), 'transacção externa não é adoptada' );
+	$deny_runtime( static fn() => $db->inTransaction(), 'transacção externa não é adoptada' );
+	$assert( false === $db->query( 'SELECT 1' ), 'query normal recusada dentro de transacção externa' );
 	$db->dbh->query( 'ROLLBACK' );
 	$assert( ! $db->inTransaction(), 'sessão recupera ausência depois do rollback externo' );
+
+	$lost = arn_tx_connect();
+	try {
+		$assert( false !== $lost->query( 'START TRANSACTION' ), 'START na ligação a perder' );
+		$assert( $lost->dbh instanceof mysqli && true === $lost->dbh->close(), 'ligação fechada durante transacção' );
+		$deny_runtime( static fn() => $lost->inTransaction(), 'perda de ligação normalizada e recusada' );
+		$assert( false === $lost->check_connection( true ), 'perda não provoca reconnect' );
+	} finally {
+		try {
+			$lost->close();
+		} catch ( Throwable ) {
+			// O handle já foi fechado de propósito.
+		}
+	}
 
 	echo 'PASS: guarda transaccional V2, ' . $checks . ' verificações, motor=' . (string) $db->get_var( 'SELECT VERSION()' ) . PHP_EOL;
 } finally {
 	if ( $db->dbh instanceof mysqli ) {
 		$db->dbh->query( 'ROLLBACK' );
 		$db->dbh->query( 'SET autocommit=1' );
+		$db->dbh->query( 'SET SESSION completion_type=0' );
 	}
 	$db->query( 'DROP TEMPORARY TABLE IF EXISTS `' . $temp . '`' );
 	foreach ( array_reverse( $tables ) as $table ) {
