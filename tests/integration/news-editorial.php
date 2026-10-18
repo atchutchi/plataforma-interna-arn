@@ -352,7 +352,7 @@ try {
 		$assert( $worker->ready(), 'editor observa concessão anterior' );
 		$intercepted = false;
 		$filter      = static function ( string $sql ) use ( &$intercepted, $worker, $waiting, $reader, $schema, $race, $assert ): string {
-			if ( 'COMMIT' === $sql && ! $intercepted ) {
+			if ( 'COMMIT AND NO CHAIN NO RELEASE' === $sql && ! $intercepted ) {
 				$intercepted = true;
 				$waiting( $worker->start() );
 				$reader->query( 'START TRANSACTION' );

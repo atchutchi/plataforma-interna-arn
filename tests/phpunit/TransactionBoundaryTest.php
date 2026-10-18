@@ -138,6 +138,46 @@ final class TransactionBoundaryTest extends TestCase {
 		$boundary->confirm( true );
 	}
 
+	/** Snapshot consistente, isolamento e timeout preservam o contrato existente. */
+	public function testExistingSnapshotAndLockTimeoutCommandsRemainSupported(): void {
+		$boundary = new TransactionBoundary();
+		$boundary->markReady();
+
+		self::assertSame( 'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ', $boundary->prepare( 'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ' ) );
+		$boundary->confirm( true );
+		self::assertSame( 'SET SESSION innodb_lock_wait_timeout = 1', $boundary->prepare( 'SET SESSION innodb_lock_wait_timeout=1' ) );
+		$boundary->confirm( true );
+		self::assertSame( 'START TRANSACTION WITH CONSISTENT SNAPSHOT', $boundary->prepare( 'START TRANSACTION WITH CONSISTENT SNAPSHOT' ) );
+		$boundary->confirm( true );
+		self::assertTrue( $boundary->inTransaction() );
+		$this->expectDenied( static fn() => $boundary->prepare( 'SET SESSION innodb_lock_wait_timeout=2' ) );
+		self::assertSame( 'ROLLBACK AND NO CHAIN NO RELEASE', $boundary->prepare( 'ROLLBACK' ) );
+		$boundary->confirm( true );
+		self::assertFalse( $boundary->inTransaction() );
+	}
+
+	/** Triggers fechados de falha são uma única DDL, sem aceitar SQL adicional. */
+	public function testClosedFailureTriggersAreAcceptedOnlyWhileIdle(): void {
+		$boundary = new TransactionBoundary();
+		$boundary->markReady();
+
+		$simple = "CREATE TRIGGER arn_simple BEFORE INSERT ON arn_table FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='simple'";
+		self::assertSame( $simple, $boundary->prepare( $simple ) );
+		$boundary->confirm( true );
+
+		$compound = "CREATE TRIGGER arn_compound BEFORE INSERT ON arn_table FOR EACH ROW BEGIN IF NEW.id=1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='compound'; END IF; END";
+		self::assertSame( $compound, $boundary->prepare( $compound ) );
+		$boundary->confirm( true );
+
+		$this->expectDenied( static fn() => $boundary->prepare( 'CREATE TRIGGER arn_bad BEFORE INSERT ON arn_table FOR EACH ROW BEGIN SELECT 1; DROP TABLE arn_table; END' ) );
+
+		$boundary->prepare( 'START TRANSACTION' );
+		$boundary->confirm( true );
+		$this->expectDenied( static fn() => $boundary->prepare( $simple ) );
+		self::assertSame( 'ROLLBACK AND NO CHAIN NO RELEASE', $boundary->prepare( 'ROLLBACK' ) );
+		$boundary->confirm( true );
+	}
+
 	/**
 	 * Cria uma fronteira com transacção activa.
 	 *

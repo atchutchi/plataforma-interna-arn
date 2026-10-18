@@ -439,12 +439,15 @@ final class IdentityWpdb extends \wpdb {
 			$sql,
 			array(
 				'START TRANSACTION',
+				'START TRANSACTION WITH CONSISTENT SNAPSHOT',
 				'COMMIT AND NO CHAIN NO RELEASE',
 				'ROLLBACK AND NO CHAIN NO RELEASE',
 				'SET TRANSACTION ISOLATION LEVEL READ COMMITTED',
+				'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ',
 			),
 			true
-		) || 1 === preg_match( '/^(SAVEPOINT|ROLLBACK(?: WORK)? TO|RELEASE SAVEPOINT)\b/i', $sql );
+		) || 1 === preg_match( '/^(SAVEPOINT|ROLLBACK(?: WORK)? TO|RELEASE SAVEPOINT)\b/i', $sql )
+			|| 1 === preg_match( '/^SET SESSION innodb_lock_wait_timeout = [1-9][0-9]{0,2}$/D', $sql );
 	}
 
 	/**

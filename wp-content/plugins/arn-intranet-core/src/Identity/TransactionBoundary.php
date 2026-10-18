@@ -50,6 +50,9 @@ final class TransactionBoundary {
 	/** Configuração de isolamento permitida. */
 	private const SET_ISOLATION = 'set_isolation';
 
+	/** Limite controlado de espera por bloqueio da sessão. */
+	private const SET_LOCK_TIMEOUT = 'set_lock_timeout';
+
 	/** Consulta de leitura. */
 	private const READ_STATEMENT = 'read_statement';
 
@@ -110,7 +113,7 @@ final class TransactionBoundary {
 		switch ( $kind ) {
 			case self::BEGIN:
 				$this->requireState( self::IDLE, 'Transacção aninhada recusada.' );
-				$prepared = 'START TRANSACTION';
+				$prepared = $statement['sql'];
 				break;
 
 			case self::COMMIT:
@@ -133,8 +136,9 @@ final class TransactionBoundary {
 				break;
 
 			case self::SET_ISOLATION:
-				$this->requireState( self::IDLE, 'Isolamento durante transacção recusado.' );
-				$prepared = 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED';
+			case self::SET_LOCK_TIMEOUT:
+				$this->requireState( self::IDLE, 'Configuração durante transacção recusada.' );
+				$prepared = $statement['sql'];
 				break;
 
 			case self::READ_STATEMENT:
@@ -261,13 +265,19 @@ final class TransactionBoundary {
 	 * @throws RuntimeException Quando a instrução não é segura.
 	 */
 	private static function classify( string $sql ): array {
-		$cleaned = self::sanitize( $sql );
+		$cleaned = self::isTriggerStatement( $sql ) ? self::sanitizeTrigger( $sql ) : self::sanitize( $sql );
 		if ( '' === $cleaned ) {
 			throw new RuntimeException( 'Comando SQL vazio.' );
 		}
 
 		$normalized = strtoupper( trim( (string) preg_replace( '/\\s+/', ' ', $cleaned ) ) );
 
+		if ( 'START TRANSACTION WITH CONSISTENT SNAPSHOT' === $normalized ) {
+			return array(
+				'kind' => self::BEGIN,
+				'sql'  => 'START TRANSACTION WITH CONSISTENT SNAPSHOT',
+			);
+		}
 		if ( 1 === preg_match( '/^(START TRANSACTION|BEGIN(?: WORK)?)$/D', $normalized ) ) {
 			return array(
 				'kind' => self::BEGIN,
@@ -304,10 +314,16 @@ final class TransactionBoundary {
 				'sql'  => $cleaned,
 			);
 		}
-		if ( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED' === $normalized ) {
+		if ( in_array( $normalized, array( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED', 'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ' ), true ) ) {
 			return array(
 				'kind' => self::SET_ISOLATION,
-				'sql'  => $cleaned,
+				'sql'  => $normalized,
+			);
+		}
+		if ( 1 === preg_match( '/^SET SESSION INNODB_LOCK_WAIT_TIMEOUT\s*=\s*([1-9][0-9]{0,2})$/D', $normalized, $matches ) ) {
+			return array(
+				'kind' => self::SET_LOCK_TIMEOUT,
+				'sql'  => 'SET SESSION innodb_lock_wait_timeout = ' . (int) $matches[1],
 			);
 		}
 
@@ -346,6 +362,48 @@ final class TransactionBoundary {
 			'kind' => self::OTHER_STATEMENT,
 			'sql'  => $cleaned,
 		);
+	}
+
+	/**
+	 * Confirma se a instrução pertence ao contrato fechado de triggers de ensaio.
+	 *
+	 * @param string $sql Instrução SQL.
+	 */
+	private static function isTriggerStatement( string $sql ): bool {
+		return 1 === preg_match( '/^\s*CREATE\s+TRIGGER\b/i', $sql );
+	}
+
+	/**
+	 * Aceita apenas os dois formatos de trigger usados para injectar falhas nos
+	 * ensaios. Os pontos e vírgulas internos pertencem ao corpo BEGIN/END e não
+	 * abrem uma segunda instrução arbitrária.
+	 *
+	 * @param string $sql Definição do trigger.
+	 * @return string Definição validada sem terminador final.
+	 * @throws RuntimeException Quando o trigger sai do contrato fechado.
+	 */
+	private static function sanitizeTrigger( string $sql ): string {
+		if ( 1 === preg_match( '/\/\*|#|--[\x00-\x20]/', $sql ) ) {
+			throw new RuntimeException( 'Comentário SQL em trigger recusado.' );
+		}
+
+		$cleaned = trim( $sql );
+		if ( str_ends_with( $cleaned, ';' ) ) {
+			$cleaned = rtrim( substr( $cleaned, 0, -1 ) );
+		}
+
+		$identifier = '(?:`(?:``|[^`])+`|[A-Za-z0-9_]+)';
+		$literal    = "'(?:''|\\\\.|[^'])*'";
+		$signal     = "SIGNAL\\s+SQLSTATE\\s+{$literal}\\s+SET\\s+MESSAGE_TEXT\\s*=\\s*{$literal}";
+		$prefix     = "^CREATE\\s+TRIGGER\\s+{$identifier}\\s+(?:BEFORE|AFTER)\\s+(?:INSERT|UPDATE|DELETE)\\s+ON\\s+{$identifier}\\s+FOR\\s+EACH\\s+ROW\\s+";
+		$simple     = "/{$prefix}{$signal}$/isD";
+		$compound   = "/{$prefix}BEGIN\\s+IF\\s+NEW\\.[A-Za-z0-9_]+\\s*=\\s*(?:-?[0-9]+|{$literal})\\s+THEN\\s+{$signal}\\s*;\\s*END\\s+IF\\s*;\\s*END$/isD";
+
+		if ( 1 !== preg_match( $simple, $cleaned ) && 1 !== preg_match( $compound, $cleaned ) ) {
+			throw new RuntimeException( 'Trigger SQL fora do contrato recusado.' );
+		}
+
+		return $cleaned;
 	}
 
 	/**

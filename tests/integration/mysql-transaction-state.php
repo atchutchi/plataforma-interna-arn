@@ -44,6 +44,11 @@ try {
 		'ausência de reconnect'
 	);
 	$assert( ! $db->inTransaction(), 'sessão inicial ociosa' );
+
+	$assert( 0 === $db->query( 'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ' ), 'isolamento repeatable read aceite' );
+	$assert( 0 === $db->query( 'SET SESSION innodb_lock_wait_timeout=1' ), 'timeout de lock controlado aceite' );
+	$assert( 0 === $db->query( 'START TRANSACTION WITH CONSISTENT SNAPSHOT' ) && $db->inTransaction(), 'snapshot consistente inicia transacção' );
+	$assert( 0 === $db->query( 'ROLLBACK' ) && ! $db->inTransaction(), 'snapshot consistente termina por rollback' );
 	$assert( false === isset( $db->dbh ), 'handle mysqli não exposto' );
 	$deny( static fn() => $db->dbh, 'leitura directa do handle recusada' );
 	$deny(
