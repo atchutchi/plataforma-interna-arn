@@ -91,6 +91,24 @@ jobs:
           PHP
       - name: Falha inicial sem credenciais, sem saída
         run: php tests/integration/identity-connection-failure.php /tmp/class-wpdb.php
+      - name: Instrumentar origem segura da falha de ligação
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          path = Path('wp-content/plugins/arn-intranet-core/src/Identity/IdentityWpdb.php')
+          content = path.read_text(encoding='utf-8')
+          old = "\t\t} catch ( Throwable ) {\n\t\t\t$this->boundary()->markUnavailable();"
+          new = "\t\t} catch ( Throwable $connection_error ) {\n\t\t\t$this->boundary()->markUnavailable();"
+          if content.count(old) != 1:
+              raise SystemExit('catch de ligação não localizado')
+          content = content.replace(old, new, 1)
+          old_throw = "\t\t\t// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Mensagem constante.\n\t\t\tthrow new RuntimeException( 'Ligação dedicada indisponível.' );\n\t\t} finally {"
+          new_throw = "\t\t\tif ( '1' === getenv( 'ARN_TX_DIAGNOSTIC' ) ) {\n\t\t\t\tthrow new RuntimeException( 'Diagnóstico ligação: ' . get_class( $connection_error ) . '@' . basename( $connection_error->getFile() ) . ':' . $connection_error->getLine() );\n\t\t\t}\n\t\t\t// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Mensagem constante.\n\t\t\tthrow new RuntimeException( 'Ligação dedicada indisponível.' );\n\t\t} finally {"
+          if content.count(old_throw) != 1:
+              raise SystemExit('throw de ligação não localizado')
+          path.write_text(content.replace(old_throw, new_throw, 1), encoding='utf-8')
+          PY
+          php -l wp-content/plugins/arn-intranet-core/src/Identity/IdentityWpdb.php
       - name: Fronteiras transaccionais
         env:
           ARN_TX_TEST_USER: arn_tx
@@ -100,4 +118,5 @@ jobs:
           ARN_TX_ROOT_USER: root
           ARN_TX_ROOT_PASSWORD: root-test
           ARN_TX_WPDB: /tmp/class-wpdb.php
+          ARN_TX_DIAGNOSTIC: '1'
         run: php tests/integration/mysql-transaction-state.php /tmp/class-wpdb.php
