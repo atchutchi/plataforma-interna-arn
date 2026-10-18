@@ -44,19 +44,30 @@ jobs:
 
           auth = Path('tests/integration/authorization-persistence.php')
           content = auth.read_text(encoding='utf-8')
-          old = """\tadd_filter( 'query', $query_filter );
-          \t$assert( 10 === $repository->find( $user_id )->revision );
-          \tremove_filter( 'query', $query_filter );
-          \t$query_filter = null;
+          old = """\t$connection_id = (int) $database->get_var( 'SELECT CONNECTION_ID()' );
+          \t$query_filter  = static function ( string $query ) use ( $audit_table, $second, $connection_id ): string {
+          \t\tif ( str_starts_with( $query, 'INSERT INTO `' . $audit_table . '`' ) ) {
+          \t\t\t$second->query( $second->prepare( 'KILL %d', $connection_id ) );
+          \t\t}
+          \t\treturn $query;
+          \t};
           """
-          new = """\tadd_filter( 'query', $query_filter );
-          \t$refused( static fn() => $repository->find( $user_id ) );
-          \tremove_filter( 'query', $query_filter );
-          \t$query_filter = null;
-          \t$assert( 10 === $repository->find( $user_id )->revision );
+          new = """\t$connection_id = (int) $database->get_var( 'SELECT CONNECTION_ID()' );
+          \t$handle_property = new ReflectionProperty( wpdb::class, 'dbh' );
+          \t$killer          = $handle_property->getValue( $second );
+          \t$assert( $killer instanceof mysqli && $connection_id > 0 );
+          \t$query_filter = static function ( string $query ) use ( $audit_table, $killer, $connection_id ): string {
+          \t\tif ( str_starts_with( $query, 'INSERT INTO `' . $audit_table . '`' ) ) {
+          \t\t\t// phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_query -- Simula uma perda externa da ligação dedicada.
+          \t\t\tif ( true !== $killer->query( 'KILL CONNECTION ' . $connection_id ) ) {
+          \t\t\t\tthrow new RuntimeException( 'Falha ao simular perda da ligação dedicada.' );
+          \t\t\t}
+          \t\t}
+          \t\treturn $query;
+          \t};
           """
           if content.count(old) != 1:
-              raise SystemExit('cenário MySQL simulado não localizado')
+              raise SystemExit('cenário de perda da ligação não localizado')
           auth.write_text(content.replace(old, new, 1), encoding='utf-8')
 
           boundary = Path('wp-content/plugins/arn-intranet-core/src/Identity/TransactionBoundary.php')
@@ -124,6 +135,7 @@ jobs:
           vendor/bin/phpcbf \
             wp-content/plugins/arn-intranet-core/src/Identity/TransactionBoundary.php \
             tests/phpunit/TransactionBoundaryTest.php \
+            tests/integration/authorization-persistence.php \
             tests/integration/mysql-transaction-worker.php \
             tests/integration/mysql-transaction-bootstrap.php \
             tests/integration/mysql-transaction-state.php || status=$?
