@@ -127,7 +127,7 @@ final class IdentityWpdb extends \wpdb {
 		}
 
 		$server_query = $query;
-		if ( in_array( $command, array( 'commit', 'rollback' ), true ) && ! self::chainsTransaction( $normalized ) ) {
+		if ( $this->hasDedicatedConnection() && in_array( $command, array( 'commit', 'rollback' ), true ) && ! self::chainsTransaction( $normalized ) ) {
 			$server_query = 'commit' === $command ? 'COMMIT AND NO CHAIN' : 'ROLLBACK AND NO CHAIN';
 		}
 
