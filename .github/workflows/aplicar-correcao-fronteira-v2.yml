@@ -58,6 +58,26 @@ jobs:
           sed -i "s/sessão inicial fora de transacção/sessão inicial ociosa/" .github/scripts/apply_transaction_boundary_v2.py
           python3 .github/scripts/apply_transaction_boundary_v2.py
 
+          python3 <<'PY'
+          from pathlib import Path
+
+          boundary_path = Path('wp-content/plugins/arn-intranet-core/src/Identity/TransactionBoundary.php')
+          boundary = boundary_path.read_text(encoding='utf-8')
+          old = "\t/** Confirma se a instrução pertence ao contrato fechado de triggers de ensaio. */\n\tprivate static function isTriggerStatement( string $sql ): bool {"
+          new = "\t/**\n\t * Confirma se a instrução pertence ao contrato fechado de triggers de ensaio.\n\t *\n\t * @param string $sql Instrução SQL.\n\t */\n\tprivate static function isTriggerStatement( string $sql ): bool {"
+          if boundary.count(old) != 1:
+              raise SystemExit('Docblock de isTriggerStatement não encontrado')
+          boundary_path.write_text(boundary.replace(old, new, 1), encoding='utf-8')
+
+          test_path = Path('tests/phpunit/TransactionBoundaryTest.php')
+          test = test_path.read_text(encoding='utf-8')
+          old = '$this->expectDenied( static fn() => $boundary->prepare( "CREATE TRIGGER arn_bad BEFORE INSERT ON arn_table FOR EACH ROW BEGIN SELECT 1; DROP TABLE arn_table; END" ) );'
+          new = "$this->expectDenied( static fn() => $boundary->prepare( 'CREATE TRIGGER arn_bad BEFORE INSERT ON arn_table FOR EACH ROW BEGIN SELECT 1; DROP TABLE arn_table; END' ) );"
+          if test.count(old) != 1:
+              raise SystemExit('Teste do trigger inválido não encontrado')
+          test_path.write_text(test.replace(old, new, 1), encoding='utf-8')
+          PY
+
       - name: Confirmar sintaxe e comportamento GREEN
         run: |
           php -l wp-content/plugins/arn-intranet-core/src/Identity/TransactionBoundary.php
