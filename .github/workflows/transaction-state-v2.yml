@@ -25,8 +25,10 @@ jobs:
         include:
           - label: MySQL 8.0.44
             image: mysql:8.0.44
+            engine: mysql
           - label: MariaDB 11.8
             image: mariadb:11.8
+            engine: mariadb
     services:
       database:
         image: ${{ matrix.image }}
@@ -40,7 +42,7 @@ jobs:
           MARIADB_USER: arn_tx
           MARIADB_PASSWORD: test
         ports:
-          - 3306:3306
+          - 127.0.0.1:3306:3306
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -60,15 +62,39 @@ jobs:
           done
           echo 'Motor SQL não ficou disponível.' >&2
           exit 1
-      - name: Conceder apenas as leituras de observação
+      - name: Ativar Performance Schema na MariaDB
+        if: matrix.engine == 'mariadb'
+        env:
+          DATABASE_CONTAINER: ${{ job.services.database.id }}
         run: |
+          docker exec "$DATABASE_CONTAINER" sh -c "printf '[mariadb]\nperformance_schema=ON\n' > /etc/mysql/conf.d/arn-transaction-state.cnf"
+          docker restart "$DATABASE_CONTAINER"
+          for attempt in $(seq 1 60); do
+            if mysqladmin ping --protocol=tcp -h 127.0.0.1 -uroot -ptest --silent; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'MariaDB não regressou depois de ativar Performance Schema.' >&2
+          exit 1
+      - name: Preparar observação transaccional com privilégios mínimos
+        run: |
+          test "$(mysql --protocol=tcp -h 127.0.0.1 -uroot -ptest -Nse 'SELECT @@performance_schema')" = '1'
           mysql --protocol=tcp -h 127.0.0.1 -uroot -ptest <<'SQL'
+          UPDATE performance_schema.setup_instruments
+             SET ENABLED = 'YES', TIMED = 'YES'
+           WHERE NAME = 'transaction';
+          UPDATE performance_schema.setup_consumers
+             SET ENABLED = 'YES'
+           WHERE NAME = 'events_transactions_current';
           GRANT SELECT ON performance_schema.threads TO 'arn_tx'@'%';
           GRANT SELECT ON performance_schema.setup_instruments TO 'arn_tx'@'%';
           GRANT SELECT ON performance_schema.setup_consumers TO 'arn_tx'@'%';
           GRANT SELECT ON performance_schema.events_transactions_current TO 'arn_tx'@'%';
           FLUSH PRIVILEGES;
           SQL
+          test "$(mysql --protocol=tcp -h 127.0.0.1 -uroot -ptest -Nse "SELECT COUNT(*) FROM performance_schema.setup_instruments WHERE NAME = 'transaction' AND ENABLED = 'YES'")" = '1'
+          test "$(mysql --protocol=tcp -h 127.0.0.1 -uroot -ptest -Nse "SELECT COUNT(*) FROM performance_schema.setup_consumers WHERE NAME = 'events_transactions_current' AND ENABLED = 'YES'")" = '1'
       - name: Obter class-wpdb da versão fixada
         run: curl -fsSL https://raw.githubusercontent.com/WordPress/WordPress/7.1.3/wp-includes/class-wpdb.php -o /tmp/class-wpdb.php
       - name: Executar prova transaccional v2
