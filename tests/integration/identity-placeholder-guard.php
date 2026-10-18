@@ -5,8 +5,6 @@
  * @package ArnIntranet
  */
 
-declare(strict_types=1);
-
 use Arn\Intranet\Identity\IdentityWpdb;
 
 // phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Rótulos constantes do ensaio CLI.
