@@ -42,6 +42,53 @@ jobs:
           extensions: mysqli, mbstring
       - name: class-wpdb do WordPress 7.1.3
         run: curl -fsSL https://raw.githubusercontent.com/WordPress/WordPress/7.1.3/wp-includes/class-wpdb.php -o /tmp/class-wpdb.php
+      - name: Diagnóstico seguro da normalização mysqli
+        env:
+          ARN_TX_TEST_USER: arn_tx
+          ARN_TX_TEST_PASSWORD: test
+          ARN_TX_TEST_NAME: arn_tx_test
+        run: |
+          php <<'PHP'
+          <?php
+          mysqli_report(MYSQLI_REPORT_OFF);
+          $db = mysqli_init();
+          if (!$db->real_connect('127.0.0.1', getenv('ARN_TX_TEST_USER'), getenv('ARN_TX_TEST_PASSWORD'), getenv('ARN_TX_TEST_NAME'), 3306)) {
+              throw new RuntimeException('diagnóstico: ligação');
+          }
+          echo "diagnóstico: ligação OK\n";
+          if (!$db->autocommit(true)) {
+              throw new RuntimeException('diagnóstico: autocommit');
+          }
+          echo "diagnóstico: autocommit OK\n";
+          $modes = $db->query('SELECT @@SESSION.sql_mode');
+          if (!$modes instanceof mysqli_result) {
+              throw new RuntimeException('diagnóstico: leitura sql_mode');
+          }
+          $row = $modes->fetch_row();
+          $modes->free();
+          if (!is_array($row) || !array_key_exists(0, $row) || !is_scalar($row[0])) {
+              throw new RuntimeException('diagnóstico: valor sql_mode');
+          }
+          $normalised = [];
+          foreach (array_filter(explode(',', strtoupper((string) $row[0])), 'strlen') as $mode) {
+              $mode = trim($mode);
+              if (1 !== preg_match('/^[A-Z0-9_]+$/D', $mode)) {
+                  throw new RuntimeException('diagnóstico: sintaxe sql_mode');
+              }
+              if ('NO_BACKSLASH_ESCAPES' !== $mode) {
+                  $normalised[] = $mode;
+              }
+          }
+          $sqlMode = sprintf("SET SESSION sql_mode = '%s'", implode(',', array_values(array_unique($normalised))));
+          if (true !== $db->query($sqlMode)) {
+              throw new RuntimeException('diagnóstico: escrita sql_mode errno=' . $db->errno);
+          }
+          echo "diagnóstico: sql_mode OK\n";
+          if (true !== $db->query('SET SESSION completion_type = 0')) {
+              throw new RuntimeException('diagnóstico: completion_type errno=' . $db->errno);
+          }
+          echo "diagnóstico: completion_type OK\n";
+          PHP
       - name: Falha inicial sem credenciais, sem saída
         run: php tests/integration/identity-connection-failure.php /tmp/class-wpdb.php
       - name: Fronteiras transaccionais
