@@ -1,0 +1,81 @@
+name: Transaction state v2
+
+on:
+  push:
+    branches: ['fix/atchutchi-mysql-transaction-state-v2']
+  pull_request:
+    branches: [main]
+    paths:
+      - 'wp-content/plugins/arn-intranet-core/src/Identity/IdentityWpdb.php'
+      - 'wp-content/plugins/arn-intranet-core/src/**'
+      - 'tests/integration/transaction-state-v2*.php'
+      - '.github/workflows/transaction-state-v2.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  transaction-state:
+    name: ${{ matrix.label }} transaction state
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: MySQL 8.0.44
+            image: mysql:8.0.44
+          - label: MariaDB 11.8
+            image: mariadb:11.8
+    services:
+      database:
+        image: ${{ matrix.image }}
+        env:
+          MYSQL_ROOT_PASSWORD: test
+          MYSQL_DATABASE: arn_tx_test
+          MYSQL_USER: arn_tx
+          MYSQL_PASSWORD: test
+          MARIADB_ROOT_PASSWORD: test
+          MARIADB_DATABASE: arn_tx_test
+          MARIADB_USER: arn_tx
+          MARIADB_PASSWORD: test
+        ports:
+          - 3306:3306
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          extensions: mysqli, mbstring
+      - name: Instalar cliente SQL e aguardar o motor
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq default-mysql-client
+          for attempt in $(seq 1 60); do
+            if mysqladmin ping --protocol=tcp -h 127.0.0.1 -uroot -ptest --silent; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'Motor SQL não ficou disponível.' >&2
+          exit 1
+      - name: Conceder apenas as leituras de observação
+        run: |
+          mysql --protocol=tcp -h 127.0.0.1 -uroot -ptest <<'SQL'
+          GRANT SELECT ON performance_schema.threads TO 'arn_tx'@'%';
+          GRANT SELECT ON performance_schema.setup_instruments TO 'arn_tx'@'%';
+          GRANT SELECT ON performance_schema.setup_consumers TO 'arn_tx'@'%';
+          GRANT SELECT ON performance_schema.events_transactions_current TO 'arn_tx'@'%';
+          FLUSH PRIVILEGES;
+          SQL
+      - name: Obter class-wpdb da versão fixada
+        run: curl -fsSL https://raw.githubusercontent.com/WordPress/WordPress/7.1.3/wp-includes/class-wpdb.php -o /tmp/class-wpdb.php
+      - name: Executar prova transaccional v2
+        env:
+          ARN_TX_V2_USER: arn_tx
+          ARN_TX_V2_PASSWORD: test
+          ARN_TX_V2_NAME: arn_tx_test
+          ARN_TX_V2_HOST: 127.0.0.1:3306
+          ARN_TX_V2_WPDB: /tmp/class-wpdb.php
+        run: php tests/integration/transaction-state-v2.php /tmp/class-wpdb.php
