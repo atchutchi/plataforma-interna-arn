@@ -48,6 +48,14 @@ jobs:
           ARN_TX_TEST_HOST: 127.0.0.1:3306
           ARN_TX_WPDB: /tmp/class-wpdb.php
         run: php tests/integration/mysql-transaction-guard-v2.php /tmp/class-wpdb.php
+      - name: Executar regressões da revisão
+        env:
+          ARN_TX_TEST_USER: arn_tx
+          ARN_TX_TEST_PASSWORD: test
+          ARN_TX_TEST_NAME: arn_tx_test
+          ARN_TX_TEST_HOST: 127.0.0.1:3306
+          ARN_TX_WPDB: /tmp/class-wpdb.php
+        run: php tests/integration/mysql-transaction-review-regressions.php /tmp/class-wpdb.php
       - name: Executar persistência People exclusiva
         env:
           ARN_TX_TEST_USER: arn_tx
@@ -56,3 +64,40 @@ jobs:
           ARN_TX_TEST_HOST: 127.0.0.1:3306
           ARN_TX_WPDB: /tmp/class-wpdb.php
         run: php tests/integration/mysql-people-transaction.php /tmp/class-wpdb.php
+
+  mariadb-transaction-guard:
+    name: MariaDB 11.8, comentários executáveis
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MARIADB_ROOT_PASSWORD: test
+          MARIADB_DATABASE: arn_tx_test
+          MARIADB_USER: arn_tx
+          MARIADB_PASSWORD: test
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -h 127.0.0.1 -uroot -ptest --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          extensions: mysqli, mbstring
+      - name: Obter class-wpdb do WordPress 7.1.3
+        run: curl -fsSL https://raw.githubusercontent.com/WordPress/WordPress/7.1.3/wp-includes/class-wpdb.php -o /tmp/class-wpdb.php
+      - name: Executar regressões da revisão em MariaDB
+        env:
+          ARN_TX_TEST_USER: arn_tx
+          ARN_TX_TEST_PASSWORD: test
+          ARN_TX_TEST_NAME: arn_tx_test
+          ARN_TX_TEST_HOST: 127.0.0.1:3307
+          ARN_TX_WPDB: /tmp/class-wpdb.php
+        run: php tests/integration/mysql-transaction-review-regressions.php /tmp/class-wpdb.php
