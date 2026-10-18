@@ -32,8 +32,7 @@ final class WpdbDocumentAuthority implements DocumentAuthority {
 
 	public function lockAndAssert( Scope $scope, array $recipient_ids ): int {
 		$this->locked = array();
-		$row          = $this->database->get_row( 'SELECT @@session.in_transaction AS active' );
-		if ( ! is_object( $row ) || '' !== $this->database->last_error || '1' !== (string) $row->active ) {
+		if ( ! $this->database->inTransaction() ) {
 			throw new RuntimeException( 'Autoridade documental indisponível.' );
 		}
 		$current = $this->current->read();
