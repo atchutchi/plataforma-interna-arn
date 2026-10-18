@@ -11,14 +11,14 @@ declare(strict_types=1);
 
 require __DIR__ . '/mysql-transaction-bootstrap.php';
 
-$checks = 0;
-$assert = static function ( bool $condition, string $name ) use ( &$checks ): void {
+$checks       = 0;
+$assert       = static function ( bool $condition, string $name ) use ( &$checks ): void {
 	if ( ! $condition ) {
 		throw new RuntimeException( 'Falhou guarda transaccional: ' . $name );
 	}
 	++$checks;
 };
-$deny   = static function ( callable $operation, string $name ) use ( $assert ): void {
+$deny         = static function ( callable $operation, string $name ) use ( $assert ): void {
 	try {
 		$operation();
 	} catch ( Throwable ) {
@@ -139,17 +139,17 @@ try {
 	$db->dbh->query( 'ROLLBACK' );
 	$assert( ! $db->inTransaction(), 'sessão recupera ausência depois do rollback externo' );
 
-	$lost = arn_tx_connect();
+	$closed_database = arn_tx_connect();
 	try {
-		$assert( false !== $lost->query( 'START TRANSACTION' ), 'START na ligação a perder' );
-		$assert( $lost->dbh instanceof mysqli && true === $lost->dbh->close(), 'ligação fechada durante transacção' );
-		$deny_runtime( static fn() => $lost->inTransaction(), 'perda de ligação normalizada e recusada' );
-		$assert( false === $lost->check_connection( true ), 'perda não provoca reconnect' );
+		$assert( false !== $closed_database->query( 'START TRANSACTION' ), 'START na ligação a perder' );
+		$assert( $closed_database->dbh instanceof mysqli && true === $closed_database->dbh->close(), 'ligação fechada durante transacção' );
+		$deny_runtime( static fn() => $closed_database->inTransaction(), 'perda de ligação normalizada e recusada' );
+		$assert( false === $closed_database->check_connection( true ), 'perda não provoca reconnect' );
 	} finally {
 		try {
-			$lost->close();
-		} catch ( Throwable ) {
-			// O handle já foi fechado de propósito.
+			$closed_database->close();
+		} catch ( Throwable ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- O handle foi fechado de propósito no cenário anterior.
+			// Não há limpeza adicional possível sobre o handle já fechado.
 		}
 	}
 
