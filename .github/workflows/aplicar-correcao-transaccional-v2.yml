@@ -31,14 +31,17 @@ jobs:
           cat .bootstrap/mysql-v2/chunk-*.txt | tr -d '\n' | base64 --decode | gzip --decompress > /tmp/arn-mysql-v2.patch
           echo 'f6166298616e00b323f90be6a771633ebde6c5221ddfda237a36c8eaa2fdac09  /tmp/arn-mysql-v2.patch' | sha256sum --check --strict
           awk '
-            BEGIN { in_identity=0; seen_first_hunk=0; skipping_first_hunk=0 }
+            BEGIN { skip_file=0; in_identity=0; seen_first_hunk=0; skipping_first_hunk=0 }
             /^diff --git / {
+              skip_file = ($0 == "diff --git a/.github/workflows/mysql-transactions.yml b/.github/workflows/mysql-transactions.yml")
               if (in_identity) { in_identity=0; skipping_first_hunk=0 }
               if ($0 == "diff --git a/wp-content/plugins/arn-intranet-core/src/Identity/IdentityWpdb.php b/wp-content/plugins/arn-intranet-core/src/Identity/IdentityWpdb.php") {
                 in_identity=1; seen_first_hunk=0; skipping_first_hunk=0
               }
-              print; next
+              if (!skip_file) print
+              next
             }
+            skip_file { next }
             in_identity && /^@@ / {
               if (!seen_first_hunk) { seen_first_hunk=1; skipping_first_hunk=1; next }
               skipping_first_hunk=0; print; next
@@ -46,7 +49,7 @@ jobs:
             in_identity && skipping_first_hunk { next }
             { print }
           ' /tmp/arn-mysql-v2.patch > /tmp/arn-mysql-v2-effective.patch
-          echo '7a4799adffa574edca16712315f6094ff8d61d6a207c0fac15db43c5f7b82f03  /tmp/arn-mysql-v2-effective.patch' | sha256sum --check --strict
+          echo '2779e4564b0976feff599722255c00df54c8b7f914a555b1471f297c6656290e  /tmp/arn-mysql-v2-effective.patch' | sha256sum --check --strict
           python - <<'PY'
           from pathlib import Path
           path = Path('wp-content/plugins/arn-intranet-core/src/Identity/IdentityWpdb.php')
@@ -64,7 +67,7 @@ jobs:
           count="$(git diff --cached --name-only | wc -l | tr -d ' ')"
           echo "Ficheiros preparados: ${count}"
           git diff --cached --name-status
-          test "${count}" = "22"
+          test "${count}" = "21"
 
       - name: Verificar sintaxe dos ficheiros centrais
         shell: bash
@@ -82,7 +85,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git rm -r .bootstrap/mysql-v2 .github/workflows/aplicar-correcao-transaccional-v2.yml
+          git rm -r .bootstrap/mysql-v2
           git diff --cached --check
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
