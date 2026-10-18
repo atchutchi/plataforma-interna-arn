@@ -54,7 +54,9 @@ jobs:
           php /tmp/red-fronteira.php
 
       - name: Aplicar correcao
-        run: python3 .github/scripts/apply_transaction_boundary_v2.py
+        run: |
+          sed -i "s/sessão inicial fora de transacção/sessão inicial ociosa/" .github/scripts/apply_transaction_boundary_v2.py
+          python3 .github/scripts/apply_transaction_boundary_v2.py
 
       - name: Confirmar sintaxe e comportamento GREEN
         run: |
