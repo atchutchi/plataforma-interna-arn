@@ -92,13 +92,17 @@ try {
 
 	$assert( false === $db->query( 'SET SESSION completion_type=1' ), 'completion_type recusado pela API' );
 	$assert( $db->dbh instanceof mysqli && true === $db->dbh->query( 'SET SESSION completion_type=1' ), 'completion_type externo preparado' );
-	$assert( false !== $db->query( 'START TRANSACTION' ), 'START com completion_type externo' );
+	$deny_runtime( static fn() => $db->inTransaction(), 'completion_type externo invalida a sessão' );
+	$assert( false === $db->query( 'START TRANSACTION' ), 'START recusado com completion_type externo' );
+	$assert( false === $db->query( 'SELECT 1' ), 'query normal recusada com completion_type externo' );
+	$assert( $db->dbh instanceof mysqli && true === $db->dbh->query( 'SET SESSION completion_type=0' ), 'completion_type restaurado' );
+	$assert( ! $db->inTransaction(), 'sessão recupera depois de completion_type restaurado' );
+	$assert( false !== $db->query( 'START TRANSACTION' ), 'START depois de restaurar completion_type' );
 	$assert( false !== $db->query( 'INSERT INTO `' . $base . '` VALUES (10, 10)' ), 'sentinela completion_type criada' );
-	$assert( false !== $db->query( 'COMMIT' ), 'COMMIT explícito não herda chain da sessão' );
-	$assert( ! $db->inTransaction(), 'COMMIT simples termina apesar de completion_type' );
+	$assert( false !== $db->query( 'COMMIT' ), 'COMMIT simples com default seguro' );
+	$assert( ! $db->inTransaction(), 'COMMIT simples termina com completion_type seguro' );
 	$assert( '1' === (string) $db->get_var( 'SELECT COUNT(*) FROM `' . $base . '` WHERE id = 10' ), 'sentinela completion_type confirmada uma vez' );
 	$db->query( $clean_id( 10 ) );
-	$assert( $db->dbh instanceof mysqli && true === $db->dbh->query( 'SET SESSION completion_type=0' ), 'completion_type restaurado' );
 
 	$assert( false !== $db->query( 'START TRANSACTION' ), 'START antes de temporária' );
 	$assert( false !== $db->query( 'CREATE TEMPORARY TABLE `' . $temp . '` (id INT PRIMARY KEY) ENGINE=InnoDB' ), 'tabela temporária permitida' );
