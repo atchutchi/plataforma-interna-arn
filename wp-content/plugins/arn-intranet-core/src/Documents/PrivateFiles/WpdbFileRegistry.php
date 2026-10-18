@@ -59,8 +59,7 @@ final class WpdbFileRegistry {
 	 * @throws RuntimeException When no transaction exists or a write fails.
 	 */
 	public function registerInTransaction( FileRecord $record ): void {
-		$row = $this->database->get_row( 'SELECT @@session.in_transaction AS active' );
-		if ( ! is_object( $row ) || '' !== $this->database->last_error || '1' !== (string) $row->active ) {
+		if ( ! $this->database->inTransaction() ) {
 			throw new RuntimeException( self::ERROR );
 		}
 		$this->writeRecord( $record );
@@ -136,8 +135,7 @@ final class WpdbFileRegistry {
 	 * @throws RuntimeException Quando existe transacção externa.
 	 */
 	private function assertNoTransaction(): void {
-		$row = $this->database->get_row( 'SELECT @@session.in_transaction AS active' );
-		if ( ! is_object( $row ) || '' !== $this->database->last_error || '0' !== (string) $row->active ) {
+		if ( $this->database->inTransaction() ) {
 			throw new RuntimeException( self::ERROR ); }
 	}
 
