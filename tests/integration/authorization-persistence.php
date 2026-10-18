@@ -254,9 +254,10 @@ try {
 		return $query;
 	};
 	add_filter( 'query', $query_filter );
-	$assert( 10 === $repository->find( $user_id )->revision );
+	$refused( static fn() => $repository->find( $user_id ) );
 	remove_filter( 'query', $query_filter );
 	$query_filter = null;
+	$assert( 10 === $repository->find( $user_id )->revision );
 
 	// Falha de query dentro da mudança e perda da ligação recusam sem reconnect.
 	$query_filter = static function ( string $query ) use ( $audit_table ): string {
@@ -267,10 +268,16 @@ try {
 	remove_filter( 'query', $query_filter );
 	$query_filter = null;
 	$assert( 10 === $other->find( $user_id )->revision );
-	$connection_id = (int) $database->get_var( 'SELECT CONNECTION_ID()' );
-	$query_filter  = static function ( string $query ) use ( $audit_table, $second, $connection_id ): string {
+	$connection_id   = (int) $database->get_var( 'SELECT CONNECTION_ID()' );
+	$handle_property = new ReflectionProperty( wpdb::class, 'dbh' );
+	$killer          = $handle_property->getValue( $second );
+	$assert( $killer instanceof mysqli && $connection_id > 0 );
+	$query_filter = static function ( string $query ) use ( $audit_table, $killer, $connection_id ): string {
 		if ( str_starts_with( $query, 'INSERT INTO `' . $audit_table . '`' ) ) {
-			$second->query( $second->prepare( 'KILL %d', $connection_id ) );
+			// phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_query -- Simula uma perda externa da ligação dedicada.
+			if ( true !== $killer->query( 'KILL CONNECTION ' . $connection_id ) ) {
+				throw new RuntimeException( 'Falha ao simular perda da ligação dedicada.' );
+			}
 		}
 		return $query;
 	};

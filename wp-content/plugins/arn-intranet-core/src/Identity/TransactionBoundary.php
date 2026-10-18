@@ -248,11 +248,14 @@ final class TransactionBoundary {
 	 */
 	private function requireState( string $expected, string $message ): void {
 		if ( $expected !== $this->state ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Mensagem interna fechada do domínio.
 			throw new RuntimeException( $message );
 		}
 	}
 
 	/**
+	 * Classifica uma instrução SQL segura.
+	 *
 	 * @param string $sql SQL solicitado.
 	 * @return array{kind:string,sql:string} Classificação e SQL normalizado.
 	 * @throws RuntimeException Quando a instrução não é segura.
@@ -266,25 +269,46 @@ final class TransactionBoundary {
 		$normalized = strtoupper( trim( (string) preg_replace( '/\\s+/', ' ', $cleaned ) ) );
 
 		if ( 1 === preg_match( '/^(START TRANSACTION|BEGIN(?: WORK)?)$/D', $normalized ) ) {
-			return array( 'kind' => self::BEGIN, 'sql' => 'START TRANSACTION' );
+			return array(
+				'kind' => self::BEGIN,
+				'sql'  => 'START TRANSACTION',
+			);
 		}
 		if ( 1 === preg_match( '/^COMMIT(?: WORK)?$/D', $normalized ) ) {
-			return array( 'kind' => self::COMMIT, 'sql' => 'COMMIT' );
+			return array(
+				'kind' => self::COMMIT,
+				'sql'  => 'COMMIT',
+			);
 		}
 		if ( 1 === preg_match( '/^ROLLBACK(?: WORK)?$/D', $normalized ) ) {
-			return array( 'kind' => self::ROLLBACK, 'sql' => 'ROLLBACK' );
+			return array(
+				'kind' => self::ROLLBACK,
+				'sql'  => 'ROLLBACK',
+			);
 		}
 		if ( 1 === preg_match( '/^SAVEPOINT [A-Z0-9_]+$/D', $normalized ) ) {
-			return array( 'kind' => self::SAVEPOINT, 'sql' => $cleaned );
+			return array(
+				'kind' => self::SAVEPOINT,
+				'sql'  => $cleaned,
+			);
 		}
 		if ( 1 === preg_match( '/^ROLLBACK(?: WORK)? TO(?: SAVEPOINT)? [A-Z0-9_]+$/D', $normalized ) ) {
-			return array( 'kind' => self::ROLLBACK_TO, 'sql' => $cleaned );
+			return array(
+				'kind' => self::ROLLBACK_TO,
+				'sql'  => $cleaned,
+			);
 		}
 		if ( 1 === preg_match( '/^RELEASE SAVEPOINT [A-Z0-9_]+$/D', $normalized ) ) {
-			return array( 'kind' => self::RELEASE_SAVEPOINT, 'sql' => $cleaned );
+			return array(
+				'kind' => self::RELEASE_SAVEPOINT,
+				'sql'  => $cleaned,
+			);
 		}
 		if ( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED' === $normalized ) {
-			return array( 'kind' => self::SET_ISOLATION, 'sql' => $cleaned );
+			return array(
+				'kind' => self::SET_ISOLATION,
+				'sql'  => $cleaned,
+			);
 		}
 
 		if (
@@ -300,16 +324,28 @@ final class TransactionBoundary {
 		}
 
 		if ( 1 === preg_match( '/^(SELECT|SHOW|DESCRIBE|DESC|EXPLAIN)\\b/D', $normalized ) ) {
-			return array( 'kind' => self::READ_STATEMENT, 'sql' => $cleaned );
+			return array(
+				'kind' => self::READ_STATEMENT,
+				'sql'  => $cleaned,
+			);
 		}
 		if ( 1 === preg_match( '/^(INSERT|UPDATE|DELETE|REPLACE)\\b/D', $normalized ) ) {
-			return array( 'kind' => self::WRITE_STATEMENT, 'sql' => $cleaned );
+			return array(
+				'kind' => self::WRITE_STATEMENT,
+				'sql'  => $cleaned,
+			);
 		}
 		if ( 1 === preg_match( '/^(CREATE|ALTER|DROP|RENAME|TRUNCATE)\\b/D', $normalized ) ) {
-			return array( 'kind' => self::DDL_STATEMENT, 'sql' => $cleaned );
+			return array(
+				'kind' => self::DDL_STATEMENT,
+				'sql'  => $cleaned,
+			);
 		}
 
-		return array( 'kind' => self::OTHER_STATEMENT, 'sql' => $cleaned );
+		return array(
+			'kind' => self::OTHER_STATEMENT,
+			'sql'  => $cleaned,
+		);
 	}
 
 	/**

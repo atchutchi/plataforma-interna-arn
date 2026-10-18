@@ -138,7 +138,11 @@ final class TransactionBoundaryTest extends TestCase {
 		$boundary->confirm( true );
 	}
 
-	/** @return TransactionBoundary Fronteira com uma transacção activa. */
+	/**
+	 * Cria uma fronteira com transacção activa.
+	 *
+	 * @return TransactionBoundary Fronteira com uma transacção activa.
+	 */
 	private function activeBoundary(): TransactionBoundary {
 		$boundary = new TransactionBoundary();
 		$boundary->markReady();
@@ -147,7 +151,11 @@ final class TransactionBoundaryTest extends TestCase {
 		return $boundary;
 	}
 
-	/** @param TransactionBoundary $boundary Fronteira esperada como insegura. */
+	/**
+	 * Confirma que uma fronteira ficou indisponível.
+	 *
+	 * @param TransactionBoundary $boundary Fronteira esperada como insegura.
+	 */
 	private function expectUnavailable( TransactionBoundary $boundary ): void {
 		try {
 			$boundary->inTransaction();
@@ -157,7 +165,11 @@ final class TransactionBoundaryTest extends TestCase {
 		}
 	}
 
-	/** @param callable $operation Operação que deve lançar RuntimeException. */
+	/**
+	 * Confirma que uma operação insegura é recusada.
+	 *
+	 * @param callable $operation Operação que deve lançar RuntimeException.
+	 */
 	private function expectDenied( callable $operation ): void {
 		try {
 			$operation();

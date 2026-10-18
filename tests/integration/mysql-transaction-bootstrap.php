@@ -122,7 +122,11 @@ if ( ! function_exists( 'wp_die' ) ) {
 	}
 }
 if ( ! function_exists( 'is_multisite' ) ) {
-	/** @return bool Falso neste ensaio. */
+	/**
+	 * Indica que o ensaio não usa multisite.
+	 *
+	 * @return bool Falso neste ensaio.
+	 */
 	function is_multisite(): bool {
 		return false;
 	}
@@ -164,7 +168,8 @@ foreach (
 	}
 }
 
-$core = $argv[1] ?? getenv( 'ARN_TX_WPDB' ) ?: '';
+$core = $argv[1] ?? getenv( 'ARN_TX_WPDB' );
+$core = is_string( $core ) ? $core : '';
 if ( ! is_string( $core ) || ! is_file( $core ) ) {
 	throw new RuntimeException( 'Indica o ficheiro class-wpdb.php.' );
 }

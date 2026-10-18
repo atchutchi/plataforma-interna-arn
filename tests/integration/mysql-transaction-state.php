@@ -21,7 +21,7 @@ $assert = static function ( bool $condition, string $name ) use ( &$checks ): vo
 	}
 	++$checks;
 };
-$deny = static function ( callable $operation, string $name ) use ( $assert ): void {
+$deny   = static function ( callable $operation, string $name ) use ( $assert ): void {
 	try {
 		$operation();
 	} catch ( Throwable ) {
@@ -33,9 +33,9 @@ $deny = static function ( callable $operation, string $name ) use ( $assert ): v
 
 $db       = arn_tx_connect();
 $observer = arn_tx_connect_root();
-$prefix  = 'arn_tx2_' . bin2hex( random_bytes( 5 ) ) . '_';
-$table   = $prefix . 'probe';
-$barrier = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'arn_tx2_' . bin2hex( random_bytes( 6 ) );
+$prefix   = 'arn_tx2_' . bin2hex( random_bytes( 5 ) ) . '_';
+$table    = $prefix . 'probe';
+$barrier  = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'arn_tx2_' . bin2hex( random_bytes( 6 ) );
 
 try {
 	$db->set_prefix( $prefix );
@@ -46,7 +46,12 @@ try {
 	$assert( ! $db->inTransaction(), 'sessão inicial ociosa' );
 	$assert( false === isset( $db->dbh ), 'handle mysqli não exposto' );
 	$deny( static fn() => $db->dbh, 'leitura directa do handle recusada' );
-	$deny( static function () use ( $db ): void { unset( $db->dbh ); }, 'remoção directa do handle recusada' );
+	$deny(
+		static function () use ( $db ): void {
+			unset( $db->dbh );
+		},
+		'remoção directa do handle recusada'
+	);
 	$deny( static fn() => $db->db_connect( false ), 'reconexão manual recusada' );
 	$deny( static fn() => $db->set_sql_mode(), 'mudança directa de sql_mode recusada' );
 	$deny( static fn() => $db->set_charset( null ), 'mudança directa de charset recusada' );
@@ -71,8 +76,8 @@ try {
 
 	foreach (
 		array(
-			'SET autocommit=1'                         => 'autocommit redundante recusado',
-			'COMMIT AND CHAIN'                         => 'chain recusado',
+			'SET autocommit=1'                           => 'autocommit redundante recusado',
+			'COMMIT AND CHAIN'                           => 'chain recusado',
 			'CREATE TEMPORARY TABLE unsafe_tmp (id INT)' => 'DDL temporário recusado',
 			'/*!80000 CREATE TABLE unsafe_exec (id INT) */' => 'comentário executável recusado',
 		) as $unsafe => $label
@@ -113,7 +118,7 @@ try {
 	$assert( 0 === $db->query( 'ROLLBACK' ), 'rollback depois do filtro' );
 	$assert(
 		'0' === (string) $db->get_var(
-			"SELECT COUNT(*) FROM information_schema.TABLES " .
+			'SELECT COUNT(*) FROM information_schema.TABLES ' .
 			"WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'escaped_filter'"
 		),
 		'filtro não criou DDL'
@@ -135,10 +140,10 @@ try {
 	$assert( ! $db->inTransaction(), 'commit não inicia chain' );
 	$assert( '1' === (string) $db->get_var( 'SELECT v FROM `' . $table . '` WHERE id = 1' ), 'commit preserva a escrita' );
 
-	$php    = PHP_BINARY;
-	$core   = $argv[1];
-	$worker = __DIR__ . DIRECTORY_SEPARATOR . 'mysql-transaction-worker.php';
-	$env    = array_merge(
+	$php       = PHP_BINARY;
+	$core      = $argv[1];
+	$worker    = __DIR__ . DIRECTORY_SEPARATOR . 'mysql-transaction-worker.php';
+	$env       = array_merge(
 		is_array( getenv() ) ? getenv() : $_ENV,
 		array(
 			'ARN_TX_TEST_USER'      => (string) getenv( 'ARN_TX_TEST_USER' ),
@@ -150,10 +155,14 @@ try {
 			'ARN_TX_WORKER_BARRIER' => $barrier,
 		)
 	);
-	$spawn = static function ( string $role ) use ( $php, $worker, $core, $env ): array {
+	$spawn     = static function ( string $role ) use ( $php, $worker, $core, $env ): array {
 		$process = proc_open(
 			array( $php, $worker, $core ),
-			array( 0 => array( 'pipe', 'r' ), 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) ),
+			array(
+				0 => array( 'pipe', 'r' ),
+				1 => array( 'pipe', 'w' ),
+				2 => array( 'pipe', 'w' ),
+			),
 			$pipes,
 			null,
 			array_merge( $env, array( 'ARN_TX_WORKER_ROLE' => $role ) )
@@ -173,7 +182,7 @@ try {
 			usleep( 25000 );
 		}
 	};
-	$finish = static function ( array $running ): array {
+	$finish    = static function ( array $running ): array {
 		[ $process, $pipes ] = $running;
 		$stdout              = stream_get_contents( $pipes[1] );
 		$stderr              = stream_get_contents( $pipes[2] );
@@ -188,7 +197,7 @@ try {
 	$waiter = $spawn( 'waiter' );
 	$wait_file( $barrier . '.waiter-attempting' );
 
-	$lock_sql = $observer->prepare(
+	$lock_sql      = $observer->prepare(
 		'SELECT COUNT(*) FROM performance_schema.data_lock_waits AS waits '
 		. 'INNER JOIN performance_schema.data_locks AS requested '
 		. 'ON requested.ENGINE_LOCK_ID = waits.REQUESTING_ENGINE_LOCK_ID '
@@ -225,10 +234,11 @@ try {
 } finally {
 	try {
 		$db->query( 'ROLLBACK' );
-	} catch ( Throwable ) {
+	} catch ( Throwable ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Limpeza após perda deliberada da ligação.
 		// A ligação pode já estar indisponível durante a limpeza.
 	}
-	foreach ( glob( $barrier . '*' ) ?: array() as $file ) {
+	$barrier_files = glob( $barrier . '*' );
+	foreach ( is_array( $barrier_files ) ? $barrier_files : array() as $file ) {
 		@unlink( $file );
 	}
 	$db->query( 'DROP TABLE IF EXISTS `' . $table . '`' );
