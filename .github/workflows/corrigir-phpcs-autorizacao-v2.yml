@@ -1,0 +1,165 @@
+name: Corrigir PHPCS e regressão de autorização v2
+
+on:
+  push:
+    branches:
+      - fix/atchutchi-mysql-transaction-boundary-v2
+
+permissions:
+  contents: write
+
+jobs:
+  fix-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          extensions: mysqli, mbstring
+          tools: composer:v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependências
+        run: |
+          composer install --no-interaction --no-progress --prefer-dist
+          npm ci
+
+      - name: Ajustar regressão e normas
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          from pathlib import Path
+
+          auth = Path('tests/integration/authorization-persistence.php')
+          content = auth.read_text(encoding='utf-8')
+          old = """\tadd_filter( 'query', $query_filter );
+          \t$assert( 10 === $repository->find( $user_id )->revision );
+          \tremove_filter( 'query', $query_filter );
+          \t$query_filter = null;
+          """
+          new = """\tadd_filter( 'query', $query_filter );
+          \t$refused( static fn() => $repository->find( $user_id ) );
+          \tremove_filter( 'query', $query_filter );
+          \t$query_filter = null;
+          \t$assert( 10 === $repository->find( $user_id )->revision );
+          """
+          if content.count(old) != 1:
+              raise SystemExit('cenário MySQL simulado não localizado')
+          auth.write_text(content.replace(old, new, 1), encoding='utf-8')
+
+          boundary = Path('wp-content/plugins/arn-intranet-core/src/Identity/TransactionBoundary.php')
+          content = boundary.read_text(encoding='utf-8')
+          old = "\t\tif ( $expected !== $this->state ) {\n\t\t\tthrow new RuntimeException( $message );\n\t\t}"
+          new = "\t\tif ( $expected !== $this->state ) {\n\t\t\t// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Mensagem interna fechada do domínio.\n\t\t\tthrow new RuntimeException( $message );\n\t\t}"
+          if content.count(old) != 1:
+              raise SystemExit('requireState não localizado')
+          content = content.replace(old, new, 1)
+          old = "\t/**\n\t * @param string $sql SQL solicitado."
+          new = "\t/**\n\t * Classifica uma instrução SQL segura.\n\t *\n\t * @param string $sql SQL solicitado."
+          if content.count(old) != 1:
+              raise SystemExit('doc classify não localizado')
+          boundary.write_text(content.replace(old, new, 1), encoding='utf-8')
+
+          test = Path('tests/phpunit/TransactionBoundaryTest.php')
+          content = test.read_text(encoding='utf-8')
+          replacements = {
+              "\t/** @return TransactionBoundary Fronteira com uma transacção activa. */": "\t/**\n\t * Cria uma fronteira com transacção activa.\n\t *\n\t * @return TransactionBoundary Fronteira com uma transacção activa.\n\t */",
+              "\t/** @param TransactionBoundary $boundary Fronteira esperada como insegura. */": "\t/**\n\t * Confirma que uma fronteira ficou indisponível.\n\t *\n\t * @param TransactionBoundary $boundary Fronteira esperada como insegura.\n\t */",
+              "\t/** @param callable $operation Operação que deve lançar RuntimeException. */": "\t/**\n\t * Confirma que uma operação insegura é recusada.\n\t *\n\t * @param callable $operation Operação que deve lançar RuntimeException.\n\t */",
+          }
+          for old, new in replacements.items():
+              if content.count(old) != 1:
+                  raise SystemExit('doc de helper não localizado')
+              content = content.replace(old, new, 1)
+          test.write_text(content, encoding='utf-8')
+
+          worker = Path('tests/integration/mysql-transaction-worker.php')
+          content = worker.read_text(encoding='utf-8').replace('$role', '$worker_role')
+          old = "\t} catch ( Throwable ) {\n\t\t// A ligação pode já estar indisponível durante a limpeza."
+          new = "\t} catch ( Throwable ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Limpeza após perda deliberada da ligação.\n\t\t// A ligação pode já estar indisponível durante a limpeza."
+          if content.count(old) != 1:
+              raise SystemExit('catch do worker não localizado')
+          worker.write_text(content.replace(old, new, 1), encoding='utf-8')
+
+          bootstrap = Path('tests/integration/mysql-transaction-bootstrap.php')
+          content = bootstrap.read_text(encoding='utf-8')
+          old = "\t/** @return bool Falso neste ensaio. */\n\tfunction is_multisite(): bool {"
+          new = "\t/**\n\t * Indica que o ensaio não usa multisite.\n\t *\n\t * @return bool Falso neste ensaio.\n\t */\n\tfunction is_multisite(): bool {"
+          if content.count(old) != 1:
+              raise SystemExit('doc is_multisite não localizado')
+          content = content.replace(old, new, 1)
+          old = "$core = $argv[1] ?? getenv( 'ARN_TX_WPDB' ) ?: '';"
+          new = "$core = $argv[1] ?? getenv( 'ARN_TX_WPDB' );\n$core = is_string( $core ) ? $core : '';"
+          if content.count(old) != 1:
+              raise SystemExit('resolução de core não localizada')
+          bootstrap.write_text(content.replace(old, new, 1), encoding='utf-8')
+
+          state = Path('tests/integration/mysql-transaction-state.php')
+          content = state.read_text(encoding='utf-8')
+          old = "\t} catch ( Throwable ) {\n\t\t// A ligação pode já estar indisponível durante a limpeza."
+          new = "\t} catch ( Throwable ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Limpeza após perda deliberada da ligação.\n\t\t// A ligação pode já estar indisponível durante a limpeza."
+          if content.count(old) != 1:
+              raise SystemExit('catch de limpeza não localizado')
+          content = content.replace(old, new, 1)
+          old = "\tforeach ( glob( $barrier . '*' ) ?: array() as $file ) {\n\t\t@unlink( $file );\n\t}"
+          new = "\t$barrier_files = glob( $barrier . '*' );\n\tforeach ( is_array( $barrier_files ) ? $barrier_files : array() as $file ) {\n\t\t@unlink( $file );\n\t}"
+          if content.count(old) != 1:
+              raise SystemExit('limpeza glob não localizada')
+          state.write_text(content.replace(old, new, 1), encoding='utf-8')
+          PY
+
+          status=0
+          vendor/bin/phpcbf \
+            wp-content/plugins/arn-intranet-core/src/Identity/TransactionBoundary.php \
+            tests/phpunit/TransactionBoundaryTest.php \
+            tests/integration/mysql-transaction-worker.php \
+            tests/integration/mysql-transaction-bootstrap.php \
+            tests/integration/mysql-transaction-state.php || status=$?
+          if [ "$status" -gt 1 ]; then
+            exit "$status"
+          fi
+          git diff --check
+
+      - name: Verificar PHP completo e normas
+        run: |
+          vendor/bin/phpunit -c phpunit.xml.dist
+          vendor/bin/phpcs
+
+      - name: Verificar integração de autorização em WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run env:start:tests
+          trap 'npm run env:stop:tests' EXIT
+          npm run env:check:tests
+          npm run composer:install
+          npm run test:authorization:integration
+
+      - name: Publicar as correcções verificadas
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add \
+            wp-content/plugins/arn-intranet-core/src/Identity/TransactionBoundary.php \
+            tests/phpunit/TransactionBoundaryTest.php \
+            tests/integration/authorization-persistence.php \
+            tests/integration/mysql-transaction-worker.php \
+            tests/integration/mysql-transaction-bootstrap.php \
+            tests/integration/mysql-transaction-state.php
+          git diff --cached --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'test: alinhar regressões e normas da fronteira transaccional'
+          git push origin HEAD:fix/atchutchi-mysql-transaction-boundary-v2
