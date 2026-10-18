@@ -1,0 +1,56 @@
+name: Transacções MySQL
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  mysql-transactions:
+    name: MySQL ${{ matrix.mysql }}, fronteiras transaccionais
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        mysql: ['8.0.44', '8.4']
+    services:
+      mysql:
+        image: mysql:${{ matrix.mysql }}
+        env:
+          MYSQL_ROOT_PASSWORD: root-test
+          MYSQL_DATABASE: arn_tx_test
+          MYSQL_USER: arn_tx
+          MYSQL_PASSWORD: test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot-test --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          extensions: mysqli, mbstring
+      - name: class-wpdb do WordPress 7.1.3
+        run: curl -fsSL https://raw.githubusercontent.com/WordPress/WordPress/7.1.3/wp-includes/class-wpdb.php -o /tmp/class-wpdb.php
+      - name: Falha inicial sem credenciais, sem saída
+        run: php tests/integration/identity-connection-failure.php /tmp/class-wpdb.php
+      - name: Fronteiras transaccionais
+        env:
+          ARN_TX_TEST_USER: arn_tx
+          ARN_TX_TEST_PASSWORD: test
+          ARN_TX_TEST_NAME: arn_tx_test
+          ARN_TX_TEST_HOST: 127.0.0.1:3306
+          ARN_TX_ROOT_USER: root
+          ARN_TX_ROOT_PASSWORD: root-test
+          ARN_TX_WPDB: /tmp/class-wpdb.php
+        run: php tests/integration/mysql-transaction-state.php /tmp/class-wpdb.php
