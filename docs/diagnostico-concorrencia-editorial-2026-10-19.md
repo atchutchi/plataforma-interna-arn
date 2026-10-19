@@ -4,7 +4,7 @@
 
 Continuação da [Issue #31](https://github.com/atchutchi/plataforma-interna-arn/issues/31), por pedido do responsável, na branch `test/editorial-contention-diagnostics`, a partir de `main` em `2c77a46a3721b560e75696e036c051b546d49ba8`. Apenas laboratório local e fixtures fictícias. Não há alterações ao plugin, tema, esquema, contas institucionais ou configuração Google. A PR #41 e a Issue #37 continuam fora desta tarefa. Não fazer merge desta entrega.
 
-A causa da intermitência histórica continua por identificar. Uma passagem verde, uma recusa injectada ou um erro SQL deliberado não constituem reprodução da falha histórica. A Issue #31 permanece aberta. Esta parcela fornece observação para a próxima ocorrência e calibração dessa observação.
+Foi reproduzido um mecanismo de observação desactualizada da cache InnoDB e preparado um ajuste causal da frequência de sondagem. A atribuição de cada ocorrência histórica continua por demonstrar, sobretudo a recusa genérica durante revogação. Uma passagem verde ou um erro SQL deliberado não constituem reprodução dessas ocorrências. A Issue #31 permanece aberta.
 
 ## Evidência anterior
 
@@ -27,7 +27,7 @@ O worker regista arranque, ligação, snapshot, preparação, libertação pelo 
 
 O pai publica eventos JSON `Editorial contention` e `Editorial completion`, com fases, estado vivo/terminado, exit code conhecido ou desconhecido, marcadores, connection ID, observações e estado transaccional permitido. O tempo monotónico ordena fases e mede intervalos. Não representa uma hora civil de auditoria institucional.
 
-A ligação original `$reader` continua a executar a consulta `INNODB_LOCK_WAITS` que decide a asserção. Uma segunda ligação dedicada faz a mesma observação e consulta o estado transaccional para comparação. Não substitui a prova original nem converte uma observação desconhecida em zero. Uma discordância é apenas evidência a investigar.
+A ligação original `$reader` continua a executar a consulta `INNODB_LOCK_WAITS` que decide a asserção. Uma segunda ligação dedicada faz a mesma observação e consulta o estado transaccional para comparação. Não substitui a prova original nem converte uma observação desconhecida em zero. As ligações são separadas, mas partilham a cache de metadados do servidor. Uma discordância ou concordância não prova que o snapshot esteja actualizado.
 
 | Classificação | Significado limitado |
 | --- | --- |
@@ -45,6 +45,16 @@ Estas classificações são observações e não causas finais. Em particular, a
 Mantêm-se as 59 verificações originais, os dois processos independentes, os bloqueios reais e a janela de 15 segundos da observação. A prova de duas decisões exige exactamente uma confirmação e uma recusa, com uma única transição. A revogação confirmada sob lock continua a impedir a decisão sem efeitos nas oito tabelas de negócio observadas. Não foram acrescentados retries, skips, aumentos do timeout ou uma decisão editorial sequencial.
 
 Uma consulta adicional, escrita de trace ou leitura de estado pode alterar a temporização do ensaio. Uma execução verde com instrumentação não demonstra desaparecimento da intermitência.
+
+## Mecanismo reproduzido e ajuste da sondagem
+
+O [código da MariaDB 11.8.3, trx0i_s.cc](https://raw.githubusercontent.com/MariaDB/server/mariadb-11.8.3/storage/innobase/trx/trx0i_s.cc), nas linhas 900 a 915 e 1093 a 1098, mantém uma cache comum às três tabelas InnoDB. Cada leitura renova o instante da última leitura. A actualização exige mais de 100 ms sem leitura. Consultas repetidas a cada 50 ms podem conservar um snapshot anterior ao bloqueio.
+
+Um ensaio privado isolado manteve uma transacção detentora de uma linha e iniciou uma escrita assíncrona noutra ligação. Após preparar um snapshot sem espera, 16 leituras rápidas devolveram zero, com intervalo máximo medido no cliente de 47 ms. O escritor continuava pendente. Sem libertar a linha, 160 ms sem consultar essa cache permitiram observar a espera. Só o rollback do detentor permitiu concluir a escrita. A medição do cliente não certifica o intervalo interno do servidor, mas a observação antes/depois manteve o mesmo bloqueio real.
+
+O observador editorial passa a deixar 150 ms entre rondas de leitura, conservando a consulta e a asserção originais e o prazo total de 15 segundos. A mudança respeita a janela de actualização identificada, sem aumentar o timeout ou aceitar uma segunda consulta como prova alternativa.
+
+`npm run test:editorial-observation:integration` mantém esta experiência em SQL real, numa tabela exclusiva. A CI exige o escritor pendente, a espera observada após o intervalo e a conclusão apenas depois da libertação. Os resultados da sondagem rápida são diagnósticos. Não se exige que o escalonador do runner cumpra uma latência máxima ou que a cache fique obrigatoriamente desactualizada. Isto evita introduzir outra falha dependente da carga da máquina. A reprodução negativa observada no laboratório fica preservada separadamente.
 
 ## Calibração reproduzível
 
@@ -83,10 +93,11 @@ Laboratório portátil Windows, WordPress 7.1.3, PHP 8.4.26 e MariaDB 11.8.3. O 
 | Recusa precoce isolada | Exit 1, `worker-before-marker`, worker terminado e trace completo com `refused`, sem entrada na autoridade |
 | Consulta observadora inválida isolada | Exit 1, `observer-query-failed`, errno 1054, observador independente em espera e estado `LOCK WAIT` |
 | Controlador completo após formatação final | Exit 0, caso normal aprovado e dois casos negativos reprovados com a prova exigida, preservação nativa confirmada entre casos |
+| Ajuste de sondagem para 150 ms | Novo controlador completo aprovado. Experiência SQL pública com 16 amostras rápidas a zero, escritor pendente, espera observada após intervalo e conclusão apenas após libertação. A comparação final conservou exactamente as 17 tabelas fictícias e a configuração, sem contas/tabelas editoriais temporárias ou correio bloqueado registado |
 | Regressão unitária do trace | RED inicial com seis falhas por ausência da implementação, depois seis testes e 20 asserções aprovados |
 | Suite PHP completa | 853 testes, 3758 asserções e quatro omissões existentes por symlinks indisponíveis no Windows |
 | Node, lint e build | 55 testes Node aprovados, lint e build aprovados |
-| PHPCS | 392 ficheiros, exit 0 |
+| PHPCS | 392 ficheiros na primeira entrega, exit 0. Os três ficheiros PHP alterados/acrescentados no ajuste passaram novamente |
 | Revisão independente | Sem achados concretos por corrigir, com a causa histórica explicitamente fora do que os dados provam |
 | Playwright em `localhost:8889` | Login OIDC simulado, portal sem competências, três larguras 375/768/1440, texto a 200%, foco por teclado, 16 superfícies recusadas, cabeçalhos privados, logout e cookie anterior recusado por redireccionamento 302. Sem erros JavaScript na vista testada |
 
@@ -98,8 +109,12 @@ A comparação do laboratório normal preservou a configuração, sessões e os 
 
 Os logs completos ficam fora do Git, numa pasta privada desta tarefa. Não copiar dados identificáveis, configurações ou snapshots para a PR. A CI Linux no SHA entregue é uma verificação separada e o seu estado pertence à PR. Mesmo com CI verde, o pedido actual continua a proibir merge e a causa histórica mantém-se pendente.
 
+Primeira CI, SHA `c892b0a`: a execução de push [39312608811](https://github.com/atchutchi/plataforma-interna-arn/actions/runs/39312608811) passou. Na execução da PR [39312638769](https://github.com/atchutchi/plataforma-interna-arn/actions/runs/39312638769), o teste editorial original passou as 59 verificações. A nova calibração passou `none` e `early-worker`, mas falhou `observer-query` na condição conjunta que exige espera secundária, estado `LOCK WAIT` e worker vivo. O controlador ainda não publicava esses factos antes da asserção, pelo que não é possível determinar retrospectivamente qual dos três faltou. Não se atribui essa tentativa à cache como facto provado e não se reexecutou a tentativa para a substituir por verde.
+
+O ajuste seguinte acrescenta factos booleanos fechados antes dessa asserção, a experiência SQL e o intervalo de 150 ms. A revisão independente identificou uma exigência inicial inadequada de intervalo máximo inferior a 100 ms na experiência. Essa exigência foi retirada antes da entrega do ajuste. O controlo positivo do bloqueio e da libertação mantém-se obrigatório. Os resultados posteriores são novos ensaios de código alterado, preservando a tentativa vermelha anterior.
+
 ## Próximo passo
 
 Conservar esta instrumentação na branch e PR de diagnóstico, sem merge nesta sessão. Rever a CI no SHA entregue. Na próxima falha espontânea, guardar a tentativa original e os eventos dos três cenários de concorrência antes de qualquer reexecução manual. Correlacionar o connection ID do marcador com a fase, errno anterior ao rollback, estado do worker e ambas as observações.
 
-Só depois de haver uma causa sustentada deve ser preparada uma regressão que reproduza essa causa e uma correcção mínima. Manter a Issue #31 aberta até essa prova. A correcção transaccional da PR #41 e a conciliação F1-13 da Issue #37 continuam nas entregas da Albertina, sem antecipar alterações de produto nesta branch.
+O mecanismo de cache já tem um contra-exemplo controlado e um ajuste no teste. Falta correlacionar uma falha espontânea com a prova completa, distinguir eventuais outras causas e investigar a recusa histórica durante revogação. Manter a Issue #31 aberta. A correcção transaccional da PR #41 e a conciliação F1-13 da Issue #37 continuam nas entregas da Albertina, sem antecipar alterações de produto nesta branch.

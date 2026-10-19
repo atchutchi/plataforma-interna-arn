@@ -91,6 +91,29 @@ foreach ( array( 'none', 'early-worker', 'observer-query' ) as $case ) {
 		} else {
 			$assert( $exit > 0 && 1 === count( $observations ) && array() === $completions && str_contains( $stdout . $stderr, 'processo concorrente espera num lock real' ) );
 			$observation = $observations[0];
+			// Publish only typed facts, before an assertion can discard the child trace.
+			WP_CLI::log(
+				'Editorial calibration facts: ' . wp_json_encode(
+					array(
+						'case'                  => $case,
+						'exit'                  => $exit,
+						'primary_unknown'       => false === ( $observation['primary']['known'] ?? null ),
+						'primary_sql_error'     => true === ( $observation['primary']['sql_error'] ?? null ),
+						'primary_errno_1054'    => 1054 === ( $observation['primary']['errno'] ?? null ),
+						'secondary_wait_seen'   => true === ( $observation['secondary_wait_seen'] ?? null ),
+						'state_lock_wait'       => 'LOCK WAIT' === ( $observation['transaction_state'] ?? null ),
+						'state_running'         => 'RUNNING' === ( $observation['transaction_state'] ?? null ),
+						'state_unknown'         => 'unknown' === ( $observation['transaction_state'] ?? null ),
+						'worker_running'        => true === ( $observation['worker']['running'] ?? null ),
+						'worker_exited'         => false === ( $observation['worker']['running'] ?? null ),
+						'trace_complete'        => true === ( $observation['worker']['trace']['complete'] ?? null ),
+						'authority_enter_seen'  => in_array( 'authority-enter', array_column( $observation['worker']['trace']['records'] ?? array(), 'phase' ), true ),
+						'authority_locked_seen' => in_array( 'authority-locked', array_column( $observation['worker']['trace']['records'] ?? array(), 'phase' ), true ),
+						'worker_refused_seen'   => in_array( 'refused', array_column( $observation['worker']['trace']['records'] ?? array(), 'phase' ), true ),
+						'worker_failed_seen'    => in_array( 'failed', array_column( $observation['worker']['trace']['records'] ?? array(), 'phase' ), true ),
+					)
+				)
+			);
 			$assert( 'decision-first' === $observation['scenario'] && $observation['worker']['trace']['complete'] );
 			$phases = array_column( $observation['worker']['trace']['records'], 'phase' );
 			if ( 'early-worker' === $case ) {

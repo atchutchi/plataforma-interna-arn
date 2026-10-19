@@ -363,7 +363,9 @@ try {
 			$unknown_polls  += $primary['known'] ? 0 : 1;
 			$found           = $primary['known'] && $primary['count'] > 0;
 			$secondary_found = $secondary_found || ( $secondary['known'] && $secondary['count'] > 0 );
-			usleep( 50000 );
+			// MariaDB trx0i_s.cc requires >100 ms since the last cache read.
+			// Both connections share that server cache. Keep the same 15 s deadline.
+			usleep( 150000 );
 		}
 		$state = 'unknown';
 		if ( $connection > 0 ) {
