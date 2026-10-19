@@ -38,8 +38,8 @@ final class DashboardLinks {
 			array(
 				'id'          => 'posts',
 				'capability'  => 'edit_posts',
-				'title'       => 'Artigos',
-				'description' => 'Consultar e preparar conteúdos editoriais.',
+				'title'       => 'Artigos WordPress',
+				'description' => 'Gerir artigos nativos do WordPress.',
 				'path'        => 'edit.php',
 				'icon'        => 'admin-post',
 			),

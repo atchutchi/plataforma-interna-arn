@@ -43,7 +43,7 @@ final class AdminDashboard {
 
 	/** Regista a caixa do painel com capacidade de leitura actual. */
 	public function setup(): void {
-		if ( current_user_can( 'read' ) ) {
+		if ( current_user_can( 'read' ) && ! is_network_admin() && ! is_user_admin() ) {
 			remove_action( 'welcome_panel', 'wp_welcome_panel' );
 			remove_meta_box( 'dashboard_primary', 'dashboard', 'side' );
 			wp_add_dashboard_widget( 'arn-dashboard', 'Painel ARN', array( $this, 'render' ), null, null, 'normal', 'high' );
@@ -71,16 +71,26 @@ final class AdminDashboard {
 		}
 	}
 
-	/** Apresenta marca e destinos nativos conforme a conta actual. */
-	public function render(): void {
-		if ( ! current_user_can( 'read' ) ) {
-			return;
+	/** Calcula os grupos depois dos menus autorizados de cada módulo. */
+	public function sections(): array {
+		if ( ! current_user_can( 'read' ) || is_network_admin() || is_user_admin() ) {
+			return array();
 		}
 		$capabilities = array();
 		foreach ( array( 'read', 'edit_pages', 'edit_posts', 'upload_files', 'manage_options' ) as $capability ) {
 			$capabilities[ $capability ] = current_user_can( $capability );
 		}
 		$links = DashboardLinks::visible( $capabilities, wp_get_environment_type(), $this->toolRegistered( 'arn-google-access' ), $this->toolRegistered( 'arn-authorization-probe' ) );
+		global $menu, $submenu;
+		return DashboardSections::visible( $links, is_array( $menu ) ? $menu : array(), is_array( $submenu ) ? $submenu : array(), $capabilities, wp_get_environment_type() );
+	}
+
+	/** Apresenta marca e destinos nativos conforme a conta actual. */
+	public function render(): void {
+		$sections = $this->sections();
+		if ( array() === $sections ) {
+			return;
+		}
 
 		echo '<section class="arn-admin" aria-label="Administração ARN"><div class="arn-admin-header">';
 		$logo_path = get_theme_root( 'arn-intranet' ) . '/arn-intranet/assets/images/arn-logo.png';
@@ -88,11 +98,14 @@ final class AdminDashboard {
 			echo '<img class="arn-admin-logo" src="' . esc_url( get_theme_root_uri( 'arn-intranet' ) . '/arn-intranet/assets/images/arn-logo.png' ) . '" width="1491" height="684" alt="ARN, Autoridade Reguladora Nacional">';
 		}
 		echo '<div><p class="arn-admin-label">Plataforma interna</p><h3>Administração da plataforma</h3><p class="arn-admin-intro">Acede aos conteúdos e às ferramentas disponíveis para a tua conta.</p></div></div>';
-		echo '<nav aria-label="Atalhos do painel ARN"><ul class="arn-admin-links">';
-		foreach ( $links as $link ) {
-			echo '<li><a href="' . esc_url( admin_url( $link['path'] ) ) . '"><span class="dashicons dashicons-' . esc_attr( $link['icon'] ) . '" aria-hidden="true"></span><span><span class="arn-admin-link-title">' . esc_html( $link['title'] ) . '</span><span class="arn-admin-link-description">' . esc_html( $link['description'] ) . '</span></span></a></li>';
+		foreach ( $sections as $id => $section ) {
+			echo '<nav class="arn-admin-section" aria-labelledby="arn-admin-section-' . esc_attr( $id ) . '"><h4 id="arn-admin-section-' . esc_attr( $id ) . '">' . esc_html( $section['title'] ) . '</h4><ul class="arn-admin-links">';
+			foreach ( $section['links'] as $link ) {
+				echo '<li><a href="' . esc_url( admin_url( $link['path'] ) ) . '"><span class="dashicons dashicons-' . esc_attr( $link['icon'] ) . '" aria-hidden="true"></span><span><span class="arn-admin-link-title">' . esc_html( $link['title'] ) . '</span><span class="arn-admin-link-description">' . esc_html( $link['description'] ) . '</span></span></a></li>';
+			}
+			echo '</ul></nav>';
 		}
-		echo '</ul></nav><p class="arn-admin-footnote">Os atalhos disponíveis dependem das permissões actuais da tua conta.</p></section>';
+		echo '<p class="arn-admin-footnote">Os destinos voltam a verificar a tua sessão e as permissões actuais.</p></section>';
 	}
 
 	/**
@@ -102,8 +115,11 @@ final class AdminDashboard {
 	 */
 	private function toolRegistered( string $slug ): bool {
 		global $submenu;
-		foreach ( $submenu['tools.php'] ?? array() as $item ) {
-			if ( isset( $item[1] ) && ( $item[2] ?? null ) === $slug && current_user_can( $item[1] ) ) { // phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Compara uma variável a um valor calculado.
+		if ( ! is_array( $submenu ) || ! is_array( $submenu['tools.php'] ?? null ) ) {
+			return false;
+		}
+		foreach ( $submenu['tools.php'] as $item ) {
+			if ( is_array( $item ) && 'manage_options' === ( $item[1] ?? null ) && ( $item[2] ?? null ) === $slug && current_user_can( 'manage_options' ) ) { // phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Compara uma variável a um valor calculado.
 				return true;
 			}
 		}

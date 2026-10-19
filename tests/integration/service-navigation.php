@@ -369,6 +369,8 @@ try {
 	$assert( array( 'communications', 'calendar' ) === array_column( $expected_f112, 'id' ) && Portal::model( 'services', array() )['services'] === $expected_f112, 'modelo F112 positivo com autoridade real' );
 	$assert( Portal::model( 'home', array() )['services'] === $expected_f112, 'início F112 coincide com destinos autorizados' );
 	$assert( str_contains( $home_html(), 'href="' . esc_url( get_permalink( $f112['pages']['calendar'] ) ) . '"' ), 'início renderiza acesso F112 real' );
+	require_once __DIR__ . '/dashboard-management-fixture.php';
+	arn_dashboard_management_fixture( $f112['user_ids'], $admin, $login, $assert, $home_table );
 	require_once __DIR__ . '/home-dashboard-fixture.php';
 	$dashboard_cleanup = arn_home_dashboard_fixture( $db, $f112['user_ids'], $login, $assert, $home_table, $owned_anchors );
 	$dashboard_cleanup();
