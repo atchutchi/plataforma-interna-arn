@@ -79,7 +79,7 @@ final class DocumentPortal {
 		$page     = $input['arn_page'] ?? '1';
 		$id       = $input['arn_doc'] ?? '';
 		if ( ! is_string( $q ) || strlen( $q ) > 160 || ! is_string( $category ) || ( '' !== $category && ! isset( self::CATEGORIES[ $category ] ) )
-			|| ! is_string( $page ) || 1 !== preg_match( '/^[1-9][0-9]{0,2}$/D', $page )
+			|| ! is_string( $page ) || 1 !== preg_match( '/^[1-9][0-9]{0,5}$/D', $page )
 			|| ! is_string( $id ) || ( '' !== $id && 1 !== preg_match( '/^[1-9][0-9]{0,9}$/D', $id ) ) ) {
 			return $base;
 		}

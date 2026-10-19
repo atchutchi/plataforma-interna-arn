@@ -29,6 +29,7 @@ final class NewsConfiguration {
 		) ) {
 			return false;
 		}
+		$db = null;
 		try {
 			global $wpdb;
 			$db = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
@@ -38,6 +39,8 @@ final class NewsConfiguration {
 			return true;
 		} catch ( Throwable ) {
 			return false;
+		} finally {
+			$db?->close();
 		}
 	}
 }

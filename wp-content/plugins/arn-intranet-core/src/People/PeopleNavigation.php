@@ -18,13 +18,39 @@ final class PeopleNavigation {
 	}
 
 	public static function links( WP_Block_List $blocks ): WP_Block_List {
-		if ( ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || is_admin() || ! PeopleConfiguration::current() ) {
-			return $blocks;
+		foreach ( self::destinations() as $destination ) {
+			$exists = false;
+			foreach ( $blocks as $block ) {
+				if ( 'core/navigation-link' === $block->name && ( $block->attributes['url'] ?? null ) === $destination['url'] ) {
+					$exists = true;
+					break;
+				}
+			}
+			if ( ! $exists ) {
+				$blocks[] = array(
+					'blockName'    => 'core/navigation-link',
+					'attrs'        => $destination + array(
+						'kind' => 'post-type',
+						'type' => 'page',
+					),
+					'innerBlocks'  => array(),
+					'innerHTML'    => '',
+					'innerContent' => array(),
+				);
+			}
 		}
-		$source = new LocalPeopleDirectory();
+		return $blocks;
+	}
+
+	/** Same guarded destinations for native navigation and the services page. */
+	public static function destinations( ?LocalPeopleDirectory $source = null ): array {
+		if ( ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || is_admin() || ! PeopleConfiguration::current() ) {
+			return array();
+		}
+		$source = $source ?? new LocalPeopleDirectory();
 		$own    = $source->own();
 		if ( null === $own ) {
-			return $blocks;
+			return array();
 		}
 		$views = array(
 			'directory' => 'Funcionários',
@@ -34,36 +60,19 @@ final class PeopleNavigation {
 		if ( null !== $query && null !== $source->team( $query ) ) {
 			$views['team'] = 'A minha equipa';
 		}
-		$pages = new PeoplePages();
+		$pages  = new PeoplePages();
+		$result = array();
 		foreach ( $views as $view => $label ) {
 			$post = get_page_by_path( $pages->slug( $view ), OBJECT, 'page' );
 			if ( ! $post instanceof WP_Post || $pages->viewFor( $post ) !== $view ) {
 				continue;
 			}
-			$url    = get_permalink( $post );
-			$exists = false;
-			foreach ( $blocks as $block ) {
-				if ( 'core/navigation-link' === $block->name && ( $block->attributes['url'] ?? null ) === $url ) {
-					$exists = true;
-					break;
-				}
-			}
-			if ( ! $exists ) {
-				$blocks[] = array(
-					'blockName'    => 'core/navigation-link',
-					'attrs'        => array(
-						'label' => $label,
-						'url'   => $url,
-						'kind'  => 'post-type',
-						'type'  => 'page',
-						'id'    => $post->ID,
-					),
-					'innerBlocks'  => array(),
-					'innerHTML'    => '',
-					'innerContent' => array(),
-				);
-			}
+			$result[ $view ] = array(
+				'label' => $label,
+				'url'   => get_permalink( $post ),
+				'id'    => $post->ID,
+			);
 		}
-		return $blocks;
+		return $result;
 	}
 }

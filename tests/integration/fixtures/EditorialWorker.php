@@ -8,6 +8,8 @@ namespace Arn\Intranet\Tests\Fixtures;
 
 use RuntimeException;
 
+require_once __DIR__ . '/EditorialContentionTrace.php';
+
 // phpcs:disable Squiz.Commenting.FunctionComment, Squiz.Commenting.VariableComment, WordPress.Security.EscapeOutput.ExceptionNotEscaped
 // phpcs:disable WordPress.WP.AlternativeFunctions, WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open
 
@@ -16,13 +18,17 @@ final class EditorialWorker {
 	private $process;
 	private array $pipes = array();
 	private array $markers;
+	private readonly EditorialContentionTrace $trace;
+	private ?int $exit_code = null;
 	public function __construct( string $prefix, int $editor, int $article, array $participants ) {
 		$root          = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $prefix . bin2hex( random_bytes( 8 ) );
 		$this->markers = array(
 			'ready'   => $root . '.ready',
 			'go'      => $root . '.go',
 			'entered' => $root . '.entered',
+			'trace'   => $root . '.trace',
 		);
+		$this->trace   = new EditorialContentionTrace( $this->markers['trace'] );
 		$context       = array(
 			'prefix'       => $prefix,
 			'editor'       => $editor,
@@ -82,12 +88,26 @@ final class EditorialWorker {
 		$error  = stream_get_contents( $this->pipes[2] );
 		fclose( $this->pipes[1] );
 		fclose( $this->pipes[2] );
-		$exit          = proc_close( $this->process );
-		$this->process = null;
+		$exit            = proc_close( $this->process );
+		$this->exit_code = $exit;
+		$this->process   = null;
 		if ( 0 !== $exit || '' !== $error || ! in_array( $output, array( "EDITORIAL_CONFIRMED\n", "EDITORIAL_REFUSED\n" ), true ) ) {
 			throw new RuntimeException( 'Processo exclusivo não confirmou resultado válido.' );
 		}
 		return trim( $output );
+	}
+	/** Closed fields only. Never read or publish stdout/stderr, argv or environment. */
+	public function diagnostic(): array {
+		$status = is_resource( $this->process ) ? proc_get_status( $this->process ) : false;
+		$exit   = is_array( $status ) && is_int( $status['exitcode'] ) && $status['exitcode'] >= 0 ? $status['exitcode'] : $this->exit_code;
+		return array(
+			'running'   => is_array( $status ) ? $status['running'] : null,
+			'exit_code' => $exit,
+			'ready'     => is_file( $this->markers['ready'] ),
+			'released'  => is_file( $this->markers['go'] ),
+			'entered'   => is_file( $this->markers['entered'] ) && filesize( $this->markers['entered'] ) > 0,
+			'trace'     => $this->trace->snapshot(),
+		);
 	}
 	public function close(): void {
 		if ( is_resource( $this->process ) ) {

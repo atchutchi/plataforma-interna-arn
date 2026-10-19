@@ -13,6 +13,10 @@ $portal = $args['portal'] ?? array();
 if ( ! is_array( $portal ) || empty( $portal['view'] ) ) {
 	return;
 }
+if ( 'search' === $portal['view'] ) {
+	get_template_part( 'portal/search', null, array( 'search' => $portal ) );
+	return;
+}
 if ( 'news_preview' === $portal['view'] && is_array( $portal['news'] ?? null ) ) {
 	get_template_part( 'portal/news-preview', null, array( 'news' => $portal['news'] ) );
 	return;
@@ -55,7 +59,7 @@ $intro        = array(
 	'news'        => 'Circulares, notas internas, despachos e comunicação sindical. Consulta as comunicações por assunto, categoria ou ano.',
 	'documents'   => 'Encontra os documentos do arquivo e consulta a sua fonte original.',
 	'regulations' => 'Consulta os regulamentos disponíveis e a informação documental que os acompanha.',
-	'services'    => 'Conhece os serviços previstos para o portal e acompanha a sua preparação.',
+	'services'    => 'Encontra os acessos disponíveis para a tua conta e acompanha a preparação dos próximos serviços.',
 );
 ?>
 <div class="arn-portal alignwide">
@@ -87,19 +91,24 @@ $intro        = array(
 	<?php elseif ( 'home' === $view ) : ?>
 		<section class="arn-portal-welcome" aria-labelledby="arn-portal-title">
 			<div><p class="arn-portal-kicker">Portal interno da ARN</p><h1 id="arn-portal-title">Bem-vindo ao teu espaço de informação</h1><p>Consulta as comunicações da ARN e encontra os documentos de que precisas.</p></div>
-			<form class="arn-portal-search" action="<?php echo esc_url( arn_intranet_portal_url( 'documentos' ) ); ?>" method="get" role="search">
-				<?php arn_intranet_portal_form_route( arn_intranet_portal_url( 'documentos' ) ); ?>
-				<label for="arn-home-search">O que procuras?</label><div class="arn-portal-search-controls"><input id="arn-home-search" type="search" name="q" placeholder="Pesquisar no arquivo" maxlength="160"><button type="submit">Pesquisar</button></div>
-				<p>Pesquisa por assunto, palavra ou referência.</p>
+			<form class="arn-portal-search" action="<?php echo esc_url( get_permalink() ); ?>" method="get" role="search" aria-label="Pesquisa integrada">
+				<?php arn_intranet_portal_form_route( get_permalink() ); ?>
+				<input type="hidden" name="arn_search" value="1">
+				<label for="arn-home-search">O que procuras?</label><div class="arn-portal-search-controls"><input id="arn-home-search" type="search" name="q" placeholder="Pesquisar no portal" maxlength="100" required><button type="submit">Pesquisar</button></div>
+				<p>Pesquisa funcionários e conteúdos disponíveis para a tua conta.</p>
 			</form>
 		</section>
+		<div class="arn-home-accesses">
+			<?php get_template_part( 'portal/access-links', null, array( 'services' => $portal['services'] ?? array() ) ); ?>
+		</div>
 		<?php
+		get_template_part( 'portal/home-dashboard', null, array( 'dashboard' => $portal['dashboard'] ?? array() ) );
 		if ( empty( $portal['published_news'] ) ) {
 			get_template_part( 'portal/notice', null, array( 'available' => $available ) ); }
 		?>
 		<div class="arn-portal-columns">
 			<section aria-labelledby="arn-news-title">
-				<div class="arn-portal-section-heading"><h2 id="arn-news-title">Comunicações recentes</h2><a href="<?php echo esc_url( arn_intranet_portal_url( 'noticias' ) ); ?>">Todas as notícias <span aria-hidden="true">↗</span></a></div>
+				<div class="arn-portal-section-heading"><h2 id="arn-news-title">Notícias recentes</h2><a href="<?php echo esc_url( arn_intranet_portal_url( 'noticias' ) ); ?>">Todas as notícias <span aria-hidden="true">↗</span></a></div>
 				<?php if ( ! empty( $portal['featured'] ) ) : ?>
 					<?php
 					get_template_part(
@@ -149,10 +158,7 @@ $intro        = array(
 	<?php else : ?>
 		<header class="arn-portal-page-heading"><p class="arn-portal-kicker">Portal interno</p><h1><?php echo esc_html( $portal_title ); ?></h1><p><?php echo esc_html( $intro[ $view ] ?? '' ); ?></p></header>
 		<?php if ( 'services' === $view ) : ?>
-			<section class="arn-portal-services" aria-labelledby="arn-services-title"><h2 id="arn-services-title">Serviços em preparação</h2><p>A disponibilização destes serviços depende da validação dos processos e das permissões de acesso.</p>
-				<dl><div><dt>Pedidos internos e férias</dt><dd>Submissão e acompanhamento de pedidos. Em preparação.</dd></div><div><dt>Diretório e unidades</dt><dd>Consulta de contactos e da estrutura institucional. Em preparação.</dd></div><div><dt>Suporte informático</dt><dd>Registo e acompanhamento de pedidos de apoio. Em preparação.</dd></div></dl>
-				<p>A consulta de notícias, documentos e regulamentos está disponível através do menu do portal.</p>
-			</section>
+			<?php get_template_part( 'portal/services', null, array( 'services' => $portal['services'] ?? array() ) ); ?>
 		<?php else : ?>
 			<?php get_template_part( 'portal/notice', null, array( 'available' => $available ) ); ?>
 			<?php

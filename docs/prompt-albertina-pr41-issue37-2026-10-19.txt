@@ -1,0 +1,55 @@
+Continua o desenvolvimento da Plataforma Interna da ARN no teu laboratório local, com contas e dados fictícios. Tens duas entregas separadas: corrigir a fronteira transaccional da PR #41, relacionada com a Issue #36, e concluir a proposta documental da Issue #37. Não faças merge ou deploy. Entrega commits, push, PRs e provas para revisão.
+
+Antes de começar, preserva as tuas alterações e branches. Faz fetch e lê o README.md e o AGENTS.md efectivos. A referência observada em 19 de outubro foi main 2c77a46, PR #41 em 28304c1 e a tua branch fix/albertina-pr41-review-findings em 9cd87c3. A tua conciliação documental já está publicada em docs/albertina-f1-13-conciliacao, head 4b90341, com 35 critérios propostos e CI verde, ainda sem PR. Confirma os heads actuais. Não reinicies a solução da PR #39 em 12c94a0, que continua recusada. As variantes transaction-state-v2 e transaction-boundary-v2 não estão aprovadas para integração automática.
+
+A tua correcção dos três achados anteriores passou a CI em 9cd87c3. Contudo, a revisão posterior encontrou outros problemas. Consulta docs/revisao-branches-pr41-2026-10-19.md e o reprodutor tests/integration/transaction-boundary-adversarial-review.php na branch de entrega do responsável. Em MariaDB 11.8.3 real, passaram dois controlos e falharam dez de doze cenários. Seis sentinelas ficaram confirmadas e o ensaio de leitura devolveu um resultado antigo após recusa. Não declares resolvida a Issue #36 com base na CI anterior.
+
+A branch desta passagem é test/revisao-transaccional-20261019. Consulta os seus ficheiros depois de fetch. Ao levar o reprodutor para a tua correcção, preserva alterações locais e importa apenas esse ficheiro. Não integres a branch inteira na tua entrega, porque contém também actualizações README/AGENTS reservadas ao responsável.
+
+Primeira entrega: PR #41 e Issue #36.
+
+Preserva os teus commits 349d08e e 9cd87c3. Trabalha na tua branch de correcção e entrega uma PR dirigida à branch fix/atchutchi-mysql-transaction-guard-v2, identificando a PR #41. Se essa base tiver sido entretanto integrada ou substituída pelo responsável, verifica a nova base antes de reaplicar commits. Não faças push para branches de outra pessoa. Não feches a PR #39 ou as Issues por tua iniciativa.
+
+Reproduz primeiro os problemas no candidato exacto. Corrige o contrato sem acumular expressões regulares para os exemplos conhecidos. A ligação precisa de controlar o SQL efectivamente executado ou recusar instruções que não consegue classificar com segurança. Conserva a compatibilidade com queries preparadas e os hooks do WordPress.
+
+Inclui estes casos: START TRANSACTION# inline, BEGIN seguido de comentário de linha, comentários entre palavras e ANALYZE# inline seguido de TABLE. Um START aninhado não pode confirmar a sentinela anterior.
+
+Trata comentários executáveis segundo o motor e a versão, ou recusa os que não consegues interpretar. Testa /*!99999 SELECT */ CREATE TABLE, comentários MySQL e /*M! de MariaDB executados e ignorados. Expandir sempre o comentário também é inseguro.
+
+Respeita literais, escapes e identificadores citados. Testa SET `autocommit`=0, SET @@session.`autocommit`=0, completion_type citado e SET @text='/*', autocommit=0, @text2='*/'. Não confundas o texto de um literal com uma atribuição. As formas permitidas de SET devem continuar a funcionar quando não alteram a fronteira.
+
+Recusa SQL composto que possa esconder DDL, incluindo SET STATEMENT max_statement_time=1 FOR CREATE TABLE e IF 1 THEN CREATE TABLE ...; END IF em MariaDB. Documenta o subconjunto de SQL suportado dentro de uma transacção. Não uses uma lista de palavras proibidas como prova universal de segurança.
+
+Valida a instrução final após os filtros query, sem executar cada filtro duas vezes e sem esconder a instrução original dos hooks. Testa SELECT 1 transformado por um filtro em COMMIT e em DDL. Ambos têm de ser recusados antes de confirmar a sentinela.
+
+Um COMMIT falhado não pode eliminar a capacidade de limpar uma transacção ainda activa. Injecta um erro apenas no COMMIT, remove a injecção e prova que o ROLLBACK pela API termina a transacção, reverte os dados e liberta os locks. Não consideres o ROLLBACK directo pelo handle uma aprovação da API. Trata separadamente a incerteza causada por perda da ligação durante COMMIT. Uma recusa de query também tem de limpar resultados anteriores para get_var/get_row não devolverem dados antigos.
+
+Executa RED e GREEN em MySQL 8.0.44 e MariaDB 11.8 com prefixos exclusivos e ligação observadora. O reprodutor usa ARN_TX_ADVERSARIAL_REVIEW=1 e ARN_TX_TEST_USER/PASSWORD/NAME/HOST carregados de configuração privada. O primeiro argumento é class-wpdb.php e o segundo é a raiz do candidato. Só aceita host loopback. Não imprimas credenciais. As duas formas compostas são específicas de MariaDB. A sonda directa SET TRANSACTION READ ONLY usa erro 1568 para distinguir transacção activa e deve ser validada nos dois motores. Um erro diferente é desconhecido, nunca sucesso.
+
+O resultado alvo é zero falhas e zero tabelas restantes. Mantém escrita sentinela, observação externa, reversibilidade e ausência de DDL. Prova espera real entre dois processos, não apenas um marcador escrito antes de UPDATE. Mantém regressões de AND CHAIN, completion_type, savepoints, DDL directo, autocommit, ausência de reconnect, falha inicial sem segredos, perda real de ligação durante escrita e COMMIT falhado. Não aumentes timeouts, retires asserções ou substituas código real por doubles para obter verde.
+
+Repete PHPUnit completo, PHPCS, npm test, npm run lint, npm run build e as integrações afectadas de autorização, unidades, documentos, ficheiros, notícias, comunicados, calendário, People e Workspace. Em People, prova gravação, CAS, no-op, rollback por falha de auditoria e instalador idempotente. Não alteres o contrato ou os dados do pré-cadastro para contornar a guarda.
+
+Depois de a fronteira passar, retoma a QA da Issue #28 com Playwright no teu laboratório: actores fictícios, escrita/CAS/no-op, suspensão e sessão antiga, flags, REST com nonce obtido na sessão real e zoom nativo separado de CSS200%. Browser verde não substitui a prova SQL. Regista os percursos não executados.
+
+Segunda entrega: Issue #37, apenas documentação.
+
+Continua a tua branch docs/albertina-f1-13-conciliacao em 4b90341, preservando a conciliação que já publicaste. Não recries a primeira proposta. Esta entrega documental pode ser concluída em paralelo com a correcção SQL, sem implementar o módulo. Altera apenas docs/superpowers/specs/2026-10-16-tarefas-locais-design.md, docs/criterios-aceitacao-f1-13.md e docs/entrega-albertina-f1-13-spec.md. Lê Communications, Calendar, F112 e Notifications já integrados e docs/preparacao-tecnica-f1-13-2026-10-16.md. A ausência das classes F1-12 refere-se apenas à base histórica fffef583.
+
+Fixa destinatários no estado resultante dentro da transacção e persiste tarefa, auditoria e avisos atomicamente. Só a apresentação ocorre depois do commit. A chave dos avisos inclui identidade da tarefa, revisão resultante, destinatário e tipo. Define persistência e autorização dos comentários append-only. Se propuseres uma tabela adicional, declara a alteração e a sua justificação sem escrever schema.
+
+A revisão da tua conciliação em 4b90341 encontrou três pontos concretos ainda por resolver. Primeiro, a lista de quatro tabelas não contém a persistência dos avisos nem dos recibos, apesar de o texto prometer armazenamento próprio do módulo. Define essa representação, índices, unicidade, destinatário, primeiro instante de leitura e instalação, alinhando os três documentos. Não implementes as tabelas nesta entrega.
+
+Segundo, CA-F113-17 exige reenvio idempotente de create, mas create não tem expected_revision ou identidade persistente do pedido. Uma chave com task_id não impede uma segunda tarefa com outro ID. Define uma proposta de identificação estável do pedido, vínculo ao actor e âmbito e tratamento de reenvio igual ou payload diferente. Não dedupliques tarefas legítimas só por terem texto igual. Alinha o critério com o contrato escolhido.
+
+Inclui persistência atómica do resultado da criação, resposta ao reenvio e disputa entre dois pedidos simultâneos com a mesma identidade. O cenário tem de distinguir um pedido repetido de duas criações legítimas com campos iguais.
+
+Terceiro, o comentário repetido com a mesma revisão é descrito como no-op ou recusa CAS. Escolhe uma resposta determinística e concilia-a com a exigência de revisão exacta e com CA-F113-33. Se propuseres idempotência de pedidos para comentários, distingue-a de uma operação nova com CAS antigo. Mantém revisão, auditoria, avisos e quantidade de comentários previsíveis em cada cenário.
+
+Separa actor e unidade derivados da sessão dos campos editáveis de cada operação HTTP. Alinha respostas de CAS desactualizado e no-op e os seus efeitos nulos. Mantém propostas explícitas para reabertura, cancelamento, reatribuição, fuso e superfície de avisos. UnitManager não implica Employee e manage_options não dá competência de negócio. Não prometas avisos de tarefas automaticamente projectados pela superfície F1-04 actual.
+
+Mantém CA-F113-01 a CA-F113-35 estáveis e Por executar, incluindo os três IDs que já acrescentaste. Se forem necessários outros critérios, acrescenta a partir de 36 sem renumerar os existentes. Verifica unicidade, rastreabilidade, links e coerência de campos, estados, fixtures e nomes nos três documentos. Faz git diff --check. Entrega PR documental própria contra main ligada à #37 e à #29. Não corras Playwright como se o módulo F1-13 já existisse. A aprovação da documentação não implementa o módulo nem aprova políticas institucionais.
+
+Limites comuns: não editar README/AGENTS nas tuas entregas, GoogleLoginController, WpdbIdentityLinkRepository, Identity/PreRegistration ou dados Workspace reais. Não atribuir funções por nome/email, renovar prazos, instalar F1-13 ou alterar .205/.151, IIS, AD, DNS, VPN, Google Workspace ou produção. Segredos, configuração, inventários, dumps, cookies, capturas e provas com dados reais ficam fora do Git. Não enviar emails.
+
+Entrega final: URLs das duas PRs, SHAs exactos, base, ficheiros alterados, resultados RED/GREEN por motor e por cenário, comandos, contagens, limpeza, comparação antes/depois do laboratório e falhas/limites ainda abertos. Actualiza os resultados e o corpo da PR para o head final, sem reutilizar a aprovação de um SHA antigo. Sem merge enquanto houver falhas ou revisão por resolver.

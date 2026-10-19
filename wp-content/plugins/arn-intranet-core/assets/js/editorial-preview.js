@@ -9,6 +9,7 @@
     { label: __('Documentos', 'arn-intranet-core'), value: 'documents' },
     { label: __('Regulamentos', 'arn-intranet-core'), value: 'regulations' },
     { label: __('Serviços', 'arn-intranet-core'), value: 'services' },
+    { label: __('Pesquisa integrada', 'arn-intranet-core'), value: 'search' },
   ];
 
   wp.blocks.registerBlockType('arn/portal-view', {
@@ -20,7 +21,7 @@
       view: {
         type: 'string',
         default: 'home',
-        enum: ['home', 'news', 'documents', 'regulations', 'services'],
+        enum: ['home', 'news', 'documents', 'regulations', 'services', 'search'],
       },
     },
     supports: { html: false },

@@ -184,6 +184,8 @@ PeoplePortal::register();
 \Arn\Intranet\F112\PostTypes::register();
 \Arn\Intranet\F112\Portal::register();
 Portal::register();
+\Arn\Intranet\EditorialPreview\NavigationPageList::register();
+\Arn\Intranet\EditorialPreview\ModuleNavigation::register();
 DocumentCatalogPage::register();
 DocumentFileController::register();
 NewsroomPage::register();

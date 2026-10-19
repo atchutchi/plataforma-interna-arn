@@ -12,7 +12,6 @@ namespace Arn\Intranet\EditorialPreview;
 use InvalidArgumentException;
 use RuntimeException;
 use Arn\Intranet\Documents\Catalog\DocumentPortal;
-use Arn\Intranet\Documents\Catalog\LocalDocumentCatalog;
 use Arn\Intranet\News\NewsPreviewController;
 use Arn\Intranet\News\NewsPublishedController;
 use Arn\Intranet\News\NewsPublishedPortal;
@@ -62,8 +61,9 @@ final class Portal {
 
 	/** Impede cache de páginas que contenham o bloco privado. */
 	public static function privateCache(): void {
-		if ( is_singular() && has_block( 'arn/portal-view', get_post() ) && ( self::allowed() || LocalDocumentCatalog::configured() ) ) {
+		if ( is_singular() && has_block( 'arn/portal-view', get_post() ) ) {
 			nocache_headers();
+			header( 'Cache-Control: private, no-store, max-age=0' );
 		}
 	}
 
@@ -86,7 +86,7 @@ final class Portal {
 					'view' => array(
 						'type'    => 'string',
 						'default' => 'home',
-						'enum'    => array( 'home', 'news', 'documents', 'regulations', 'services' ),
+						'enum'    => array( 'home', 'news', 'documents', 'regulations', 'services', 'search' ),
 					),
 				),
 				'editor_script'   => 'arn-editorial-preview',
@@ -103,7 +103,7 @@ final class Portal {
 	 */
 	public static function render( array $attributes ): string {
 		$view = $attributes['view'] ?? 'home';
-		if ( ! is_string( $view ) || ! in_array( $view, array( 'home', 'news', 'documents', 'regulations', 'services' ), true ) ) {
+		if ( ! is_string( $view ) || ! in_array( $view, array( 'home', 'news', 'documents', 'regulations', 'services', 'search' ), true ) ) {
 			$view = 'home';
 		}
 		$model = self::model( $view, self::requestInput() );
@@ -129,6 +129,14 @@ final class Portal {
 	 * @return array<string,mixed> Modelo para o tema.
 	 */
 	public static function model( string $view, array $input ): array {
+		if ( 'search' === $view || ( 'home' === $view && array_key_exists( 'arn_search', $input ) ) ) {
+			return \Arn\Intranet\Search\WordPressSources::model( $input );
+		}
+		if ( 'services' === $view ) {
+			$model             = self::reviewModel( $view, array() );
+			$model['services'] = ( new ServiceDirectory() )->items();
+			return $model;
+		}
 		if ( 'news' === $view && NewsPreviewController::requested() && null !== NewsPreviewController::current() ) {
 			return array(
 				'view' => 'news_preview',
@@ -162,6 +170,8 @@ final class Portal {
 			$model['pages']          = $news['pages'];
 			$model['counts']         = $news['counts'];
 			$model['published_news'] = true;
+			$model['services']       = ( new ServiceDirectory() )->items();
+			$model['dashboard']      = ( new HomeDashboard() )->model( $model['services'] );
 			return $model;
 		}
 		return self::reviewModel( $view, $input );
