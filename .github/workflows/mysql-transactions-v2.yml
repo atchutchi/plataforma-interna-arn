@@ -66,6 +66,15 @@ jobs:
           ARN_TX_TEST_HOST: 127.0.0.1:3306
           ARN_TX_WPDB: /tmp/class-wpdb.php
         run: php tests/integration/mysql-people-transaction.php /tmp/class-wpdb.php
+      - name: Executar revisão adversarial
+        env:
+          ARN_TX_ADVERSARIAL_REVIEW: '1'
+          ARN_TX_TEST_USER: arn_tx
+          ARN_TX_TEST_PASSWORD: test
+          ARN_TX_TEST_NAME: arn_tx_test
+          ARN_TX_TEST_HOST: 127.0.0.1:3306
+          ARN_TX_WPDB: /tmp/class-wpdb.php
+        run: php tests/integration/transaction-boundary-adversarial-review.php /tmp/class-wpdb.php ${{ github.workspace }}
 
   mariadb-transaction-guard:
     name: MariaDB 11.8, comentários executáveis
@@ -103,3 +112,12 @@ jobs:
           ARN_TX_TEST_HOST: 127.0.0.1:3307
           ARN_TX_WPDB: /tmp/class-wpdb.php
         run: php tests/integration/mysql-transaction-review-regressions.php /tmp/class-wpdb.php
+      - name: Executar revisão adversarial em MariaDB
+        env:
+          ARN_TX_ADVERSARIAL_REVIEW: '1'
+          ARN_TX_TEST_USER: arn_tx
+          ARN_TX_TEST_PASSWORD: test
+          ARN_TX_TEST_NAME: arn_tx_test
+          ARN_TX_TEST_HOST: 127.0.0.1:3307
+          ARN_TX_WPDB: /tmp/class-wpdb.php
+        run: php tests/integration/transaction-boundary-adversarial-review.php /tmp/class-wpdb.php ${{ github.workspace }}

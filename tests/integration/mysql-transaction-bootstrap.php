@@ -82,6 +82,11 @@ if ( ! function_exists( 'has_filter' ) ) {
 		return false;
 	}
 }
+if ( ! function_exists( 'is_wp_error' ) ) {
+	function is_wp_error( $thing ): bool {
+		return $thing instanceof \WP_Error;
+	}
+}
 if ( ! function_exists( 'absint' ) ) {
 	function absint( $maybeint ): int {
 		return abs( (int) $maybeint );

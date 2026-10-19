@@ -25,6 +25,7 @@ $base                = 'arn_review_' . $suffix;
 $mariadb_table       = 'arn_review_maria_' . $suffix;
 $mysql_comment_table = 'arn_review_mysqlc_' . $suffix;
 $version             = (string) $db->get_var( 'SELECT VERSION()' );
+$is_mariadb          = str_contains( strtoupper( $version ), 'MARIADB' );
 
 $completion_is_no_chain = static function () use ( $db ): bool {
 	$value = strtoupper( (string) $db->get_var( 'SELECT @@session.completion_type' ) );
@@ -90,8 +91,14 @@ try {
 
 	$assert( false !== $db->query( 'START TRANSACTION' ), 'START antes do comentário MariaDB' );
 	$assert( false !== $db->query( 'INSERT INTO `' . $base . '` VALUES (11)' ), 'sentinela MariaDB criada' );
-	$assert( false === $db->query( '/*M!100000 CREATE TABLE `' . $mariadb_table . '` (id INT PRIMARY KEY) ENGINE=InnoDB */' ), 'comentário executável MariaDB recusado' );
-	$assert( $db->inTransaction(), 'comentário MariaDB recusado conserva guarda' );
+	$maria_comment = '/*M!100000 CREATE TABLE `' . $mariadb_table . '` (id INT PRIMARY KEY) ENGINE=InnoDB */';
+	if ( $is_mariadb ) {
+		$assert( false === $db->query( $maria_comment ), 'comentário executável MariaDB recusado' );
+	} else {
+		$db->query( $maria_comment );
+		$assert( $db->inTransaction(), 'comentário MariaDB ignorado no MySQL não executa DDL' );
+	}
+	$assert( $db->inTransaction(), 'guarda após comentário MariaDB' );
 	$assert( false !== $db->query( 'ROLLBACK' ), 'ROLLBACK depois do comentário MariaDB' );
 	$assert( '0' === (string) $db->get_var( 'SELECT COUNT(*) FROM `' . $base . '` WHERE id = 11' ), 'comentário MariaDB não confirma sentinela' );
 	$assert( null === $db->get_var( $db->prepare( 'SHOW TABLES LIKE %s', $mariadb_table ) ), 'comentário MariaDB não cria tabela' );
@@ -107,6 +114,28 @@ try {
 	$prove_set_refused( 'SET @@completion_type=1', 'SET @@completion_type=1', 28 );
 	$prove_set_refused( 'SET @@session.completion_type=1', 'SET @@session.completion_type=1', 29 );
 	$prove_set_refused( 'SET @marcador=2, @@session.completion_type=1', 'SET múltiplo com completion_type', 30 );
+	$prove_set_refused( 'SET `autocommit`=0', 'SET autocommit citado', 31 );
+	$prove_set_refused( 'SET @@session.`autocommit`=0', 'SET session autocommit citado', 32 );
+	$prove_set_refused( 'SET `completion_type`=1', 'SET completion_type citado', 33 );
+	$prove_set_refused( "SET @text='/*', autocommit=0, @text2='*/'", 'SET com delimitadores no literal', 34 );
+
+	$assert( false !== $db->query( 'SET @permitido=4' ), 'SET de variável de utilizador continua aceite' );
+	$assert( '4' === (string) $db->get_var( 'SELECT @permitido' ), 'variável de utilizador persistiu' );
+
+	$assert( false !== $db->query( 'BEGIN# comentário' ), 'BEGIN com comentário de linha recebe guarda' );
+	$assert( $db->inTransaction(), 'BEGIN comentado instala guarda' );
+	$assert( false === $db->query( 'START TRANSACTION# inline' ), 'START aninhado com comentário inline recusado' );
+	$assert( $db->inTransaction(), 'START aninhado comentado não confirma a transacção' );
+	$assert( false !== $db->query( 'ROLLBACK' ), 'ROLLBACK após START comentado' );
+
+	add_filter( 'query', static fn( $sql ) => 'SELECT 1' === $sql ? 'CREATE TABLE `' . $mysql_comment_table . '` (id INT) ENGINE=InnoDB' : $sql );
+	$assert( false !== $db->query( 'START TRANSACTION' ), 'START antes do filtro DDL' );
+	$assert( false !== $db->query( 'INSERT INTO `' . $base . '` VALUES (40)' ), 'sentinela do filtro DDL' );
+	$assert( false === $db->query( 'SELECT 1' ), 'filtro query que injecta DDL recusado' );
+	$assert( $db->inTransaction(), 'guarda sobrevive ao filtro DDL' );
+	$assert( false !== $db->query( 'ROLLBACK' ), 'ROLLBACK após filtro DDL' );
+	$assert( '0' === (string) $db->get_var( 'SELECT COUNT(*) FROM `' . $base . '` WHERE id = 40' ), 'filtro DDL não confirma sentinela' );
+	$GLOBALS['arn_tx_filters']['query'] = array();
 
 	echo 'PASS: regressões de revisão, ' . $checks . ' verificações, motor=' . $version . PHP_EOL;
 } finally {

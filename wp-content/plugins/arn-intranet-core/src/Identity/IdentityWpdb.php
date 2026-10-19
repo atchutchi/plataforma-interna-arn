@@ -96,19 +96,25 @@ final class IdentityWpdb extends \wpdb {
 	 * @return bool|int
 	 */
 	public function query( $query ) {
-		$sql        = is_string( $query ) ? $query : '';
-		$normalized = self::normalizeStatement( $sql );
-		$command    = self::transactionCommand( $normalized );
+		$original = is_string( $query ) ? $query : '';
+		$final    = $this->finalStatement( $original );
+		$version  = $this->engineVersion();
+		$offered  = SqlBoundary::classify( $original, $version );
+		$decision = SqlBoundary::classify( $final, $version );
+		if ( $original !== $final && ( $offered['command'] !== $decision['command'] || $offered['implicit_commit'] !== $decision['implicit_commit'] || $decision['autocommit'] || $decision['completion_type'] || $decision['savepoint'] || $decision['release'] || ! $offered['trusted'] || ! $decision['trusted'] ) ) {
+			return $this->refuseTransactionCommand();
+		}
+		$command = $decision['command'];
 
 		if ( null !== $this->transaction_guard && ! $this->verifyOwnedTransaction() ) {
-			return false;
-		}
-
-		if ( self::changesAutocommit( $normalized ) || self::changesCompletionType( $normalized ) || self::manipulatesSavepoints( $normalized ) || self::releasesConnection( $normalized ) ) {
 			return $this->refuseTransactionCommand();
 		}
 
-		if ( null !== $this->transaction_guard && self::causesImplicitCommit( $normalized ) ) {
+		if ( ! $decision['trusted'] || $decision['autocommit'] || $decision['completion_type'] || $decision['savepoint'] || $decision['release'] ) {
+			return $this->refuseTransactionCommand();
+		}
+
+		if ( null !== $this->transaction_guard && $decision['implicit_commit'] ) {
 			return $this->refuseTransactionCommand();
 		}
 
@@ -126,8 +132,11 @@ final class IdentityWpdb extends \wpdb {
 			}
 		}
 
-		$result = parent::query( $query );
+		$result = $this->invokeParentQuery( $final );
 		if ( false === $result || '' !== $this->last_error ) {
+			if ( in_array( $command, array( 'commit', 'rollback' ), true ) && $this->ownedTransactionSurvived() ) {
+				return $result;
+			}
 			if ( in_array( $command, array( 'commit', 'rollback' ), true ) ) {
 				$this->transaction_guard = null;
 			}
@@ -146,7 +155,7 @@ final class IdentityWpdb extends \wpdb {
 
 		if ( in_array( $command, array( 'commit', 'rollback' ), true ) ) {
 			$this->transaction_guard = null;
-			if ( self::chainsTransaction( $normalized ) && ! $this->installTransactionGuard() ) {
+			if ( $decision['chain'] && ! $this->installTransactionGuard() ) {
 				$this->directStatement( 'ROLLBACK' );
 				$this->last_error = 'Operação transaccional não confirmada.';
 				return false;
@@ -206,8 +215,67 @@ final class IdentityWpdb extends \wpdb {
 	 * @return false
 	 */
 	private function refuseTransactionCommand(): bool {
+		$this->flush();
 		$this->last_error = 'Operação transaccional recusada.';
 		return false;
+	}
+
+	/**
+	 * Aplica os hooks query uma vez e devolve o SQL que o motor vai ver.
+	 *
+	 * @param string $sql Instrução original apresentada ao wrapper.
+	 */
+	private function finalStatement( string $sql ): string {
+		if ( ! function_exists( 'apply_filters' ) ) {
+			return $sql;
+		}
+		$filtered = apply_filters( 'query', $sql );
+		return is_string( $filtered ) ? $filtered : $sql;
+	}
+
+	/**
+	 * Executa a instrução já classificada sem repetir os filtros query.
+	 *
+	 * @param string $sql SQL final.
+	 * @return bool|int
+	 */
+	private function invokeParentQuery( string $sql ) {
+		$wordpress = $GLOBALS['wp_filter']['query'] ?? null; // phpcs:ignore WordPress.WP.GlobalVariablesOverride -- Restaurado no finally; evita segunda passagem dos mesmos hooks.
+		$lab       = $GLOBALS['arn_tx_filters']['query'] ?? null;
+		unset( $GLOBALS['wp_filter']['query'], $GLOBALS['arn_tx_filters']['query'] ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride
+		try {
+			return parent::query( $sql );
+		} finally {
+			if ( null !== $wordpress ) {
+				$GLOBALS['wp_filter']['query'] = $wordpress; // phpcs:ignore WordPress.WP.GlobalVariablesOverride
+			}
+			if ( null !== $lab ) {
+				$GLOBALS['arn_tx_filters']['query'] = $lab;
+			}
+		}
+	}
+
+	/**
+	 * VERSION() da ligação dedicada, sem variável transaccional do motor.
+	 */
+	private function engineVersion(): string {
+		return $this->hasDedicatedConnection() ? (string) $this->dbh->server_info : '';
+	}
+
+	/**
+	 * Um COMMIT ou ROLLBACK falhado só perde a guarda se a transacção desapareceu.
+	 */
+	private function ownedTransactionSurvived(): bool {
+		if ( null === $this->transaction_guard ) {
+			return false;
+		}
+		try {
+			$this->validateTransactionGuard();
+			return true;
+		} catch ( RuntimeException ) {
+			$this->transaction_guard = null;
+			return false;
+		}
 	}
 
 	/**
@@ -394,116 +462,5 @@ final class IdentityWpdb extends \wpdb {
 		++$this->guard_sequence;
 		$thread = $this->hasDedicatedConnection() ? (int) $this->dbh->thread_id : 0;
 		return 'arn_' . $purpose . '_' . dechex( $thread ) . '_' . dechex( $this->guard_sequence );
-	}
-
-	/**
-	 * Remove comentários comuns e expõe comentários executáveis MySQL.
-	 *
-	 * @param string $sql SQL original.
-	 */
-	private static function normalizeStatement( string $sql ): string {
-		$sql        = (string) preg_replace_callback(
-			'/\/\*(?:M)?!\s*\d{0,6}\s*(.*?)\*\//s',
-			static fn( array $matches ): string => ' ' . $matches[1] . ' ',
-			$sql
-		);
-		$sql        = (string) preg_replace( '/\/\*(?![M]?\!).*?\*\//s', ' ', $sql );
-		$sql        = (string) preg_replace( '/(^|\R)\s*(?:--[ \t].*|#.*)(?=\R|$)/', ' ', $sql );
-		$normalized = strtoupper( trim( (string) preg_replace( '/\s+/', ' ', $sql ) ) );
-		return rtrim( $normalized, "; \t" );
-	}
-
-	/**
-	 * Identifica início e fim explícitos da transacção.
-	 *
-	 * @param string $normalized SQL normalizado.
-	 */
-	private static function transactionCommand( string $normalized ): string {
-		if ( 1 === preg_match( '/^(START\s+TRANSACTION|BEGIN)(?:\s+WORK)?(\s|$)/', $normalized ) ) {
-			return 'begin';
-		}
-		if ( 1 === preg_match( '/^COMMIT(?:\s+WORK)?(\s|$)/', $normalized ) ) {
-			return 'commit';
-		}
-		if ( 1 === preg_match( '/^ROLLBACK(?:\s+WORK)?(?!\s+TO\b)(\s|$)/', $normalized ) ) {
-			return 'rollback';
-		}
-		return 'other';
-	}
-
-	/**
-	 * A ligação dedicada mantém autocommit activo e explícito.
-	 *
-	 * @param string $normalized SQL normalizado.
-	 */
-	private static function changesAutocommit( string $normalized ): bool {
-		return self::assignsForbiddenSessionVariable( $normalized, 'AUTOCOMMIT' );
-	}
-
-	/**
-	 * A ligação exige completion_type=NO_CHAIN.
-	 *
-	 * @param string $normalized SQL normalizado.
-	 */
-	private static function changesCompletionType( string $normalized ): bool {
-		return self::assignsForbiddenSessionVariable( $normalized, 'COMPLETION_TYPE' );
-	}
-
-	/**
-	 * Recusa atribuições de variáveis de sistema, incluindo SET múltiplo, GLOBAL e :=.
-	 *
-	 * @param string $normalized SQL normalizado.
-	 * @param string $name       AUTOCOMMIT ou COMPLETION_TYPE.
-	 */
-	private static function assignsForbiddenSessionVariable( string $normalized, string $name ): bool {
-		if ( 1 !== preg_match( '/^SET\b/', $normalized ) ) {
-			return false;
-		}
-		$scoped = '/(?:^SET\s+|,\s*)(?:(?:GLOBAL|SESSION|LOCAL|PERSIST|PERSIST_ONLY)\s+|@@(?:GLOBAL|SESSION|LOCAL|PERSIST|PERSIST_ONLY)\.)?' . $name . '\s*(?:=|:=)/';
-		$bare   = '/(?:^SET\s+|,\s*)@@' . $name . '\s*(?:=|:=)/';
-		return 1 === preg_match( $scoped, $normalized ) || 1 === preg_match( $bare, $normalized );
-	}
-
-	/**
-	 * Savepoints de chamadores são recusados para preservar a guarda privada.
-	 *
-	 * @param string $normalized SQL normalizado.
-	 */
-	private static function manipulatesSavepoints( string $normalized ): bool {
-		return 1 === preg_match( '/^(?:SAVEPOINT|RELEASE\s+SAVEPOINT|ROLLBACK(?:\s+WORK)?\s+TO(?:\s+SAVEPOINT)?)\b/', $normalized );
-	}
-
-	/**
-	 * COMMIT/ROLLBACK RELEASE terminaria a ligação dedicada.
-	 *
-	 * @param string $normalized SQL normalizado.
-	 */
-	private static function releasesConnection( string $normalized ): bool {
-		return 1 === preg_match( '/^(?:COMMIT|ROLLBACK)(?:\s+WORK)?(?:\s+AND)?\s+RELEASE\b/', $normalized );
-	}
-
-	/**
-	 * Comandos conhecidos por confirmar implicitamente ou esconder SQL dinâmico.
-	 * CREATE/DROP TEMPORARY TABLE são excepções documentadas pelo motor.
-	 *
-	 * @param string $normalized SQL normalizado.
-	 */
-	private static function causesImplicitCommit( string $normalized ): bool {
-		if ( 1 === preg_match( '/^(?:CREATE|DROP)\s+TEMPORARY\s+TABLE\b/', $normalized ) ) {
-			return false;
-		}
-		return 1 === preg_match(
-			'/^(?:ALTER\b|CREATE\b|DROP\b|RENAME\b|TRUNCATE\b|GRANT\b|REVOKE\b|INSTALL\b|UNINSTALL\b|LOCK\b|UNLOCK\b|FLUSH\b|RESET\b|ANALYZE\s+TABLE\b|CHECK\s+TABLE\b|OPTIMIZE\s+TABLE\b|REPAIR\s+TABLE\b|CACHE\s+INDEX\b|LOAD\s+INDEX\s+INTO\s+CACHE\b|LOAD\s+DATA\b|SET\s+PASSWORD\b|CHANGE\s+(?:MASTER|REPLICATION\s+SOURCE)\b|START\s+(?:SLAVE|REPLICA)\b|STOP\s+(?:SLAVE|REPLICA)\b|XA\b|CALL\b|PREPARE\b|EXECUTE\b|DEALLOCATE\s+PREPARE\b)/',
-			$normalized
-		);
-	}
-
-	/**
-	 * COMMIT/ROLLBACK AND CHAIN inicia outra transacção na mesma sessão.
-	 *
-	 * @param string $normalized SQL normalizado.
-	 */
-	private static function chainsTransaction( string $normalized ): bool {
-		return 1 === preg_match( '/\bAND\s+CHAIN\b/', $normalized );
 	}
 }
