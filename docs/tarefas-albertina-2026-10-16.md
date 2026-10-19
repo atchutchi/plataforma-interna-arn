@@ -1,5 +1,9 @@
 # Coordenação com Albertina4264, 16 de outubro de 2026
 
+## Revisão de 19 de outubro
+
+A PR41 em 28304c1 propõe a guarda V2 e a branch fix/albertina-pr41-review-findings em 9cd87c3 acrescenta as correcções 349d08e/9cd87c3. Os checks dessa branch passaram, mas a nova revisão reproduziu dez falhas em doze cenários MariaDB. Não integrar PR39, PR41 ou as variantes experimentais enquanto os bloqueadores persistirem. A conciliação da Issue37 foi entretanto publicada em 4b90341, com 35 critérios propostos Por executar e ainda sem PR. Preservar essa entrega e concluir a revisão dos contratos, sem a refazer. Seguir docs/revisao-branches-pr41-2026-10-19.md e docs/prompt-albertina-pr41-issue37-2026-10-19.txt. O prompt é entregue ao responsável, sem mensagem directa ou nova atribuição à colaboradora. Preservar os commits e entregar a correcção dirigida à base V2 e a conciliação documental em PRs separadas, sem merge.
+
 ## Actualização após recepção das entregas
 
 O responsável pediu a revisão, o merge das entregas adequadas e novas tarefas. Foram recebidos o relatório parcial do segundo PC pela PR #34, merge b0a85aed946a47f1c433b286d9bf041291e2cd78, e a proposta F1-13 pela PR #35, merge 0e7ffcd2d485b3c142660a99c2e6d7dd023fa7a9. Os heads 80c7633579682cfe796b383a40bdfeba24598517 e dd15b085b64498f6b36f6c5e53bcde528f36f377 tiveram 12 checks aprovados cada antes do merge. As branches da autora foram conservadas.
