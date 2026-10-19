@@ -22,7 +22,7 @@ A branch antiga `chore/albertina4264-F1-01-fundacao` e o stash local sobre `Iden
 ## Ficheiros
 
 1. `docs/superpowers/specs/2026-10-16-tarefas-locais-design.md` — proposta conciliada
-2. `docs/criterios-aceitacao-f1-13.md` — CA-F113-01 a CA-F113-35, todos Por executar
+2. `docs/criterios-aceitacao-f1-13.md` — CA-F113-01 a CA-F113-36, todos Por executar
 3. este relatório
 
 Não há schema, contas, concessões, páginas, flags, dependências nem código de tarefas. Nenhum critério passou: nenhum foi executado.
@@ -33,14 +33,15 @@ Não há schema, contas, concessões, páginas, flags, dependências nem código
 - Sucesso e no-op: 303. No-op não incrementa revisão nem cria auditoria/avisos.
 - CAS desactualizado e operação inválida numa página já autorizada: erro de formulário, sem 404, campos próprios recuperáveis.
 - Objecto não autorizado, inexistente, método errado, nonce/forma inválidos: 404 vazio `private/no-store` antes da fonte.
-- Avisos e recibos nas tabelas do módulo, destinatários calculados na transacção a partir do estado resultante, apresentação depois do commit.
+- Avisos e recibos em `arn_tasks_notifications` (coluna `read_at`, como F1-12), destinatários calculados na transacção a partir do estado resultante, apresentação depois do commit. Sem tabela F1-04 nem `arn_tasks_receipts`.
 - Instalação CLI explícita, flags booleanas próprias, sem abrir um módulo alheio.
 
 ## Diferenças declaradas, não escondidas
 
 1. **F1-12 e `@@session.in_transaction`.** `NoticeRepository` e `EventRepository` ainda usam essa sonda. Não existe no MySQL 8.0.44. F1-13 não a copia. O adaptador futuro usa a API portátil da ligação dedicada.
-2. **Avisos.** F1-04 (`Notification::EVENTS`) continua limitado a eventos de acesso. F1-13 não estende esse catálogo em silêncio. Segue as tabelas de aviso do módulo, como F1-12. O sítio de apresentação ao colaborador fica pendente.
-3. **Comentários.** F1-12 versiona conteúdo; não tem comentários. F1-13 propõe `arn_tasks_comments` append-only, ligada à tarefa, com `expected_revision`, incremento da revisão do agregado, auditoria e aviso na mesma transacção.
+2. **Avisos e recibos.** F1-04 (`Notification::EVENTS`) continua limitado a eventos de acesso. F1-13 não estende esse catálogo em silêncio. Os avisos e o primeiro `read_at` ficam em `arn_tasks_notifications`, análogo a `arn_comm_notifications`. O sítio de apresentação ao colaborador fica pendente.
+3. **Comentários.** F1-12 versiona conteúdo; não tem comentários. F1-13 propõe `arn_tasks_comments` append-only, ligada à tarefa, com `expected_revision`, incremento da revisão do agregado, auditoria e aviso na mesma transacção. Reenvio com a mesma revisão recusa CAS; não é no-op.
+4. **Identidade do `create`.** O reenvio idempotente usa `create_request_id` emitido no GET, não `task_id` e não a chave de entrega do aviso.
 
 ## Decisões propostas (não aprovadas)
 
@@ -53,6 +54,7 @@ Não há schema, contas, concessões, páginas, flags, dependências nem código
 - UTC no laboratório; prazo em falta permitido; atraso = `now > due_at`. Sem calendário de férias. Fuso apresentado por confirmar.
 - Flag futura `ARN_ALLOW_LOCAL_TASKS` ausente até revisão e baseline. Instalação só CLI.
 - Persistência sem `@@session.in_transaction`.
+- `create` idempotente por `create_request_id` do servidor. Avisos/recibos em `arn_tasks_notifications.read_at`. Reenvio de `comment` com a mesma revisão recusa CAS.
 
 ## Skills
 
@@ -74,8 +76,8 @@ Não há schema, contas, concessões, páginas, flags, dependências nem código
 ## Verificação desta passagem documental
 
 - Só os três ficheiros desta entrega.
-- IDs CA-F113-01 a 32 conservados, todos Por executar.
-- CA-F113-33 a 35 acrescentados para comentário append-only, matriz HTTP F1-12 e destinatários intra-transacção.
+- IDs CA-F113-01 a 35 conservados, todos Por executar. Nenhum passou.
+- CA-F113-36 acrescentado para a tabela de avisos/recibos e a chave de entrega. CA-F113-17 deixa de usar `task_id` como identidade do `create`. CA-F113-33 fixa recusa CAS determinística no reenvio de `comment`.
 - Sem afirmação de implementação, activação ou teste executado.
 - Sem alteração a README.md, AGENTS.md ou código.
 

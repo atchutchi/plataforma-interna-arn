@@ -22,8 +22,8 @@ Na execução futura, preencher Passou/Falhou/Não executado, comando, SHA, cont
 | CA-F113-14 | Dois processos SQL no mesmo objecto. | Um commit, uma recusa, um evento, avisos únicos. Sobreposição real sob lock, não só barreira anunciada. | Barreira entre processos | Por executar |
 | CA-F113-15 | Nonce inválido, extras, actor/unidade/estado adulterados, no-op. | Nonce/extras/adulteração: 404 vazio sem escrita. No-op com CAS exacto: 303, revisão/auditoria/avisos inalterados. GET/HEAD sem mutação. | HTTP real e hashes de tabela | Por executar |
 | CA-F113-16 | Falha injectada na auditoria ou no último aviso. | Agregado, transição, comentário e avisos revertem. Sem sucesso parcial. Destinatários não são escolhidos após o commit. | Integração SQL | Por executar |
-| CA-F113-17 | `create` e reenviar o mesmo POST. | Uma tarefa e um aviso por chave `(task_id, revision, recipient_id, kind)`. | Índice único e browser | Por executar |
-| CA-F113-18 | Destinatário marca aviso como lido e repete. | Primeiro instante conservado. Lida ≠ aceitação da tarefa. Grants/sessão iguais. | SQL e Playwright | Por executar |
+| CA-F113-17 | `create` e reenviar o mesmo POST com o mesmo `create_request_id` emitido no GET. | Uma tarefa. 303 para o mesmo objecto. Sem segunda linha, sem segundo aviso, sem nova revisão. A identidade não é `task_id`. Token em falta ou adulterado: 404. | Índice único `create_request_id` e browser | Por executar |
+| CA-F113-18 | Destinatário marca aviso como lido e repete. | Recibo em `arn_tasks_notifications.read_at`. Primeiro instante conservado. Lida ≠ aceitação da tarefa. Grants/sessão iguais. Sem tabela F1-04. | SQL e Playwright | Por executar |
 | CA-F113-19 | Destinatário perde atribuição; aviso antigo. | Lista/detalhe do aviso não revelam a tarefa inacessível. | SQL e URL directa | Por executar |
 | CA-F113-20 | REST páginas, block-renderer, search, feed, oEmbed, revisões, meta. | Sem corpo de tarefas, com fixture autenticada e nonce REST válido. | HTTP WordPress real | Por executar |
 | CA-F113-21 | 21 tarefas elegíveis; paginação 20+1. | Autorização antes de contar. Sem duplicados. Página excessiva vazia. | SQL e navegação | Por executar |
@@ -38,9 +38,10 @@ Na execução futura, preencher Passou/Falhou/Não executado, comando, SHA, cont
 | CA-F113-30 | Preservação de contas, concessões, sessões, People, F1-12 e opções. | Só deltas auditados previstos. Hashes por nome de opção. | Baselines imutáveis | Por executar |
 | CA-F113-31 | 22 originais reais. | Se ausentes no PC, Não executada a comparação física, reservada a Atchutchi. | Inventário privado | Por executar |
 | CA-F113-32 | CI no SHA entregue e revisão. | Não equivalem a PEN/RH, IIS/MySQL 8.4 ou produção. F1-13 institucional continua em curso. | Relatório por níveis de prova | Por executar |
-| CA-F113-33 | `comment` com CAS desactualizado; tentativa de editar ou apagar comentário existente. | CAS: erro de formulário sem escrita. Edição/apagamento: recusa, tabela append-only intacta. Ordenação por `id` crescente. | SQL e POST negativo | Por executar |
+| CA-F113-33 | `comment` com a mesma `expected_revision` após sucesso, ou com CAS já desactualizado; tentativa de editar ou apagar comentário existente. | Recusa CAS determinística: erro de formulário, sem escrita, sem linha nova. Não é no-op. Edição/apagamento: recusa, tabela append-only intacta. Ordenação por `id` crescente. | SQL e POST negativo | Por executar |
 | CA-F113-34 | Matriz HTTP: sucesso, no-op, CAS, operação inválida, objecto não autorizado. | Sucesso e no-op = 303. CAS e operação inválida na página já autorizada, sem 404. Objecto não autorizado/inexistente/método errado = 404 vazio private/no-store antes da fonte. Igual a F1-12, sem código HTTP inventado. | HTTP real | Por executar |
 | CA-F113-35 | Mutação com destinatários derivados; injecção de falha no último aviso. | Destinatários calculados do estado resultante dentro da transacção. Apresentação só após commit. Rollback integral se o último aviso falhar. Nenhum aviso F1-04 `Notification::EVENTS`. | Integração SQL | Por executar |
+| CA-F113-36 | Duas mutações que geram o mesmo aviso; leitura do esquema de avisos. | Uma linha em `arn_tasks_notifications` por `(task_id, revision, recipient_id, kind)`. Recibo só em `read_at`. Sem `arn_tasks_receipts` e sem catálogo F1-04. | Índice único e SQL | Por executar |
 
 ## Rastreabilidade resumida
 

@@ -80,18 +80,21 @@ Reatribuição após conta suspensa, concessão revogada/expirada ou unidade ina
 
 ## Persistência, CAS, auditoria e concorrência
 
-Proposta de quatro tabelas próprias InnoDB, instalação CLI administradora explícita, IdentityWpdb dedicada, sem reconnect e sem `@@session.in_transaction` / `@@in_transaction` / PROCESS / Performance Schema.
+Proposta de cinco tabelas próprias InnoDB, instalação CLI administradora explícita, IdentityWpdb dedicada, sem reconnect e sem `@@session.in_transaction` / `@@in_transaction` / PROCESS / Performance Schema.
 
 | Tabela proposta | Função |
 | --- | --- |
-| `arn_tasks` | Agregado corrente: campos de negócio, `assignee_id`, `revision`, `updated_at` |
-| `arn_tasks_comments` | Comentários append-only, ligados à tarefa |
+| `arn_tasks` | Agregado corrente: campos de negócio, `assignee_id`, `revision`, `updated_at`, `create_request_id` único |
+| `arn_tasks_comments` | Comentários append-only, ligados à tarefa. Equivalente funcional de `versions` em F1-12, não um quarto agregado silencioso |
 | `arn_tasks_audit` | Cadeia append-only da revisão do agregado |
+| `arn_tasks_notifications` | Avisos e recibos do módulo, no mesmo espírito de `arn_comm_notifications` / `arn_calendar_notifications` |
 | `arn_tasks_schema` | Marcador de schema/instalação, no mesmo espírito F1-12 |
 
 **Diferença face a F1-12, não escondida:** `Communications\NoticeRepository` e `Calendar\EventRepository` ainda interrogam `@@session.in_transaction` antes de `START TRANSACTION`. Essa sonda não existe no MySQL 8.0.44. A implementação futura de F1-13 não copia essa sonda. Usa a API portátil da ligação dedicada (`inTransaction`, guarda por savepoint) depois da correcção transaccional integrada. Não declarar F1-13 segura com base num head ainda em revisão.
 
 CAS pela revisão exacta (`expected_revision`). `PHP_INT_MAX` recusa. Dois processos reais com espera no lock, um commit e uma recusa. Idempotência do instalador e de reenvios POST. Prefixos de ensaio exclusivos, por exemplo `arn_tsk_`.
+
+A identidade de um `create` **não** é `task_id`: o identificador ainda não existe no primeiro POST. O servidor emite `create_request_id` no GET autorizado do formulário (32 hex, 16 bytes criptográficos), liga-o ao nonce (actor/módulo/`create`/token) e grava-o com unicidade em `arn_tasks.create_request_id`. Reenvio do mesmo POST, com o mesmo token: 303 para a tarefa já criada, sem segunda linha, sem segundo aviso, sem nova revisão. Token em falta, repetido noutro actor ou adulterado: 404 vazio antes da fonte. Título, prazo ou alvo canónicos **não** são a chave: dois pedidos com tokens distintos criam duas tarefas se a autorização o permitir.
 
 ## Notificações e auditoria
 
@@ -101,9 +104,11 @@ Contrato proposto, alinhado com `NoticeRepository::persist` / `EventRepository::
 2. Os destinatários são calculados **a partir desse estado resultante**, ainda dentro da mesma transacção, com o elenco bloqueado (`locked()`), nunca a partir do browser e nunca só depois do `COMMIT`.
 3. Auditoria e avisos são persistidos atomicamente com o agregado. Uma falha no último aviso provoca rollback integral: tarefa, comentário, revisão, auditoria e avisos revertem.
 4. A apresentação ao utilizador ocorre **depois** do `COMMIT`. Apresentar depois não significa escolher destinatários depois.
-5. Recibo de leitura: conserva o primeiro instante; não equivale a aceitação da tarefa nem altera a revisão.
+5. Recibos ficam na mesma tabela de avisos, coluna `read_at` anulável, como em F1-12. O primeiro instante conserva-se; um `UPDATE` posterior não o substitui. Lida ≠ aceitação da tarefa e não altera a revisão. Não há tabela F1-04 nem `arn_tasks_receipts` separada.
 6. Destinatário que perdeu a atribuição deixa de ver o aviso na lista/detalhe.
-7. Chave estável proposta: `(task_id, revision, recipient_id, kind)`. Sem colisão entre tarefas distintas.
+7. Unicidade de entrega, **depois** de existir `task_id`: `(task_id, revision, recipient_id, kind)`. Esta chave não identifica o `create`. Sem colisão entre tarefas distintas.
+
+Campos propostos de `arn_tasks_notifications`: `id` positivo; `task_id`; `revision`; `recipient_id`; `kind`; `created_at` Unix UTC; `read_at` nulo ou o primeiro instante. PK `id`; único `delivery (task_id, revision, recipient_id, kind)`; leitura `(recipient_id, read_at, id)`.
 
 Tipos internos propostos do módulo: `task_assigned`, `task_reassigned`, `task_state_changed`, `task_due_changed`, `task_commented`. Não entram em `Notifications\Notification::EVENTS`.
 
@@ -115,7 +120,7 @@ Sem email, Calendar, Google, push ou canais externos.
 
 Preferência técnica desta proposta: tabela separada append-only, ligada à tarefa, **não** um campo JSON no agregado e **não** um payload de log.
 
-**Diferença face a F1-12, não escondida:** comunicados e eventos versionam conteúdo imutável (`versions`). Não têm fluxo de comentários. Tarefas precisam de um histórico de mensagens curto; por isso a quarta tabela é explícita. Não escolher silenciosamente um quarto agregado diferente nem guardar o texto só na auditoria.
+**Diferença face a F1-12, não escondida:** comunicados e eventos versionam conteúdo imutável (`versions`). Não têm fluxo de comentários. Tarefas precisam de um histórico de mensagens curto; por isso `arn_tasks_comments` substitui o papel de `versions` e não é um agregado extra escondido. Não guardar o texto só na auditoria.
 
 | Aspecto | Contrato proposto |
 | --- | --- |
@@ -129,7 +134,7 @@ Preferência técnica desta proposta: tabela separada append-only, ligada à tar
 | Autorização | A mesma da leitura da tarefa na geração corrente (destinatário Own ou gestor Units). Beta não lê. lab_admin sem concessão 404 |
 | Auditoria | Um evento `commented` na cadeia da tarefa, mesma transacção |
 | Notificação | Um aviso `task_commented` aos destinatários calculados do estado resultante (proposta: responsável principal se o autor for o gestor; gestor da unidade se o autor for o responsável). Sem escolher destinatários depois do commit |
-| Append-only | Sem edição, sem apagar, sem substituir corpo. Reenvio idêntico com a mesma revisão é no-op ou recusa CAS; não duplica linhas |
+| Append-only | Sem edição, sem apagar, sem substituir corpo. Reenvio com a mesma `expected_revision`: recusa CAS determinística (erro de formulário na página autorizada, sem escrita, sem linha nova). Não é no-op. O primeiro sucesso já consumiu essa revisão; o segundo pedido com o mesmo CAS é conflito, não igualdade canónica |
 | Anexos | Fora desta parcela. Upload ou URL estática recusa. Lacuna US-ARN-08 |
 
 A inclusão de comentários na primeira implementação continua **proposta**, não regra aprovada. Se a decisão institucional os adiar, a operação `comment` e a tabela ficam fora do plano executável, sem apagar esta definição.
@@ -140,9 +145,10 @@ Páginas propostas `minhas-tarefas` e `tarefas-da-equipa`, bloco dinâmico, cont
 
 POST alinhado com `F112\Input` / `F112\ManagementPage` / `F112\Controller`:
 
-- nonce ligado a actor/módulo/operação/objecto;
+- nonce ligado a actor/módulo/operação/objecto; em `create`, também a `create_request_id`;
 - `operation` fechada;
 - `expected_revision` (CAS), excepto `create`;
+- `create_request_id` só em `create`, eco do token emitido no GET autorizado, nunca inventado pelo browser;
 - motivo privado quando a operação o exige (`cancel`, e as restantes com auditoria);
 - validação de forma e nonce **antes** de ler o agregado.
 
@@ -154,7 +160,7 @@ Campos editáveis permitidos por operação:
 
 | Operação | Campos de browser admitidos além de `operation`, nonce, `id`/`expected_revision` |
 | --- | --- |
-| `create` | título, descrição, prioridade, prazo, alvo de atribuição da mesma unidade |
+| `create` | título, descrição, prioridade, prazo, alvo de atribuição da mesma unidade, eco de `create_request_id` |
 | `start` | motivo |
 | `complete` | motivo |
 | `cancel` | motivo obrigatório |
@@ -170,7 +176,9 @@ Não se inventa um código HTTP distinto sem conflito declarado. O CMS F1-12 usa
 | Resultado | Contrato F1-13 proposto | Origem F1-12 |
 | --- | --- | --- |
 | Sucesso com escrita | 303 para o detalhe ou lista autorizada, `saved=1`, sem corpo da mutação | `ManagementPage` / `Controller` 303 |
-| No-op (valores canónicos iguais, `expected_revision` exacta) | 303 igual ao sucesso; **não** incrementa revisão; **não** cria auditoria nem aviso; `persist` sai cedo como `$before === $after` | `NoticeRepository::persist` |
+| No-op (valores canónicos iguais, `expected_revision` exacta) | 303 igual ao sucesso; **não** incrementa revisão; **não** cria auditoria nem aviso; `persist` sai cedo como `$before === $after`. Não se aplica a `comment` | `NoticeRepository::persist` |
+| Reenvio de `create` com o mesmo `create_request_id` | 303 para a tarefa já persistida; sem segunda linha nem segundo aviso | Identidade do pedido, não `task_id` |
+| Reenvio de `comment` com a mesma `expected_revision` | Recusa CAS: erro de formulário, sem escrita, sem linha nova. Determinístico; nunca no-op | `DomainException` |
 | CAS desactualizado | Não 404. A página autorizada reapresenta o objecto corrente com erro de formulário (`role=alert`): operação recusada ou registo mudou. Campos próprios permitidos podem regressar escapados. Sem escrita | `DomainException` em `ManagementPage::decide` |
 | Operação inválida (transição ou actor competentemente autenticado mas operação fora da tabela) | O mesmo tratamento de CAS: erro de formulário na página já autorizada, sem escrita. Não revelar objectos de outra unidade | `DomainException` |
 | Objecto não autorizado, inexistente, método errado, nonce inválido, forma inválida, filtro inválido | 404 vazio, `private, no-store`, sem `Location`, **antes** da fonte protegida | `Controller::refuse` |
@@ -213,11 +221,11 @@ Nenhum valor de fixture se converte em aprovação institucional ou em concessã
 | --- | --- | --- | --- | --- |
 | US-F04 | Só o destinatário actual lê Minhas tarefas | GET detalhe | CA-F113-01, CA-F113-12, CA-F113-21 | Política, SQL, Playwright |
 | US-F05 | Destinatário avança estado próprio | `start`, `complete` | CA-F113-02, CA-F113-03 | SQL e formulário |
-| US-M02 | Gestor cria e atribui no âmbito | `create` | CA-F113-04, CA-F113-17 | SQL transaccional e CMS |
+| US-M02 | Gestor cria e atribui no âmbito | `create` | CA-F113-04, CA-F113-17, CA-F113-36 | SQL transaccional e CMS |
 | US-M03 | Equipa, filtros, atraso | GET equipa | CA-F113-05, CA-F113-06, CA-F113-07 | Relógio injectado, parse |
 | US-ARN-08 | Cancelar, reatribuir, prazo, comentário | `cancel`, `reassign`, `change_due`, `comment` | CA-F113-08, CA-F113-10, CA-F113-23, CA-F113-33 | SQL e browser |
 | US-ARN-08 | Reabertura | `reopen` | CA-F113-09 | Política; POST negativo se recusada |
-| US-S01 / US-ARN-10 | Destinatários na transacção; rollback do último aviso | todas as mutações | CA-F113-16, CA-F113-18, CA-F113-19, CA-F113-35 | Integração SQL |
+| US-S01 / US-ARN-10 | Destinatários na transacção; rollback do último aviso | todas as mutações | CA-F113-16, CA-F113-18, CA-F113-19, CA-F113-35, CA-F113-36 | Integração SQL |
 | US-S03 | Sessão e suspensão | — | CA-F113-11 | Serviço auditado |
 | CAS / HTTP F1-12 | 303, no-op, CAS, 404 | POST fechado | CA-F113-13, CA-F113-14, CA-F113-15, CA-F113-34 | HTTP real e duas origens |
 | US-ARN-08 | Sem anexos públicos | POST negativo | CA-F113-24 | POST |
