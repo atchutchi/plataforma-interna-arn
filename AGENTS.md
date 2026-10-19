@@ -4,6 +4,8 @@ Continuidade de 19 de outubro, diagnóstico editorial: a branch `test/editorial-
 
 A referência do projeto é o `README.md`. Lê as secções que a tarefa tocar antes de alterar código. GitHub é a fonte de verdade. Este ficheiro resume o trabalho corrente. ChatGPT Work/Codex trabalha sobre GitHub e num clone separado. Cursor é opcional e não é dependência do código.
 
+A quarta calibração da PR #43 é `revocation-observer-query`. O selector manual ARN_EDITORIAL_DIAGNOSTIC_ONLY é fechado e fica ausente da CI. Registar as fases do pai e factos seguros antes das asserções do controlador. Uma falha no hook de COMMIT também pode ser ocultada como erro genérico de persistência. Exigir rollback das quatro tabelas de autorização. Não exigir ausência de decisão após uma revogação falhada, porque a concessão continua válida. O caso normal conserva as 59 verificações e recusa uma decisão depois de revogação confirmada. Não atribuir este percurso à tentativa histórica sem prova.
+
 A stack é WordPress, com regras em `wp-content/plugins/arn-intranet-core` e apresentação em `wp-content/themes/arn-intranet`. Não substituas esta arquitetura. Textos de interface ficam em português de Portugal.
 
 ## Comandos

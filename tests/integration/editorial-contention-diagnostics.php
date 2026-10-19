@@ -31,7 +31,13 @@ $state  = static function () use ( $assert ): string {
 	return hash( 'sha256', wp_json_encode( array( $tables, $rows ) ) );
 };
 $before = $state();
-foreach ( array( 'none', 'early-worker', 'observer-query' ) as $case ) {
+$cases  = array( 'none', 'early-worker', 'observer-query', 'revocation-observer-query' );
+$only   = getenv( 'ARN_EDITORIAL_DIAGNOSTIC_ONLY' );
+if ( false !== $only ) {
+	$assert( in_array( $only, $cases, true ) );
+	$cases = array( $only );
+}
+foreach ( $cases as $case ) {
 	$output     = tmpfile();
 	$error_file = tmpfile();
 	$process    = null;
@@ -60,18 +66,22 @@ foreach ( array( 'none', 'early-worker', 'observer-query' ) as $case ) {
 		$assert( is_string( $stdout ) && is_string( $stderr ) );
 		$observations = array();
 		$completions  = array();
+		$revocations  = array();
 		foreach ( explode( "\n", $stdout ) as $line ) {
 			foreach ( array(
 				'Editorial contention: ' => 'wait',
 				'Editorial completion: ' => 'done',
+				'Editorial revocation: ' => 'revocation',
 			) as $start => $record_kind ) {
 				if ( str_starts_with( $line, $start ) ) {
 					$value = json_decode( substr( $line, strlen( $start ) ), true, 32, JSON_THROW_ON_ERROR );
 					$assert( is_array( $value ) );
 					if ( 'wait' === $record_kind ) {
 						$observations[] = $value;
-					} else {
+					} elseif ( 'done' === $record_kind ) {
 						$completions[] = $value;
+					} else {
+						$revocations[] = $value;
 					}
 				}
 			}
@@ -88,6 +98,45 @@ foreach ( array( 'none', 'early-worker', 'observer-query' ) as $case ) {
 			foreach ( $completions as $completion ) {
 				$assert( $completion['diagnostic']['trace']['complete'] && 0 === $completion['diagnostic']['exit_code'] );
 			}
+		} elseif ( 'revocation-observer-query' === $case ) {
+			$proof   = $revocations[0] ?? array();
+			$records = $proof['trace']['records'] ?? array();
+			$seen    = is_array( $records ) ? array_column( $records, 'phase' ) : array();
+			WP_CLI::log(
+				'Editorial revocation calibration facts: ' . wp_json_encode(
+					array(
+						'exit'                           => $exit,
+						'observation_count'              => count( $observations ),
+						'completion_count'               => count( $completions ),
+						'revocation_count'               => count( $revocations ),
+						'outer_static_refusal'           => str_contains( $stdout . $stderr, 'Persistência de autorização indisponível.' ),
+						'primary_errno_1054'             => 1054 === ( $observations[2]['primary']['errno'] ?? null ),
+						'secondary_wait_seen'            => true === ( $observations[2]['secondary_wait_seen'] ?? null ),
+						'authorization_comparison_known' => is_bool( $proof['authorization_restored'] ?? null ),
+						'authorization_restored'         => true === ( $proof['authorization_restored'] ?? null ),
+						'parent_trace_complete'          => true === ( $proof['trace']['complete'] ?? null ),
+						'parent_start_seen'              => in_array( 'revocation-start', $seen, true ),
+						'parent_hook_seen'               => in_array( 'revocation-hook', $seen, true ),
+						'parent_hook_failed_seen'        => in_array( 'revocation-hook-failed', $seen, true ),
+						'parent_refusal_seen'            => in_array( 'revocation-refused', $seen, true ),
+						'parent_probe_seen'              => in_array( 'revocation-probe', $seen, true ),
+					)
+				)
+			);
+			$assert( $exit > 0 && 3 === count( $observations ) && 2 === count( $completions ) && 1 === count( $revocations ) );
+			$assert( str_contains( $stdout . $stderr, 'Persistência de autorização indisponível.' ) );
+			$assert( array( 'wait-observed', 'wait-observed', 'observer-query-failed' ) === array_column( $observations, 'classification' ) );
+			$assert( 'revocation' === $observations[2]['scenario'] && 1054 === $observations[2]['primary']['errno'] && $observations[2]['secondary_wait_seen'] );
+			$revocation = $revocations[0];
+			$phases     = array_column( $revocation['trace']['records'], 'phase' );
+			$assert( 'refused' === $revocation['outcome'] && $revocation['authorization_restored'] && $revocation['trace']['complete'] );
+			$assert( array( 'revocation-start', 'revocation-hook', 'revocation-hook-failed', 'revocation-refused' ) === $phases );
+			$assert(
+				array(
+					'sql_error' => true,
+					'errno'     => 1054,
+				) === $revocation['trace']['records'][2]['facts']
+			);
 		} else {
 			$assert( $exit > 0 && 1 === count( $observations ) && array() === $completions && str_contains( $stdout . $stderr, 'processo concorrente espera num lock real' ) );
 			$observation = $observations[0];
@@ -149,4 +198,4 @@ foreach ( array( 'none', 'early-worker', 'observer-query' ) as $case ) {
 		}
 	}
 }
-WP_CLI::success( 'Três cenários de diagnóstico editorial calibrados, sem aceitar as duas falhas injectadas como sucesso do teste original.' );
+WP_CLI::success( 'Cenários de diagnóstico editorial calibrados, sem aceitar falhas injectadas como sucesso do teste original.' );

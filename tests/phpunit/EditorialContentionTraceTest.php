@@ -114,4 +114,28 @@ final class EditorialContentionTraceTest extends TestCase {
 		$this->expectException( InvalidArgumentException::class );
 		new EditorialContentionTrace( sys_get_temp_dir() . '/unrelated-diagnostic.trace' );
 	}
+
+	public function test_parent_revocation_phases_keep_typed_failure_before_redaction(): void {
+		$trace = $this->trace();
+		$trace->record( 'revocation-start' );
+		$trace->record( 'revocation-hook' );
+		$trace->record(
+			'revocation-hook-failed',
+			array(
+				'sql_error' => true,
+				'errno'     => 1054,
+			)
+		);
+		$trace->record( 'revocation-refused' );
+		$snapshot = $trace->snapshot();
+		self::assertTrue( $snapshot['complete'] );
+		self::assertSame( array( 'revocation-start', 'revocation-hook', 'revocation-hook-failed', 'revocation-refused' ), array_column( $snapshot['records'], 'phase' ) );
+		self::assertSame(
+			array(
+				'sql_error' => true,
+				'errno'     => 1054,
+			),
+			$snapshot['records'][2]['facts']
+		);
+	}
 }

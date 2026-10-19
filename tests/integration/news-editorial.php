@@ -28,6 +28,7 @@ use Arn\Intranet\News\WpdbNewsAuthority;
 use Arn\Intranet\News\WpdbNewsRepository;
 use Arn\Intranet\Tests\Fixtures\LegacyNewsSchema;
 use Arn\Intranet\Tests\Fixtures\EditorialWorker;
+use Arn\Intranet\Tests\Fixtures\EditorialContentionTrace;
 
 // phpcs:disable Squiz.Commenting.FunctionComment, Squiz.Commenting.VariableComment, WordPress.Security.EscapeOutput.ExceptionNotEscaped
 // phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.WP.AlternativeFunctions
@@ -41,7 +42,7 @@ require_once __DIR__ . '/fixtures/LegacyNewsSchema.php';
 require_once __DIR__ . '/fixtures/EditorialWorker.php';
 $diagnostic_fault = getenv( 'ARN_EDITORIAL_DIAGNOSTIC_FAULT' );
 $diagnostic_fault = is_string( $diagnostic_fault ) && '' !== $diagnostic_fault ? $diagnostic_fault : 'none';
-if ( ! in_array( $diagnostic_fault, array( 'none', 'early-worker', 'observer-query' ), true ) ) {
+if ( ! in_array( $diagnostic_fault, array( 'none', 'early-worker', 'observer-query', 'revocation-observer-query' ), true ) ) {
 	throw new RuntimeException( 'Cenário de diagnóstico desconhecido.' );
 }
 $checks  = 0;
@@ -355,7 +356,7 @@ try {
 		$started         = hrtime( true );
 		$deadline        = microtime( true ) + 15;
 		$sql             = $reader->prepare( 'SELECT COUNT(*) FROM information_schema.INNODB_LOCK_WAITS w JOIN information_schema.INNODB_TRX t ON t.trx_id=w.requesting_trx_id WHERE t.trx_mysql_thread_id=%d', $connection );
-		$primary_sql     = 'observer-query' === $diagnostic_fault ? 'SELECT arn_editorial_missing_column FROM information_schema.INNODB_LOCK_WAITS' : $sql;
+		$primary_sql     = 'observer-query' === $diagnostic_fault || ( 'revocation-observer-query' === $diagnostic_fault && 'revocation' === $scenario ) ? 'SELECT arn_editorial_missing_column FROM information_schema.INNODB_LOCK_WAITS' : $sql;
 		while ( $connection > 0 && ! $found && microtime( true ) < $deadline ) {
 			$primary   = $sample( $reader, $primary_sql );
 			$secondary = $sample( $lock_observer, $sql );
@@ -434,28 +435,80 @@ try {
 			$worker->close();
 		}
 	}
-	$race        = $repo->create( $author, $scope, new Version( 1, $content(), $author, time() ), 'Revogação exclusiva' );
-	$race        = $repo->submit( $race->id, 1, 'Revogação na fila' );
-	$before_rows = $all_rows();
-	$worker      = new EditorialWorker( $prefix, $editor, $race->id, $participants );
+	$race                 = $repo->create( $author, $scope, new Version( 1, $content(), $author, time() ), 'Revogação exclusiva' );
+	$race                 = $repo->submit( $race->id, 1, 'Revogação na fila' );
+	$before_rows          = $all_rows();
+	$worker               = new EditorialWorker( $prefix, $editor, $race->id, $participants );
+	$revocation_path      = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $prefix . bin2hex( random_bytes( 8 ) ) . '.trace';
+	$revocation_trace     = new EditorialContentionTrace( $revocation_path );
+	$authorization_rows   = static function () use ( $db, $prefix ): ?string {
+		$rows = array();
+		foreach ( array( 'accounts', 'grants', 'audit', 'schema' ) as $name ) {
+			$value = $db->get_results( $db->prepare( 'SELECT * FROM %i ORDER BY 1', $prefix . 'arn_authz_' . $name ) );
+			if ( ! is_array( $value ) || '' !== $db->last_error ) {
+				return null;
+			}
+			$rows[] = $value;
+		}
+		return hash( 'sha256', wp_json_encode( $rows ) );
+	};
+	$authorization_before = $authorization_rows();
+	$technical_facts      = static function ( IdentityWpdb $connection ): array {
+		$facts = array( 'sql_error' => '' !== $connection->last_error );
+		try {
+			if ( $connection->dbh instanceof mysqli ) {
+				$facts['errno'] = $connection->dbh->errno;
+			}
+		} catch ( Throwable ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Introspecção indisponível omite o errno sem publicar o erro.
+			// Não inferir um errno quando a ligação já não está disponível.
+		}
+		return $facts;
+	};
 	try {
+		if ( null === $authorization_before ) {
+			throw new RuntimeException( 'Prova exclusiva de autorização indisponível.' );
+		}
 		$assert( $worker->ready(), 'editor observa concessão anterior' );
+		$revocation_trace->record( 'revocation-start' );
 		$intercepted = false;
-		$filter      = static function ( string $sql ) use ( &$intercepted, $worker, $waiting, $reader, $schema, $race, $assert ): string {
+		$filter      = static function ( string $sql ) use ( &$intercepted, $worker, $waiting, $reader, $schema, $race, $assert, $revocation_trace, $technical_facts ): string {
 			if ( 'COMMIT' === $sql && ! $intercepted ) {
 				$intercepted = true;
-				$waiting( $worker->start(), $worker, 'revocation' );
-				$reader->query( 'START TRANSACTION' );
-				$probe = $reader->get_results( $reader->prepare( 'SELECT id FROM %i WHERE id=%d FOR UPDATE NOWAIT', $schema->table( 'news' ), $race->id ) );
-				$error = $reader->last_error;
-				$reader->query( 'ROLLBACK' );
-				$assert( is_array( $probe ) && 1 === count( $probe ) && '' === $error, 'notícia livre enquanto decisão espera pela conta' );
+				$revocation_trace->record( 'revocation-hook' );
+				try {
+					$waiting( $worker->start(), $worker, 'revocation' );
+					$revocation_trace->record( 'revocation-wait-confirmed' );
+					$reader->query( 'START TRANSACTION' );
+					$probe = $reader->get_results( $reader->prepare( 'SELECT id FROM %i WHERE id=%d FOR UPDATE NOWAIT', $schema->table( 'news' ), $race->id ) );
+					$error = $reader->last_error;
+					$revocation_trace->record( 'revocation-probe', $technical_facts( $reader ) );
+					$reader->query( 'ROLLBACK' );
+					$assert( is_array( $probe ) && 1 === count( $probe ) && '' === $error, 'notícia livre enquanto decisão espera pela conta' );
+				} catch ( Throwable $failure ) {
+					$revocation_trace->record( 'revocation-hook-failed', $technical_facts( $reader ) );
+					throw $failure;
+				}
 			}
 			return $sql;
 		};
 		add_filter( 'query', $filter );
 		try {
 			$authz->revokeGrant( $editor, $grant_ids['editor'], 4, $context() );
+			$revocation_trace->record( 'revocation-confirmed' );
+		} catch ( Throwable $failure ) {
+			$revocation_trace->record( 'revocation-refused', $technical_facts( $db ) );
+			WP_CLI::log(
+				'Editorial revocation: ' . wp_json_encode(
+					array(
+						'outcome'                => 'refused',
+						'authorization_restored' => $authorization_before === $authorization_rows(),
+						'news_snapshot_equal_after_refusal' => $before_rows === $all_rows(),
+						'trace'                  => $revocation_trace->snapshot(),
+						'worker'                 => $worker->diagnostic(),
+					)
+				)
+			);
+			throw $failure;
 		} finally {
 			remove_filter( 'query', $filter );
 		}
@@ -463,8 +516,9 @@ try {
 		WP_CLI::log(
 			'Editorial completion: ' . wp_json_encode(
 				array(
-					'scenario'   => 'revocation',
-					'diagnostic' => $worker->diagnostic(),
+					'scenario'     => 'revocation',
+					'diagnostic'   => $worker->diagnostic(),
+					'parent_trace' => $revocation_trace->snapshot(),
 				)
 			)
 		);
@@ -472,6 +526,9 @@ try {
 		$db->query( 'ROLLBACK' );
 		$reader->query( 'ROLLBACK' );
 		$worker->close();
+		if ( is_file( $revocation_path ) ) {
+			unlink( $revocation_path );
+		}
 	}
 	echo esc_html( 'Editorial exclusivo: ' . $checks . " verificações.\n" );
 } finally {

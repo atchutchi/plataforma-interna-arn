@@ -15,7 +15,7 @@ use RuntimeException;
 /** Only phases, monotonic time and numeric/boolean facts may reach test output. */
 final class EditorialContentionTrace {
 
-	private const PHASES = array( 'boot', 'connected', 'snapshot-ready', 'ready', 'released', 'decision-start', 'authority-enter', 'authority-locked', 'authority-refused', 'decision-authorized', 'decision-refused', 'before-rollback', 'confirmed', 'refused', 'failed' );
+	private const PHASES = array( 'boot', 'connected', 'snapshot-ready', 'ready', 'released', 'decision-start', 'authority-enter', 'authority-locked', 'authority-refused', 'decision-authorized', 'decision-refused', 'before-rollback', 'confirmed', 'refused', 'failed', 'revocation-start', 'revocation-hook', 'revocation-wait-confirmed', 'revocation-probe', 'revocation-hook-failed', 'revocation-refused', 'revocation-confirmed' );
 
 	public function __construct( private readonly string $path ) {
 		if ( realpath( dirname( $path ) ) !== realpath( sys_get_temp_dir() ) || 1 !== preg_match( '/\Aarn_ed_[a-f0-9]{10}_[a-f0-9]{16}\.trace\z/D', basename( $path ) ) || is_link( $path ) ) {

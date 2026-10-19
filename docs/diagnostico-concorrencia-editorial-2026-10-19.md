@@ -58,15 +58,16 @@ O observador editorial passa a deixar 150 ms entre rondas de leitura, conservand
 
 ## Calibração reproduzível
 
-O comando `npm run test:editorial-diagnostics:integration` executa uma vez cada um dos três cenários abaixo, através de subprocessos reais e tabelas/contas exclusivas. Só funciona por WP-CLI em ambiente efectivo local ou development, com `manage_options`. Usa ficheiros temporários para stdout/stderr, evitando o bloqueio de pipes por saídas de erro extensas. Não publica o seu conteúdo livre.
+O comando `npm run test:editorial-diagnostics:integration` executa uma vez cada um dos quatro cenários abaixo, através de subprocessos reais e tabelas/contas exclusivas. Só funciona por WP-CLI em ambiente efectivo local ou development, com `manage_options`. Usa ficheiros temporários para stdout/stderr, evitando o bloqueio de pipes por saídas de erro extensas. Não publica o seu conteúdo livre.
 
 | Cenário | Resultado exigido ao teste editorial original | Prova adicional |
 | --- | --- | --- |
 | `none` | Exit 0 e 59 verificações | Três esperas originais observadas, uma confirmação/uma recusa e revogação recusada |
 | `early-worker` | Exit não zero na asserção original de lock | `worker-before-marker`, processo terminado, fase `refused`, sem entrada na autoridade |
 | `observer-query` | Exit não zero na mesma asserção original | `observer-query-failed`, errno 1054 deliberado, observador independente confirma espera e transacção em `LOCK WAIT` |
+| `revocation-observer-query` | Exit não zero com a mensagem genérica de persistência | Duas decisões iniciais preservadas, falha 1054 apenas no observador da revogação, fases do hook conservadas e igualdade das quatro tabelas de autorização após rollback |
 
-Os dois cenários negativos são falhas injectadas explicitamente através de `ARN_EDITORIAL_DIAGNOSTIC_FAULT`, apenas nos testes. Não são defeitos espontâneos nem resultados editoriais aprovados. Um valor desconhecido é recusado antes de criar fixtures. O caso normal não herda um modo negativo do chamador.
+Os três cenários negativos são falhas injectadas explicitamente através de `ARN_EDITORIAL_DIAGNOSTIC_FAULT`, apenas nos testes. Não são defeitos espontâneos nem resultados editoriais aprovados. Um valor desconhecido é recusado antes de criar fixtures. O caso normal não herda um modo negativo do chamador.
 
 O controlador exige a preservação exacta dos utilizadores e metadados nativos e da lista de tabelas entre casos. Recusa tabelas editoriais preexistentes e exige a sua remoção no final. Cada teste original continua responsável pela limpeza exclusiva dos seus próprios recursos.
 
@@ -81,6 +82,20 @@ Remove-Item Env:ARN_EDITORIAL_DIAGNOSTIC_FAULT
 ```
 
 O comando individual deve falhar. A calibração completa só passa se confirmar essa falha e a prova prevista, além do sucesso do caso normal.
+
+## Continuação: recusa genérica na revogação
+
+Foi consultada a tentativa 1 original de `38873149969`, sem a reexecutar. O stack mostra `revokeGrant` através de `operation` e `silently`, mas não conserva a excepção interior. A leitura do código confirma que uma excepção do hook de COMMIT do teste também atravessa esses wrappers e termina em «Persistência de autorização indisponível.». A mensagem isolada não permite concluir que houve erro SQL na escrita da revogação.
+
+O cenário `revocation-observer-query` injecta a consulta inválida apenas na última observação. As duas primeiras decisões continuam realmente concorrentes e confirmam uma transição. O erro de observação faz falhar a asserção do teste dentro do hook. A operação reverte a revogação e devolve a mensagem genérica. A reprodução controlada demonstra este percurso possível. Não estabelece retrospectivamente a causa da tentativa histórica.
+
+O trace do pai acrescenta um catálogo fechado de fases de revogação. Regista o errno do observador antes da ocultação, sem publicar SQL ou excepções livres. A comparação depois da recusa exige igualdade das quatro tabelas de autorização, incluindo concessões, revisão e auditoria. As fases e os factos booleanos são publicados pelo controlador antes das suas próprias asserções, para não perder novamente a prova em caso de falha na CI. O trace normal do pai acompanha a conclusão da revogação. Os temporários próprios são removidos.
+
+Depois de uma revogação falhada, a concessão anterior continua válida. O worker pode concluir legitimamente uma decisão quando o rollback liberta o lock. Por isso, `news_snapshot_equal_after_refusal` é somente uma observação e não um requisito de igualdade de negócio neste cenário negativo. Mantém-se integralmente a asserção original das 59 verificações: uma revogação confirmada tem de impedir a decisão sem efeitos nas oito tabelas de negócio.
+
+A selecção manual `ARN_EDITORIAL_DIAGNOSTIC_ONLY=revocation-observer-query` permite executar apenas esta calibração durante o diagnóstico. Valores desconhecidos são recusados. A CI não define este selector e executa os quatro casos. A primeira execução do novo cenário falhou por ausência do modo e a nova fase do teste unitário foi recusada antes da implementação. Depois da implementação, o cenário passou e os sete testes de trace passaram com 24 asserções. Isto é uma calibração nova, não uma reexecução da falha histórica.
+
+A execução local dos quatro cenários passou. Depois da correcção do relatório anterior às asserções, o cenário novo foi executado novamente e confirmou erro 1054, espera secundária, trace completo e autorização restaurada. Node manteve os 55 testes aprovados e lint/build passaram. PHPCS passou nos quatro ficheiros PHP alterados. A revisão independente ficou sem achados por corrigir. As 17 tabelas fictícias e a configuração ficaram exactamente iguais, sem contas, tabelas ou ficheiros temporários editoriais restantes. No laboratório normal, mantiveram-se configuração, sessões e os 89 ficheiros privados. Só os dois transientes de padrões do tema foram removidos/reinseridos em `wp_options`, sem ocultar o delta.
 
 ## Validação desta entrega
 
