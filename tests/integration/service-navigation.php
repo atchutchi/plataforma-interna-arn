@@ -8,6 +8,7 @@
 use Arn\Intranet\EditorialPreview\Portal;
 use Arn\Intranet\EditorialPreview\ServiceDirectory;
 use Arn\Intranet\EditorialPreview\NavigationPageList;
+use Arn\Intranet\EditorialPreview\ModuleNavigation;
 use Arn\Intranet\F112\Navigation;
 use Arn\Intranet\F112\LocalInstaller;
 use Arn\Intranet\F112\LocalRoster;
@@ -72,6 +73,7 @@ if ( ! mkdir( $root, 0700 ) ) {
 }
 $owned_pages             = array();
 $owned_users             = array();
+$owned_navigation        = array();
 $navigation_fixture_slug = 'arn-services-fixture-' . bin2hex( random_bytes( 5 ) );
 $capture_page            = static function ( int $id ) use ( &$owned_pages, $navigation_fixture_slug ): void {
 	$post = get_post( $id );
@@ -160,6 +162,125 @@ try {
 	$assert( 1 === substr_count( $automatic_menu, 'href="' . esc_url( get_permalink( $installed['pages']['profile'] ) ) . '"' ) && 1 === substr_count( $automatic_menu, 'href="' . esc_url( get_permalink( $installed['pages']['directory'] ) ) . '"' ), 'fallback automático sem duplicação' );
 	$assert( ! str_contains( $automatic_menu, 'href="' . esc_url( get_permalink( $installed['pages']['team'] ) ) . '"' ), 'fallback automático sem equipa recusada' );
 	$assert( str_contains( $automatic_menu, 'href="' . esc_url( get_permalink( $generic_child ) ) . '"' ), 'página filha com slug homónimo preservada' );
+	$manual_link    = static fn( string $label, string $url ): string => '<!-- wp:navigation-link ' . wp_json_encode(
+		array(
+			'label' => $label,
+			'url'   => $url,
+			'kind'  => 'custom',
+		)
+	) . ' /-->';
+	$manual_content = '<!-- wp:navigation-submenu {"label":"Acessos de ensaio"} -->'
+		. $manual_link( 'Equipa reservada', get_permalink( $installed['pages']['team'] ) )
+		. $manual_link( 'Equipa por caminho equivalente', home_url( '/./minha-equipa/' ) )
+		. $manual_link( 'Os meus dados', get_permalink( $installed['pages']['profile'] ) )
+		. '<!-- wp:navigation-submenu {"label":"Mais acessos"} -->'
+		. $manual_link( 'Perfil repetido', get_permalink( $installed['pages']['profile'] ) . '#dados' )
+		. $manual_link( 'Página comum', get_permalink( $generic_child ) )
+		. $manual_link( 'Ligação externa', 'https://other.example.invalid/minha-equipa/' )
+		. '<!-- /wp:navigation-submenu --><!-- /wp:navigation-submenu -->'
+		. '<!-- wp:navigation-submenu ' . wp_json_encode(
+			array(
+				'label'          => 'Grupo misto',
+				'url'            => get_permalink( $installed['pages']['team'] ),
+				'kind'           => 'custom',
+				'isTopLevelLink' => true,
+			)
+		) . ' -->'
+		. $manual_link( 'Página preservada', get_permalink( $generic_parent ) )
+		. '<!-- /wp:navigation-submenu -->'
+		. '<!-- wp:navigation-submenu {"label":"Sem destinos"} -->'
+		. $manual_link( 'Equipa indisponível', get_permalink( $installed['pages']['team'] ) )
+		. '<!-- /wp:navigation-submenu -->';
+	$manual_id      = wp_insert_post(
+		array(
+			'post_type'    => 'wp_navigation',
+			'post_status'  => 'publish',
+			'post_title'   => 'Menu fictício de ensaio',
+			'post_content' => wp_slash( $manual_content ),
+			'post_author'  => $admin,
+		),
+		true
+	);
+	$assert( is_int( $manual_id ) && $manual_id > 0, 'menu fictício guardado' );
+	$owned_navigation[] = $manual_id;
+	$manual_before      = get_post( $manual_id )->post_content;
+	$original_blocks    = new WP_Block_List( parse_blocks( $manual_content ) );
+	$original_parsed    = array_map( static fn( $block ): array => $block->parsed_block, iterator_to_array( $original_blocks ) );
+	ModuleNavigation::links( $original_blocks );
+	$assert( array_map( static fn( $block ): array => $block->parsed_block, iterator_to_array( $original_blocks ) ) === $original_parsed, 'objectos de blocos originais preservados' );
+	$manual_html = do_blocks(
+		'<!-- wp:navigation ' . wp_json_encode(
+			array(
+				'ref'         => $manual_id,
+				'overlayMenu' => 'never',
+			)
+		) . ' /-->'
+	);
+	$assert( ! str_contains( $manual_html, 'href="' . esc_url( get_permalink( $installed['pages']['team'] ) ) . '"' ), 'menu guardado sem equipa recusada' );
+	$assert( ! str_contains( $manual_html, 'Equipa por caminho equivalente' ), 'caminho normalizado não contorna filtro do menu' );
+	$assert( 1 === substr_count( $manual_html, 'href="' . esc_url( get_permalink( $installed['pages']['profile'] ) ) . '"' ) && str_contains( $manual_html, 'Os meus dados' ), 'menu guardado conserva primeiro rótulo sem duplicação aninhada' );
+	$assert( str_contains( $manual_html, 'href="' . esc_url( get_permalink( $generic_child ) ) . '"' ) && get_post( $manual_id )->post_content === $manual_before, 'menu guardado e página comum preservados' );
+	$assert( str_contains( $manual_html, 'Grupo misto' ) && str_contains( $manual_html, 'Página preservada' ) && ! str_contains( $manual_html, 'Sem destinos' ), 'submenu recusado conserva filhos permitidos sem botão vazio' );
+	$assert( str_contains( $manual_html, 'https://other.example.invalid/minha-equipa/' ) && ! str_contains( $manual_html, 'Perfil repetido' ), 'ligação externa preservada e fragmento local duplicado excluído' );
+	$login( $ids['manager'] );
+	$manual_manager = do_blocks(
+		'<!-- wp:navigation ' . wp_json_encode(
+			array(
+				'ref'         => $manual_id,
+				'overlayMenu' => 'never',
+			)
+		) . ' /-->'
+	);
+	$assert( 1 === substr_count( $manual_manager, 'href="' . esc_url( get_permalink( $installed['pages']['team'] ) ) . '"' ), 'menu guardado mostra equipa uma vez ao gestor' );
+	$login( $ids['alfa'], false );
+	$manual_invalid = do_blocks(
+		'<!-- wp:navigation ' . wp_json_encode(
+			array(
+				'ref'         => $manual_id,
+				'overlayMenu' => 'never',
+			)
+		) . ' /-->'
+	);
+	$assert( ! str_contains( $manual_invalid, 'href="' . esc_url( get_permalink( $installed['pages']['profile'] ) ) . '"' ) && str_contains( $manual_invalid, 'Página comum' ), 'sessão inválida retira módulos sem ocultar página comum' );
+	$login( $ids['alfa'] );
+	foreach ( array( 'draft', 'empty-label' ) as $hidden_case ) {
+		wp_update_post(
+			array(
+				'ID'          => $generic_parent,
+				'post_status' => 'draft' === $hidden_case ? 'draft' : 'publish',
+			)
+		);
+		$hidden_parent  = array(
+			'label' => 'empty-label' === $hidden_case ? '' : 'Grupo oculto',
+			'kind'  => 'post-type',
+			'type'  => 'page',
+			'id'    => $generic_parent,
+			'url'   => get_permalink( $generic_parent ),
+		);
+		$hidden_content = '<!-- wp:navigation-submenu ' . wp_json_encode( $hidden_parent ) . ' -->' . $manual_link( 'Perfil sob pai oculto', get_permalink( $installed['pages']['profile'] ) ) . '<!-- /wp:navigation-submenu -->';
+		wp_update_post(
+			array(
+				'ID'           => $manual_id,
+				'post_content' => wp_slash( $hidden_content ),
+			)
+		);
+		$hidden_html = do_blocks(
+			'<!-- wp:navigation ' . wp_json_encode(
+				array(
+					'ref'         => $manual_id,
+					'overlayMenu' => 'never',
+				)
+			) . ' /-->'
+		);
+		$assert( 1 === substr_count( $hidden_html, 'href="' . esc_url( get_permalink( $installed['pages']['profile'] ) ) . '"' ) && ! str_contains( $hidden_html, 'Perfil sob pai oculto' ), 'pai não renderizado não consome destino autorizado' );
+	}
+	wp_update_post(
+		array(
+			'ID'          => $generic_parent,
+			'post_status' => 'publish',
+		)
+	);
+	wp_delete_post( $manual_id, true );
 	$assert( $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE post_type=%s ORDER BY ID', $wpdb->posts, 'wp_navigation' ), ARRAY_A ) === $saved_menu, 'projecção e links não alteram navegação guardada' );
 	$login( $ids['manager'] );
 	$assert( array( 'directory', 'profile', 'team' ) === array_keys( PeopleNavigation::destinations() ), 'gestor com equipa' );
@@ -211,6 +332,37 @@ try {
 	$f112_menu = do_blocks( '<!-- wp:navigation {"overlayMenu":"never"} --><!-- wp:page-list /--><!-- /wp:navigation -->' );
 	$assert( 1 === substr_count( $f112_menu, 'href="' . esc_url( get_permalink( $f112['pages']['communications'] ) ) . '"' ) && 1 === substr_count( $f112_menu, 'href="' . esc_url( get_permalink( $f112['pages']['calendar'] ) ) . '"' ), 'fallback F112 sem duplicação' );
 	$assert( ! str_contains( $f112_menu, 'href="' . esc_url( get_permalink( $installed['pages']['directory'] ) ) . '"' ), 'fallback F112 sem destino People recusado' );
+	$manual_f112_content = '<!-- wp:navigation-submenu {"label":"Comunicação de ensaio"} -->'
+		. $manual_link( 'Avisos para mim', get_permalink( $f112['pages']['communications'] ) )
+		. '<!-- wp:navigation-submenu {"label":"Agenda de ensaio"} -->'
+		. $manual_link( 'Eventos para mim', get_permalink( $f112['pages']['calendar'] ) )
+		. $manual_link( 'Avisos repetidos', get_permalink( $f112['pages']['communications'] ) . '#avisos' )
+		. $manual_link( 'Perfil People recusado', get_permalink( $installed['pages']['profile'] ) )
+		. '<!-- /wp:navigation-submenu --><!-- /wp:navigation-submenu -->';
+	$manual_f112_id      = wp_insert_post(
+		array(
+			'post_type'    => 'wp_navigation',
+			'post_status'  => 'publish',
+			'post_title'   => 'Menu F112 fictício',
+			'post_content' => wp_slash( $manual_f112_content ),
+			'post_author'  => $admin,
+		),
+		true
+	);
+	$assert( is_int( $manual_f112_id ) && $manual_f112_id > 0, 'menu F112 fictício guardado' );
+	$owned_navigation[] = $manual_f112_id;
+	$manual_f112_before = get_post( $manual_f112_id )->post_content;
+	$manual_f112_html   = do_blocks(
+		'<!-- wp:navigation ' . wp_json_encode(
+			array(
+				'ref'         => $manual_f112_id,
+				'overlayMenu' => 'never',
+			)
+		) . ' /-->'
+	);
+	$assert( 1 === substr_count( $manual_f112_html, 'href="' . esc_url( get_permalink( $f112['pages']['communications'] ) ) . '"' ) && 1 === substr_count( $manual_f112_html, 'href="' . esc_url( get_permalink( $f112['pages']['calendar'] ) ) . '"' ), 'menu F112 guardado sem duplicação em submenus' );
+	$assert( str_contains( $manual_f112_html, 'Avisos para mim' ) && ! str_contains( $manual_f112_html, 'Perfil People recusado' ) && get_post( $manual_f112_id )->post_content === $manual_f112_before, 'menu F112 conserva rótulo e conteúdo sem acesso People' );
+	wp_delete_post( $manual_f112_id, true );
 	wp_update_post(
 		array(
 			'ID'           => $f112['pages']['communications'],
@@ -253,9 +405,12 @@ try {
 	require_once ABSPATH . 'wp-admin/includes/screen.php';
 	$GLOBALS['current_screen'] = WP_Screen::get( 'dashboard' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Contexto administrativo apenas neste processo CLI de teste.
 	$assert( array() === PeopleNavigation::destinations() && array() === Navigation::destinations(), 'admin' );
+	$editor_blocks = new WP_Block_List( parse_blocks( $manual_content ) );
+	$assert( ModuleNavigation::links( $editor_blocks ) === $editor_blocks, 'edição administrativa não filtrada' );
 	unset( $GLOBALS['current_screen'] );
 	define( 'REST_REQUEST', true );
 	$assert( array() === PeopleNavigation::destinations() && array() === Navigation::destinations(), 'REST' );
+	$assert( ModuleNavigation::links( $editor_blocks ) === $editor_blocks, 'REST conserva blocos para as guardas nativas' );
 	echo esc_html( 'Services WordPress: ' . $checks . ' verificações.' . PHP_EOL );
 } finally {
 	wp_set_current_user( $admin );
@@ -267,6 +422,9 @@ try {
 	}
 	remove_action( 'save_post_page', $capture_page, PHP_INT_MIN );
 	remove_action( 'user_register', $capture_user, PHP_INT_MIN );
+	foreach ( $owned_navigation as $navigation_id ) {
+		wp_delete_post( $navigation_id, true );
+	}
 	delete_option( InstallationState::optionName( $wpdb->prefix ) );
 	foreach ( $owned_pages as $service_page_id ) {
 		wp_delete_post( $service_page_id, true );
