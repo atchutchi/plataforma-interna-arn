@@ -1,6 +1,14 @@
 # Coordenação com Albertina4264, 16 de outubro de 2026
 
-## Revisão de 19 de outubro
+## Estado após revisão para integração, 19 de outubro
+
+A conciliação publicada em docs/albertina-f1-13-conciliacao, head 8634ce6, foi revista como proposta e é incluída na composição de integração. Mantém 36 critérios Por executar. A recepção documental não aprova políticas ou implementação. Os três ficheiros da autora são conservados sem reescrita.
+
+A correcção transaccional fix/albertina-pr41-review-findings avançou para c087aaa. O ensaio MySQL V2 está verde, mas a verificação geral 39337859907 falha nos quatro grupos de integração de identidade, pré-cadastro Workspace, F1-12 e redacção editorial. A revisão confirmou que SQL legítimo com CASE ou literal THEN é recusado. Outros riscos identificados exigem reprodução no motor e não são apresentados como falhas SQL demonstradas. Este candidato e as PRs #39/#41 ficam fora do merge. Não se alterou a branch da autora, o laboratório ou a atribuição das Issues.
+
+O pedido actual autoriza integrar apenas as entregas validadas. Seguir docs/integracao-entregas-locais-2026-10-19.md. Os relatos seguintes conservam os SHAs e resultados anteriores e não substituem este estado.
+
+## Revisão anterior de 19 de outubro
 
 A PR41 em 28304c1 propõe a guarda V2 e a branch fix/albertina-pr41-review-findings em 9cd87c3 acrescenta as correcções 349d08e/9cd87c3. Os checks dessa branch passaram, mas a nova revisão reproduziu dez falhas em doze cenários MariaDB. Não integrar PR39, PR41 ou as variantes experimentais enquanto os bloqueadores persistirem. A conciliação da Issue37 foi entretanto publicada em 4b90341, com 35 critérios propostos Por executar e ainda sem PR. Preservar essa entrega e concluir a revisão dos contratos, sem a refazer. Seguir docs/revisao-branches-pr41-2026-10-19.md e docs/prompt-albertina-pr41-issue37-2026-10-19.txt. O prompt é entregue ao responsável, sem mensagem directa ou nova atribuição à colaboradora. Preservar os commits e entregar a correcção dirigida à base V2 e a conciliação documental em PRs separadas, sem merge.
 
