@@ -40,6 +40,7 @@
     "test:document-catalog:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/document-catalog.php --user=admin",
     "test:news:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/news-submission.php --user=admin && node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/news-installer.php --user=admin",
     "test:news-editorial:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/news-editorial.php --user=admin",
+    "test:editorial-diagnostics:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/editorial-contention-diagnostics.php --user=admin",
     "test:news-editorial-installer:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/news-editorial-installer.php --user=admin",
     "test:news-editorial-upgrade:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/news-editorial-upgrade.php --user=admin",
     "test:local-private-files:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/local-private-files.php --user=admin",

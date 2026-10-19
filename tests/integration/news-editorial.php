@@ -39,6 +39,11 @@ if ( ! defined( 'WP_CLI' ) || true !== WP_CLI || ! in_array( wp_get_environment_
 }
 require_once __DIR__ . '/fixtures/LegacyNewsSchema.php';
 require_once __DIR__ . '/fixtures/EditorialWorker.php';
+$diagnostic_fault = getenv( 'ARN_EDITORIAL_DIAGNOSTIC_FAULT' );
+$diagnostic_fault = is_string( $diagnostic_fault ) && '' !== $diagnostic_fault ? $diagnostic_fault : 'none';
+if ( ! in_array( $diagnostic_fault, array( 'none', 'early-worker', 'observer-query' ), true ) ) {
+	throw new RuntimeException( 'Cenário de diagnóstico desconhecido.' );
+}
 $checks  = 0;
 $assert  = static function ( bool $ok, string $label ) use ( &$checks ): void {
 	if ( ! $ok ) {
@@ -62,6 +67,9 @@ $db->suppress_errors( true );
 $reader = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
 $reader->set_prefix( $prefix );
 $reader->suppress_errors( true );
+$lock_observer = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+$lock_observer->set_prefix( $prefix );
+$lock_observer->suppress_errors( true );
 $schema = new NewsSchema( $db );
 $files  = new FileSchema( $db );
 $users  = array();
@@ -314,14 +322,83 @@ try {
 	$generations[ $author ] = 5;
 	$repo->markRead( (int) $author_notices[0]->id, time() );
 	$refuses( static fn() => $repo->revise( $article->id, new Version( 4, $content(), $author, time() ), 10, 'Arquivo terminal' ) );
-	$waiting = static function ( int $connection ) use ( $reader, $assert ): void {
-		$found    = false;
-		$deadline = microtime( true ) + 15;
-		while ( ! $found && microtime( true ) < $deadline ) {
-			$found = 0 < (int) $reader->get_var( $reader->prepare( 'SELECT COUNT(*) FROM information_schema.INNODB_LOCK_WAITS w JOIN information_schema.INNODB_TRX t ON t.trx_id=w.requesting_trx_id WHERE t.trx_mysql_thread_id=%d', $connection ) );
+	$waiting = static function ( int $connection, EditorialWorker $worker, string $scenario ) use ( $reader, $lock_observer, $diagnostic_fault, $assert ): void {
+		$sample          = static function ( IdentityWpdb $database, string $sql ): array {
+			$value = $database->get_var( $sql );
+			$known = '' === $database->last_error && ( is_int( $value ) || is_string( $value ) ) && 1 === preg_match( '/\A[0-9]+\z/D', (string) $value );
+			$errno = null;
+			try {
+				if ( $database->dbh instanceof mysqli ) {
+					$errno = $database->dbh->errno;
+				}
+			} catch ( Throwable ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Uma falha de introspecção permanece desconhecida.
+				// Ligação perdida: o errno permanece desconhecido.
+			}
+			return array(
+				'known'     => $known,
+				'count'     => $known ? (int) $value : null,
+				'sql_error' => '' !== $database->last_error,
+				'errno'     => $errno,
+			);
+		};
+		$found           = false;
+		$secondary_found = false;
+		$polls           = 0;
+		$unknown_polls   = 0;
+		$primary         = array(
+			'known'     => false,
+			'count'     => null,
+			'sql_error' => null,
+			'errno'     => null,
+		);
+		$secondary       = $primary;
+		$started         = hrtime( true );
+		$deadline        = microtime( true ) + 15;
+		$sql             = $reader->prepare( 'SELECT COUNT(*) FROM information_schema.INNODB_LOCK_WAITS w JOIN information_schema.INNODB_TRX t ON t.trx_id=w.requesting_trx_id WHERE t.trx_mysql_thread_id=%d', $connection );
+		$primary_sql     = 'observer-query' === $diagnostic_fault ? 'SELECT arn_editorial_missing_column FROM information_schema.INNODB_LOCK_WAITS' : $sql;
+		while ( $connection > 0 && ! $found && microtime( true ) < $deadline ) {
+			$primary   = $sample( $reader, $primary_sql );
+			$secondary = $sample( $lock_observer, $sql );
+			++$polls;
+			$unknown_polls  += $primary['known'] ? 0 : 1;
+			$found           = $primary['known'] && $primary['count'] > 0;
+			$secondary_found = $secondary_found || ( $secondary['known'] && $secondary['count'] > 0 );
 			usleep( 50000 );
 		}
-		$assert( $connection > 0 && $found && '' === $reader->last_error, 'processo concorrente espera num lock real' );
+		$state = 'unknown';
+		if ( $connection > 0 ) {
+			$value = $lock_observer->get_var( $lock_observer->prepare( 'SELECT trx_state FROM information_schema.INNODB_TRX WHERE trx_mysql_thread_id=%d', $connection ) );
+			if ( '' === $lock_observer->last_error && in_array( $value, array( 'RUNNING', 'LOCK WAIT', 'ROLLING BACK', 'COMMITTING' ), true ) ) {
+				$state = $value;
+			}
+		}
+		$diagnostic     = $worker->diagnostic();
+		$classification = match ( true ) {
+			$found => 'wait-observed',
+			$connection < 1 => 'worker-before-marker',
+			! $primary['known'] => 'observer-query-failed',
+			$secondary_found => 'observers-disagree',
+			false === $diagnostic['running'] => 'worker-exited-before-lock',
+			default => 'wait-not-observed',
+		};
+		WP_CLI::log(
+			'Editorial contention: ' . wp_json_encode(
+				array(
+					'scenario'            => $scenario,
+					'classification'      => $classification,
+					'connection'          => $connection,
+					'polls'               => $polls,
+					'unknown_polls'       => $unknown_polls,
+					'elapsed_ms'          => (int) ( ( hrtime( true ) - $started ) / 1000000 ),
+					'primary'             => $primary,
+					'secondary'           => $secondary,
+					'secondary_wait_seen' => $secondary_found,
+					'transaction_state'   => $state,
+					'worker'              => $diagnostic,
+				)
+			)
+		);
+		$assert( $connection > 0 && $found && $primary['known'] && ! $primary['sql_error'], 'processo concorrente espera num lock real' );
 	};
 	$race    = $repo->create( $author, $scope, new Version( 1, $content(), $author, time() ), 'Concorrência exclusiva' );
 	$race    = $repo->submit( $race->id, 1, 'Concorrência na fila' );
@@ -332,10 +409,21 @@ try {
 		$assert( $workers[0]->ready() && $workers[1]->ready(), 'dois processos editoriais preparados' );
 		$db->query( 'START TRANSACTION' );
 		$db->get_results( $db->prepare( 'SELECT id FROM %i WHERE id=%d FOR UPDATE', $schema->table( 'news' ), $race->id ) );
-		$waiting( $workers[0]->start() );
-		$waiting( $workers[1]->start() );
+		$waiting( $workers[0]->start(), $workers[0], 'decision-first' );
+		$waiting( $workers[1]->start(), $workers[1], 'decision-second' );
 		$db->query( 'ROLLBACK' );
 		$outcomes = array( $workers[0]->finish(), $workers[1]->finish() );
+		foreach ( $workers as $index => $worker ) {
+			WP_CLI::log(
+				'Editorial completion: ' . wp_json_encode(
+					array(
+						'worker'     => $index,
+						'outcome'    => $outcomes[ $index ],
+						'diagnostic' => $worker->diagnostic(),
+					)
+				)
+			);
+		}
 		sort( $outcomes );
 		$assert( array( 'EDITORIAL_CONFIRMED', 'EDITORIAL_REFUSED' ) === $outcomes && 3 === $repo->find( $race->id )->revision && 3 === count( $repo->history( $race->id ) ), 'duas decisões concorrentes confirmam exactamente uma transição' );
 	} finally {
@@ -354,7 +442,7 @@ try {
 		$filter      = static function ( string $sql ) use ( &$intercepted, $worker, $waiting, $reader, $schema, $race, $assert ): string {
 			if ( 'COMMIT' === $sql && ! $intercepted ) {
 				$intercepted = true;
-				$waiting( $worker->start() );
+				$waiting( $worker->start(), $worker, 'revocation' );
 				$reader->query( 'START TRANSACTION' );
 				$probe = $reader->get_results( $reader->prepare( 'SELECT id FROM %i WHERE id=%d FOR UPDATE NOWAIT', $schema->table( 'news' ), $race->id ) );
 				$error = $reader->last_error;
@@ -370,6 +458,14 @@ try {
 			remove_filter( 'query', $filter );
 		}
 		$assert( $intercepted && 'EDITORIAL_REFUSED' === $worker->finish() && $before_rows === $all_rows() && NewsState::Pending === $repo->find( $race->id )->state, 'revogação confirmada sob lock impede decisão sem efeitos operacionais' );
+		WP_CLI::log(
+			'Editorial completion: ' . wp_json_encode(
+				array(
+					'scenario'   => 'revocation',
+					'diagnostic' => $worker->diagnostic(),
+				)
+			)
+		);
 	} finally {
 		$db->query( 'ROLLBACK' );
 		$reader->query( 'ROLLBACK' );
@@ -391,4 +487,5 @@ try {
 	foreach ( $users as $id ) {
 		wp_delete_user( $id );
 	}
+	$lock_observer->close();
 }

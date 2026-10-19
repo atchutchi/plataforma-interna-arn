@@ -1,5 +1,7 @@
 # Instruções para agentes
 
+Continuidade de 19 de outubro, diagnóstico editorial: a branch `test/editorial-contention-diagnostics`, baseada em main `2c77a46`, trata apenas a instrumentação da Issue #31. Ler docs/diagnostico-concorrencia-editorial-2026-10-19.md. Causa histórica desconhecida. Não apresentar as duas falhas injectadas como reprodução histórica nem uma reexecução verde como correcção. Manter as 59 verificações, dois processos sobrepostos, prova original de INNODB_LOCK_WAITS e timeout de 15 segundos. A ligação adicional nunca substitui a asserção original. Executar `npm run test:editorial-diagnostics:integration` apenas em laboratório fictício. Guardar provas completas fora do Git. PR #41 e Issue #37 da Albertina fora do âmbito. Pedido actual proíbe merge mesmo com CI verde. Não alterar produto, permissões ou contas reais nesta tarefa.
+
 A referência do projeto é o `README.md`. Lê as secções que a tarefa tocar antes de alterar código. GitHub é a fonte de verdade. Este ficheiro resume o trabalho corrente. ChatGPT Work/Codex trabalha sobre GitHub e num clone separado. Cursor é opcional e não é dependência do código.
 
 A stack é WordPress, com regras em `wp-content/plugins/arn-intranet-core` e apresentação em `wp-content/themes/arn-intranet`. Não substituas esta arquitetura. Textos de interface ficam em português de Portugal.

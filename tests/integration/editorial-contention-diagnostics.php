@@ -1,0 +1,129 @@
+<?php
+/** Calibrate editorial observations without accepting failed contention as success.
+ *
+ * @package ArnIntranet
+ */
+
+// phpcs:disable Squiz.Commenting.FunctionComment, WordPress.Security.EscapeOutput.ExceptionNotEscaped
+// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.WP.AlternativeFunctions
+// phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open
+if ( ! defined( 'WP_CLI' ) || true !== WP_CLI || ! in_array( wp_get_environment_type(), array( 'local', 'development' ), true ) || ! current_user_can( 'manage_options' ) ) {
+	throw new RuntimeException( 'Ensaio exclusivo do laboratório.' );
+}
+$assert = static function ( bool $ok ): void {
+	if ( ! $ok ) {
+		throw new RuntimeException( 'Calibração editorial não confirmou a prova esperada.' );
+	}
+};
+$state  = static function () use ( $assert ): string {
+	$database = $GLOBALS['wpdb'];
+	$tables   = $database->get_col( 'SHOW TABLES' );
+	$assert( is_array( $tables ) && '' === $database->last_error );
+	sort( $tables );
+	foreach ( $tables as $table ) {
+		$assert( 1 !== preg_match( '/\Aarn_ed_[a-f0-9]{10}_/', $table ) );
+	}
+	$rows = array();
+	foreach ( array( $database->users, $database->usermeta ) as $table ) {
+		$rows[] = $database->get_results( $database->prepare( 'SELECT * FROM %i ORDER BY 1', $table ), ARRAY_A );
+		$assert( is_array( end( $rows ) ) && '' === $database->last_error );
+	}
+	return hash( 'sha256', wp_json_encode( array( $tables, $rows ) ) );
+};
+$before = $state();
+foreach ( array( 'none', 'early-worker', 'observer-query' ) as $case ) {
+	$output     = tmpfile();
+	$error_file = tmpfile();
+	$process    = null;
+	$pipes      = array();
+	try {
+		$assert( is_resource( $output ) && is_resource( $error_file ) );
+		$process = proc_open(
+			array( PHP_BINARY, $_SERVER['argv'][0], '--path=' . ABSPATH, '--user=' . wp_get_current_user()->user_login, 'eval-file', __DIR__ . '/news-editorial.php' ),
+			array(
+				0 => array( 'pipe', 'r' ),
+				1 => $output,
+				2 => $error_file,
+			),
+			$pipes,
+			getcwd(),
+			array_merge( getenv(), array( 'ARN_EDITORIAL_DIAGNOSTIC_FAULT' => $case ) )
+		);
+		$assert( is_resource( $process ) );
+		fclose( $pipes[0] );
+		$exit    = proc_close( $process );
+		$process = null;
+		rewind( $output );
+		rewind( $error_file );
+		$stdout = stream_get_contents( $output );
+		$stderr = stream_get_contents( $error_file );
+		$assert( is_string( $stdout ) && is_string( $stderr ) );
+		$observations = array();
+		$completions  = array();
+		foreach ( explode( "\n", $stdout ) as $line ) {
+			foreach ( array(
+				'Editorial contention: ' => 'wait',
+				'Editorial completion: ' => 'done',
+			) as $start => $record_kind ) {
+				if ( str_starts_with( $line, $start ) ) {
+					$value = json_decode( substr( $line, strlen( $start ) ), true, 32, JSON_THROW_ON_ERROR );
+					$assert( is_array( $value ) );
+					if ( 'wait' === $record_kind ) {
+						$observations[] = $value;
+					} else {
+						$completions[] = $value;
+					}
+				}
+			}
+		}
+		if ( 'none' === $case ) {
+			$assert( 0 === $exit && '' === $stderr && str_contains( $stdout, 'Editorial exclusivo: 59 verificações.' ) );
+			$assert( array( 'decision-first', 'decision-second', 'revocation' ) === array_column( $observations, 'scenario' ) && 3 === count( $completions ) );
+			foreach ( $observations as $observation ) {
+				$assert( 'wait-observed' === $observation['classification'] && $observation['primary']['known'] && $observation['primary']['count'] > 0 && ! $observation['primary']['sql_error'] );
+			}
+			$outcomes = array_column( $completions, 'outcome' );
+			sort( $outcomes );
+			$assert( array( 'EDITORIAL_CONFIRMED', 'EDITORIAL_REFUSED' ) === $outcomes );
+			foreach ( $completions as $completion ) {
+				$assert( $completion['diagnostic']['trace']['complete'] && 0 === $completion['diagnostic']['exit_code'] );
+			}
+		} else {
+			$assert( $exit > 0 && 1 === count( $observations ) && array() === $completions && str_contains( $stdout . $stderr, 'processo concorrente espera num lock real' ) );
+			$observation = $observations[0];
+			$assert( 'decision-first' === $observation['scenario'] && $observation['worker']['trace']['complete'] );
+			$phases = array_column( $observation['worker']['trace']['records'], 'phase' );
+			if ( 'early-worker' === $case ) {
+				$assert( 'worker-before-marker' === $observation['classification'] && 0 === $observation['connection'] && false === $observation['worker']['running'] );
+				$assert( $observation['worker']['ready'] && $observation['worker']['released'] && ! $observation['worker']['entered'] );
+				$assert( in_array( 'refused', $phases, true ) && ! in_array( 'authority-enter', $phases, true ) );
+			} else {
+				$assert( 'observer-query-failed' === $observation['classification'] && ! $observation['primary']['known'] && $observation['primary']['sql_error'] && 1054 === $observation['primary']['errno'] );
+				$assert( $observation['secondary_wait_seen'] && 'LOCK WAIT' === $observation['transaction_state'] && $observation['worker']['running'] );
+				$assert( in_array( 'authority-enter', $phases, true ) );
+			}
+		}
+		$assert( $before === $state() );
+		WP_CLI::log(
+			'Editorial diagnostic calibration: ' . wp_json_encode(
+				array(
+					'case'            => $case,
+					'exit'            => $exit,
+					'classifications' => array_column( $observations, 'classification' ),
+					'native_users_and_table_list_preserved' => true,
+				)
+			)
+		);
+	} finally {
+		if ( is_resource( $process ) ) {
+			proc_terminate( $process );
+			proc_close( $process );
+		}
+		foreach ( array( $output, $error_file ) as $handle ) {
+			if ( is_resource( $handle ) ) {
+				fclose( $handle );
+			}
+		}
+	}
+}
+WP_CLI::success( 'Três cenários de diagnóstico editorial calibrados, sem aceitar as duas falhas injectadas como sucesso do teste original.' );
