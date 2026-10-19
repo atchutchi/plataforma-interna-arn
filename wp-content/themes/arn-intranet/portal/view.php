@@ -93,6 +93,9 @@ $intro        = array(
 				<p>Pesquisa por assunto, palavra ou referência.</p>
 			</form>
 		</section>
+		<div class="arn-home-accesses">
+			<?php get_template_part( 'portal/access-links', null, array( 'services' => $portal['services'] ?? array() ) ); ?>
+		</div>
 		<?php
 		if ( empty( $portal['published_news'] ) ) {
 			get_template_part( 'portal/notice', null, array( 'available' => $available ) ); }

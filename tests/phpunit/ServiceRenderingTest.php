@@ -20,6 +20,13 @@ final class ServiceRenderingTest extends TestCase {
 			return htmlspecialchars( $value, ENT_QUOTES, 'UTF-8' ); }
 		function esc_url( string $value ): string {
 			return esc_html( $value ); }
+		function esc_attr( string $value ): string {
+			return esc_html( $value ); }
+		function wp_unique_id( string $prefix ): string {
+			static $id = 0;
+			return $prefix . ( ++$id ); }
+		function get_template_part( string $slug, ?string $name, array $args ): void {
+			include dirname( __DIR__, 2 ) . '/wp-content/themes/arn-intranet/' . $slug . '.php'; }
 		$file = dirname( __DIR__, 2 ) . '/wp-content/themes/arn-intranet/portal/services.php';
 		self::assertFileExists( $file, 'Falta a vista funcional de serviços.' );
 		$args = array( 'services' => array() );

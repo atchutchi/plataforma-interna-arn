@@ -98,6 +98,7 @@ $assert = static function ( bool $ok, string $label ) use ( &$checks ): void {
 };
 try {
 	$assert( array() === PeopleNavigation::destinations() && array() === Navigation::destinations(), 'flags desligadas' );
+	$assert( array() === Portal::model( 'home', array() )['services'], 'início vazio com flags desligadas' );
 	foreach ( array( 'ARN_ALLOW_LOCAL_PEOPLE', 'ARN_ALLOW_FICTIONAL_LOCAL_ACCESS', 'ARN_ALLOW_LOCAL_AUTHORIZATION_STORAGE', 'ARN_ALLOW_LOCAL_ORGANIZATION_STORAGE' ) as $flag ) {
 		if ( ! defined( $flag ) ) {
 			define( $flag, true );
@@ -145,11 +146,41 @@ try {
 		$_COOKIE[ LOGGED_IN_COOKIE ] = wp_generate_auth_cookie( $id, $expiry, 'logged_in', $token );
 	};
 	$assert( array() === PeopleNavigation::destinations(), 'administrador nativo sem autoridade People' );
+	$assert( array() === Portal::model( 'home', array() )['services'], 'início não concede acessos ao administrador' );
 	$login( $ids['alfa'] );
 	$assert( array( 'directory', 'profile' ) === array_keys( PeopleNavigation::destinations() ), 'colaborador sem equipa' );
 	$saved_menu = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE post_type=%s ORDER BY ID', $wpdb->posts, 'wp_navigation' ), ARRAY_A );
 	$expected   = ( new ServiceDirectory() )->items();
 	$assert( array( 'directory', 'profile' ) === array_column( $expected, 'id' ) && Portal::model( 'services', array( 'q' => 'private' ) )['services'] === $expected, 'modelo real e fontes reais coincidem' );
+	$home = Portal::model( 'home', array( 'q' => array( 'ignorado' ) ) );
+	$assert( ( $home['services'] ?? null ) === $expected, 'início usa os mesmos destinos autorizados sem filtros do URL' );
+	$home_html   = static function () use ( $generic_parent ): string {
+		$previous        = $GLOBALS['post'] ?? null;
+		$GLOBALS['post'] = get_post( $generic_parent ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Contexto temporário da vista real, restaurado em finally.
+		try {
+			return Portal::render( array( 'view' => 'home' ) );
+		} finally {
+			$GLOBALS['post'] = $previous; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restauro do contexto anterior do teste.
+		}
+	};
+	$home_table  = static function ( string $suffix ) use ( $db, $wpdb ): array {
+		$rows   = $db->get_results( $db->prepare( 'SELECT * FROM %i', $wpdb->prefix . $suffix ), ARRAY_A );
+		$hashes = array_map( static fn( array $row ): string => hash( 'sha256', wp_json_encode( $row ) ), $rows );
+		sort( $hashes, SORT_STRING );
+		return $hashes;
+	};
+	$home_before = array();
+	foreach ( $suffixes as $suffix ) {
+		if ( in_array( $suffix, array( 'arn_people_audit', 'arn_people', 'arn_people_schema', 'arn_authz_audit', 'arn_authz_grants', 'arn_authz_accounts', 'arn_authz_schema', 'arn_org_audit', 'arn_org_units', 'arn_org_header' ), true ) ) {
+			$home_before[ $suffix ] = $home_table( $suffix );
+		}
+	}
+	$home_output = $home_html();
+	$assert( 1 === substr_count( $home_output, '<h1 ' ) && str_contains( $home_output, 'Os teus acessos' ) && str_contains( $home_output, 'href="' . esc_url( get_permalink( $installed['pages']['profile'] ) ) . '"' ), 'início real com um título e acesso próprio' );
+	$assert( ! str_contains( $home_output, 'href="' . esc_url( get_permalink( $installed['pages']['team'] ) ) . '"' ) && ! str_contains( $home_output, 'Em preparação' ), 'início sem equipa recusada ou operações futuras' );
+	foreach ( $home_before as $suffix => $rows ) {
+		$assert( $rows === $home_table( $suffix ), 'leitura do início preserva dados e auditoria ' . $suffix );
+	}
 	$blocks = new WP_Block_List( array(), array() );
 	$blocks = PeopleNavigation::links( $blocks );
 	$blocks = PeopleNavigation::links( $blocks );
@@ -284,6 +315,7 @@ try {
 	$assert( $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE post_type=%s ORDER BY ID', $wpdb->posts, 'wp_navigation' ), ARRAY_A ) === $saved_menu, 'projecção e links não alteram navegação guardada' );
 	$login( $ids['manager'] );
 	$assert( array( 'directory', 'profile', 'team' ) === array_keys( PeopleNavigation::destinations() ), 'gestor com equipa' );
+	$assert( array( 'directory', 'profile', 'team' ) === array_column( Portal::model( 'home', array() )['services'], 'id' ), 'gestor tem os três atalhos no início' );
 	$profile_id = $installed['pages']['profile'];
 	wp_update_post(
 		array(
@@ -292,6 +324,7 @@ try {
 		)
 	);
 	$assert( ! isset( PeopleNavigation::destinations()['profile'] ), 'página adulterada excluída' );
+	$assert( ! in_array( 'profile', array_column( Portal::model( 'home', array() )['services'], 'id' ), true ), 'início exclui perfil adulterado' );
 	wp_update_post(
 		array(
 			'ID'           => $profile_id,
@@ -302,9 +335,11 @@ try {
 	$assert( ! isset( PeopleNavigation::destinations()['profile'] ), 'página não publicada excluída' );
 	$login( $ids['alfa'], false );
 	$assert( array() === ( new ServiceDirectory() )->items(), 'geração de sessão inválida' );
+	$assert( array() === Portal::model( 'home', array() )['services'] && str_contains( $home_html(), 'Ainda não há acessos disponíveis para a tua conta' ), 'sessão inválida tem início vazio' );
 	wp_set_current_user( 0 );
 	unset( $_COOKIE[ LOGGED_IN_COOKIE ] );
 	$assert( array() === ( new ServiceDirectory() )->items(), 'sem actor' );
+	$assert( array() === Portal::model( 'home', array() )['services'], 'início sem actor não tem atalhos' );
 	wp_set_current_user( $admin );
 	foreach ( array( 'ARN_ALLOW_LOCAL_COMMUNICATIONS', 'ARN_ALLOW_LOCAL_CALENDAR' ) as $flag ) {
 		if ( ! defined( $flag ) ) {
@@ -322,6 +357,8 @@ try {
 	$login( $f112['user_ids']['a'] );
 	$expected_f112 = ( new ServiceDirectory() )->items();
 	$assert( array( 'communications', 'calendar' ) === array_column( $expected_f112, 'id' ) && Portal::model( 'services', array() )['services'] === $expected_f112, 'modelo F112 positivo com autoridade real' );
+	$assert( Portal::model( 'home', array() )['services'] === $expected_f112, 'início F112 coincide com destinos autorizados' );
+	$assert( str_contains( $home_html(), 'href="' . esc_url( get_permalink( $f112['pages']['calendar'] ) ) . '"' ), 'início renderiza acesso F112 real' );
 	$f112_blocks = Navigation::links( new WP_Block_List( array(), array() ) );
 	$f112_blocks = Navigation::links( $f112_blocks );
 	$f112_urls   = array();
@@ -370,6 +407,7 @@ try {
 		)
 	);
 	$assert( array( 'calendar' ) === array_column( ( new ServiceDirectory() )->items(), 'id' ), 'F112 adulterado excluído sem ocultar calendário' );
+	$assert( array( 'calendar' ) === array_column( Portal::model( 'home', array() )['services'], 'id' ), 'início conserva calendário quando comunicado indisponível' );
 	$login( $f112['user_ids']['a'], false );
 	$assert( array() === ( new ServiceDirectory() )->items(), 'geração F112 inválida' );
 	$login( $ids['manager'] );
@@ -405,11 +443,13 @@ try {
 	require_once ABSPATH . 'wp-admin/includes/screen.php';
 	$GLOBALS['current_screen'] = WP_Screen::get( 'dashboard' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Contexto administrativo apenas neste processo CLI de teste.
 	$assert( array() === PeopleNavigation::destinations() && array() === Navigation::destinations(), 'admin' );
+	$assert( array() === Portal::model( 'home', array() )['services'], 'início sem atalhos no contexto admin' );
 	$editor_blocks = new WP_Block_List( parse_blocks( $manual_content ) );
 	$assert( ModuleNavigation::links( $editor_blocks ) === $editor_blocks, 'edição administrativa não filtrada' );
 	unset( $GLOBALS['current_screen'] );
 	define( 'REST_REQUEST', true );
 	$assert( array() === PeopleNavigation::destinations() && array() === Navigation::destinations(), 'REST' );
+	$assert( array() === Portal::model( 'home', array() )['services'], 'início sem atalhos no REST' );
 	$assert( ModuleNavigation::links( $editor_blocks ) === $editor_blocks, 'REST conserva blocos para as guardas nativas' );
 	echo esc_html( 'Services WordPress: ' . $checks . ' verificações.' . PHP_EOL );
 } finally {
