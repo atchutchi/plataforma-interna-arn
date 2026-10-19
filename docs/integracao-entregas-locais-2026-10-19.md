@@ -32,7 +32,7 @@ A revisão independente da composição de código não encontrou novos bloquead
 
 A QA local do head da PR #49 está descrita em `painel-gestao-autorizada-local-f1-15.md`, incluindo Playwright com nove perfis fictícios, o ensaio WordPress/MariaDB de 210 verificações e a limpeza do laboratório separado. A integração acrescenta documentação e o instrumento de revisão, sem alterar esse código de produto. Não é necessário recriar contas ou repetir os mesmos percursos visuais para receber estes ficheiros.
 
-O fecho exige PHPUnit, PHPCS, testes Node, lint, construção e as quatro suites de integração WordPress/MariaDB verdes sobre a composição final. Os resultados e o SHA final ficam na PR de integração e nos checks do GitHub. Uma execução anterior verde de uma branch não autoriza integrar um head posterior por verificar. Nenhuma falha conhecida é ignorada ou convertida em sucesso por repetição sem diagnóstico.
+O fecho exige PHPUnit, PHPCS, testes Node, lint, construção e todos os grupos de integração WordPress/MariaDB verdes sobre a composição final. Os resultados e o SHA final ficam na PR de integração e nos checks do GitHub. Uma execução anterior verde de uma branch não autoriza integrar um head posterior por verificar. Nenhuma falha conhecida é ignorada ou convertida em sucesso por repetição sem diagnóstico.
 
 ## Continuidade
 
