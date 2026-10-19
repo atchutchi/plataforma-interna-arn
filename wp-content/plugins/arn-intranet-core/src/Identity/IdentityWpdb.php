@@ -402,14 +402,15 @@ final class IdentityWpdb extends \wpdb {
 	 * @param string $sql SQL original.
 	 */
 	private static function normalizeStatement( string $sql ): string {
-		$sql = (string) preg_replace_callback(
-			'/\/\*!\s*\d{0,6}\s*(.*?)\*\//s',
+		$sql        = (string) preg_replace_callback(
+			'/\/\*(?:M)?!\s*\d{0,6}\s*(.*?)\*\//s',
 			static fn( array $matches ): string => ' ' . $matches[1] . ' ',
 			$sql
 		);
-		$sql = (string) preg_replace( '/\/\*(?!\!).*?\*\//s', ' ', $sql );
-		$sql = (string) preg_replace( '/(^|\R)\s*(?:--[ \t].*|#.*)(?=\R|$)/', ' ', $sql );
-		return strtoupper( trim( (string) preg_replace( '/\s+/', ' ', $sql ) ) );
+		$sql        = (string) preg_replace( '/\/\*(?![M]?\!).*?\*\//s', ' ', $sql );
+		$sql        = (string) preg_replace( '/(^|\R)\s*(?:--[ \t].*|#.*)(?=\R|$)/', ' ', $sql );
+		$normalized = strtoupper( trim( (string) preg_replace( '/\s+/', ' ', $sql ) ) );
+		return rtrim( $normalized, "; \t" );
 	}
 
 	/**
@@ -436,7 +437,7 @@ final class IdentityWpdb extends \wpdb {
 	 * @param string $normalized SQL normalizado.
 	 */
 	private static function changesAutocommit( string $normalized ): bool {
-		return 1 === preg_match( '/^SET\s+(?:(?:SESSION|LOCAL)\s+|@@SESSION\.)?AUTOCOMMIT\s*=/', $normalized );
+		return self::assignsForbiddenSessionVariable( $normalized, 'AUTOCOMMIT' );
 	}
 
 	/**
@@ -445,7 +446,22 @@ final class IdentityWpdb extends \wpdb {
 	 * @param string $normalized SQL normalizado.
 	 */
 	private static function changesCompletionType( string $normalized ): bool {
-		return 1 === preg_match( '/^SET\s+(?:(?:SESSION|LOCAL)\s+|@@SESSION\.)?COMPLETION_TYPE\s*=/', $normalized );
+		return self::assignsForbiddenSessionVariable( $normalized, 'COMPLETION_TYPE' );
+	}
+
+	/**
+	 * Recusa atribuições de variáveis de sistema, incluindo SET múltiplo, GLOBAL e :=.
+	 *
+	 * @param string $normalized SQL normalizado.
+	 * @param string $name       AUTOCOMMIT ou COMPLETION_TYPE.
+	 */
+	private static function assignsForbiddenSessionVariable( string $normalized, string $name ): bool {
+		if ( 1 !== preg_match( '/^SET\b/', $normalized ) ) {
+			return false;
+		}
+		$scoped = '/(?:^SET\s+|,\s*)(?:(?:GLOBAL|SESSION|LOCAL|PERSIST|PERSIST_ONLY)\s+|@@(?:GLOBAL|SESSION|LOCAL|PERSIST|PERSIST_ONLY)\.)?' . $name . '\s*(?:=|:=)/';
+		$bare   = '/(?:^SET\s+|,\s*)@@' . $name . '\s*(?:=|:=)/';
+		return 1 === preg_match( $scoped, $normalized ) || 1 === preg_match( $bare, $normalized );
 	}
 
 	/**
