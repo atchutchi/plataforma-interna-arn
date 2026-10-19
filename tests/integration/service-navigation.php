@@ -1,0 +1,297 @@
+<?php
+/**
+ * Services use the real WordPress navigation authorities on an empty local lab.
+ *
+ * @package ArnIntranet
+ */
+
+use Arn\Intranet\EditorialPreview\Portal;
+use Arn\Intranet\EditorialPreview\ServiceDirectory;
+use Arn\Intranet\EditorialPreview\NavigationPageList;
+use Arn\Intranet\F112\Navigation;
+use Arn\Intranet\F112\LocalInstaller;
+use Arn\Intranet\F112\LocalRoster;
+use Arn\Intranet\F112\Pages;
+use Arn\Intranet\F112\InstallationState;
+use Arn\Intranet\Identity\IdentityWpdb;
+use Arn\Intranet\People\LocalPeopleInstaller;
+use Arn\Intranet\People\LocalPeopleRoster;
+use Arn\Intranet\People\PeopleNavigation;
+use Arn\Intranet\People\PeoplePages;
+use Arn\Intranet\Authorization\Storage\WpdbAuthorizationRepository;
+use Arn\Intranet\Authorization\Storage\AuthorizationSchema;
+use Arn\Intranet\Organization\Storage\WpdbLocalUnitRepository;
+use Arn\Intranet\Organization\Storage\LocalUnitContext;
+
+// phpcs:disable Squiz.Commenting, WordPress.WP.AlternativeFunctions -- CLI fixture proof, no production entry point.
+if ( ! defined( 'WP_CLI' ) || true !== WP_CLI || ! in_array( wp_get_environment_type(), array( 'local', 'development' ), true ) || ! current_user_can( 'manage_options' ) ) {
+	throw new RuntimeException( 'Ensaio de serviços apenas em laboratório local.' );
+}
+if ( 'development' === wp_get_environment_type() ) {
+	if ( array() !== PeopleNavigation::destinations() || array() !== Navigation::destinations() || array() !== Portal::model( 'services', array() )['services'] ) {
+		throw new RuntimeException( 'Destinos indevidos fora do ambiente local.' );
+	}
+	echo esc_html( 'Services WordPress: development negativo, sem criar recursos.' . PHP_EOL );
+	return;
+}
+global $wpdb;
+$suffixes = array( 'arn_people_audit', 'arn_people', 'arn_people_schema', 'arn_authz_audit', 'arn_authz_grants', 'arn_authz_accounts', 'arn_authz_schema', 'arn_org_audit', 'arn_org_units', 'arn_org_header' );
+foreach ( array( 'arn_comm_', 'arn_calendar_' ) as $module_prefix ) {
+	foreach ( array( 'objects', 'versions', 'audit', 'notifications', 'schema' ) as $part ) {
+		$suffixes[] = $module_prefix . $part;
+	}
+}
+$db = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+$db->set_prefix( $wpdb->prefix );
+// Refuse before creating anything if an existing business module could be affected.
+foreach ( $suffixes as $suffix ) {
+	if ( 0 !== (int) $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', $wpdb->prefix . $suffix ) ) ) {
+		throw new RuntimeException( 'O ensaio exige tabelas de negócio ausentes.' );
+	}
+}
+$logins = LocalPeopleRoster::logins();
+foreach ( LocalRoster::definitions() as $label => $person ) {
+	$logins[ 'f112_' . $label ] = $person['login'];
+}
+foreach ( $logins as $login ) {
+	if ( false !== get_user_by( 'login', $login ) || false !== get_user_by( 'email', $login . '@example.invalid' ) ) {
+		throw new RuntimeException( 'O ensaio exige contas fictícias ausentes.' );
+	}
+}
+$service_pages = new PeoplePages();
+$service_pages->preflight( false );
+( new Pages() )->preflight( false );
+if ( InstallationState::exists( $wpdb->prefix ) ) {
+	throw new RuntimeException( 'O ensaio exige marcador F112 ausente.' );
+}
+$admin  = get_current_user_id();
+$cookie = $_COOKIE[ LOGGED_IN_COOKIE ] ?? null;
+$root   = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'arn_services_' . bin2hex( random_bytes( 8 ) );
+if ( ! mkdir( $root, 0700 ) ) {
+	throw new RuntimeException( 'Raiz privada indisponível.' );
+}
+$owned_pages             = array();
+$owned_users             = array();
+$navigation_fixture_slug = 'arn-services-fixture-' . bin2hex( random_bytes( 5 ) );
+$capture_page            = static function ( int $id ) use ( &$owned_pages, $navigation_fixture_slug ): void {
+	$post = get_post( $id );
+	if ( $post instanceof WP_Post && ( $navigation_fixture_slug === $post->post_name || in_array( $post->post_name, array( 'funcionarios', 'meu-perfil', 'minha-equipa', 'comunicados', 'calendario' ), true ) ) ) {
+		$owned_pages[ $id ] = $id;
+	}
+};
+$capture_user            = static function ( int $id ) use ( &$owned_users, $logins ): void {
+	$user = get_userdata( $id );
+	if ( $user instanceof WP_User && in_array( $user->user_login, $logins, true ) && $user->user_email === $user->user_login . '@example.invalid' ) {
+		$owned_users[ $id ] = $id;
+	}
+};
+add_action( 'save_post_page', $capture_page, PHP_INT_MIN );
+add_action( 'user_register', $capture_user, PHP_INT_MIN );
+$checks = 0;
+$assert = static function ( bool $ok, string $label ) use ( &$checks ): void {
+	if ( ! $ok ) {
+		throw new RuntimeException( 'Falhou Services: ' . esc_html( $label ) );
+	}
+	++$checks;
+};
+try {
+	$assert( array() === PeopleNavigation::destinations() && array() === Navigation::destinations(), 'flags desligadas' );
+	foreach ( array( 'ARN_ALLOW_LOCAL_PEOPLE', 'ARN_ALLOW_FICTIONAL_LOCAL_ACCESS', 'ARN_ALLOW_LOCAL_AUTHORIZATION_STORAGE', 'ARN_ALLOW_LOCAL_ORGANIZATION_STORAGE' ) as $flag ) {
+		if ( ! defined( $flag ) ) {
+			define( $flag, true );
+		}
+		$assert( true === constant( $flag ), 'opt-in explícito' );
+	}
+	( new AuthorizationSchema( $db ) )->install();
+	$units = new WpdbLocalUnitRepository( $db );
+	$units->installSchema();
+	$units->apply( 'initialize', 0, new LocalUnitContext( $admin, 'Preparação exclusiva do ensaio de serviços', time() ) );
+	$installed      = ( new LocalPeopleInstaller( null, $root ) )->install();
+	$generic_parent = wp_insert_post(
+		array(
+			'post_type'   => 'page',
+			'post_status' => 'publish',
+			'post_name'   => $navigation_fixture_slug,
+			'post_title'  => 'Página de ensaio',
+		),
+		true
+	);
+	$assert( is_int( $generic_parent ) && $generic_parent > 0, 'página genérica de ensaio' );
+	$generic_child = wp_insert_post(
+		array(
+			'post_type'   => 'page',
+			'post_status' => 'publish',
+			'post_name'   => 'calendario',
+			'post_title'  => 'Calendário de ensaio',
+			'post_parent' => $generic_parent,
+		),
+		true
+	);
+	$assert( is_int( $generic_child ) && $generic_child > 0, 'página filha homónima de ensaio' );
+	$ids   = $installed['user_ids'];
+	$auth  = new WpdbAuthorizationRepository( $db );
+	$login = static function ( int $id, bool $valid = true ) use ( $auth ): void {
+		wp_set_current_user( $id );
+		$manager                    = WP_Session_Tokens::get_instance( $id );
+		$expiry                     = time() + 600;
+		$token                      = $manager->create( $expiry );
+		$data                       = $manager->get( $token );
+		$data['arn_authz_local']    = true;
+		$data['arn_authz_user_id']  = $id;
+		$data['arn_authz_revision'] = $valid ? $auth->find( $id )->revision : 0;
+		$manager->update( $token, $data );
+		$_COOKIE[ LOGGED_IN_COOKIE ] = wp_generate_auth_cookie( $id, $expiry, 'logged_in', $token );
+	};
+	$assert( array() === PeopleNavigation::destinations(), 'administrador nativo sem autoridade People' );
+	$login( $ids['alfa'] );
+	$assert( array( 'directory', 'profile' ) === array_keys( PeopleNavigation::destinations() ), 'colaborador sem equipa' );
+	$saved_menu = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE post_type=%s ORDER BY ID', $wpdb->posts, 'wp_navigation' ), ARRAY_A );
+	$expected   = ( new ServiceDirectory() )->items();
+	$assert( array( 'directory', 'profile' ) === array_column( $expected, 'id' ) && Portal::model( 'services', array( 'q' => 'private' ) )['services'] === $expected, 'modelo real e fontes reais coincidem' );
+	$blocks = new WP_Block_List( array(), array() );
+	$blocks = PeopleNavigation::links( $blocks );
+	$blocks = PeopleNavigation::links( $blocks );
+	$actual = array();
+	foreach ( $blocks as $block ) {
+		$actual[] = $block->attributes['url'];
+	}
+	$assert( 2 === count( $blocks ) && array_column( $expected, 'url' ) === $actual, 'menu coincide e não duplica' );
+	$automatic_menu = do_blocks( '<!-- wp:navigation {"overlayMenu":"never"} --><!-- wp:page-list /--><!-- /wp:navigation -->' );
+	$assert( 1 === substr_count( $automatic_menu, 'href="' . esc_url( get_permalink( $installed['pages']['profile'] ) ) . '"' ) && 1 === substr_count( $automatic_menu, 'href="' . esc_url( get_permalink( $installed['pages']['directory'] ) ) . '"' ), 'fallback automático sem duplicação' );
+	$assert( ! str_contains( $automatic_menu, 'href="' . esc_url( get_permalink( $installed['pages']['team'] ) ) . '"' ), 'fallback automático sem equipa recusada' );
+	$assert( str_contains( $automatic_menu, 'href="' . esc_url( get_permalink( $generic_child ) ) . '"' ), 'página filha com slug homónimo preservada' );
+	$assert( $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE post_type=%s ORDER BY ID', $wpdb->posts, 'wp_navigation' ), ARRAY_A ) === $saved_menu, 'projecção e links não alteram navegação guardada' );
+	$login( $ids['manager'] );
+	$assert( array( 'directory', 'profile', 'team' ) === array_keys( PeopleNavigation::destinations() ), 'gestor com equipa' );
+	$profile_id = $installed['pages']['profile'];
+	wp_update_post(
+		array(
+			'ID'           => $profile_id,
+			'post_content' => '<!-- wp:paragraph --><p>Alterado</p><!-- /wp:paragraph -->',
+		)
+	);
+	$assert( ! isset( PeopleNavigation::destinations()['profile'] ), 'página adulterada excluída' );
+	wp_update_post(
+		array(
+			'ID'           => $profile_id,
+			'post_content' => PeoplePages::content( 'profile' ),
+			'post_status'  => 'draft',
+		)
+	);
+	$assert( ! isset( PeopleNavigation::destinations()['profile'] ), 'página não publicada excluída' );
+	$login( $ids['alfa'], false );
+	$assert( array() === ( new ServiceDirectory() )->items(), 'geração de sessão inválida' );
+	wp_set_current_user( 0 );
+	unset( $_COOKIE[ LOGGED_IN_COOKIE ] );
+	$assert( array() === ( new ServiceDirectory() )->items(), 'sem actor' );
+	wp_set_current_user( $admin );
+	foreach ( array( 'ARN_ALLOW_LOCAL_COMMUNICATIONS', 'ARN_ALLOW_LOCAL_CALENDAR' ) as $flag ) {
+		if ( ! defined( $flag ) ) {
+			define( $flag, true );
+		}
+		$assert( true === constant( $flag ), 'opt-in F112 explícito' );
+	}
+	$unit_snapshot = $units->snapshot();
+	foreach ( $unit_snapshot->units as $unit ) {
+		if ( 'LAB-B' === $unit->id && ! $unit->active ) {
+			$units->apply( 'reactivate-b', $unit_snapshot->revision, new LocalUnitContext( $admin, 'Preparação fictícia de B para serviços F112', time() ) );
+		}
+	}
+	$f112 = ( new LocalInstaller( null, $root ) )->install();
+	$login( $f112['user_ids']['a'] );
+	$expected_f112 = ( new ServiceDirectory() )->items();
+	$assert( array( 'communications', 'calendar' ) === array_column( $expected_f112, 'id' ) && Portal::model( 'services', array() )['services'] === $expected_f112, 'modelo F112 positivo com autoridade real' );
+	$f112_blocks = Navigation::links( new WP_Block_List( array(), array() ) );
+	$f112_blocks = Navigation::links( $f112_blocks );
+	$f112_urls   = array();
+	foreach ( $f112_blocks as $block ) {
+		$f112_urls[] = $block->attributes['url'];
+	}
+	$assert( 2 === count( $f112_blocks ) && array_column( $expected_f112, 'url' ) === $f112_urls, 'menu F112 coincide e não duplica' );
+	$f112_menu = do_blocks( '<!-- wp:navigation {"overlayMenu":"never"} --><!-- wp:page-list /--><!-- /wp:navigation -->' );
+	$assert( 1 === substr_count( $f112_menu, 'href="' . esc_url( get_permalink( $f112['pages']['communications'] ) ) . '"' ) && 1 === substr_count( $f112_menu, 'href="' . esc_url( get_permalink( $f112['pages']['calendar'] ) ) . '"' ), 'fallback F112 sem duplicação' );
+	$assert( ! str_contains( $f112_menu, 'href="' . esc_url( get_permalink( $installed['pages']['directory'] ) ) . '"' ), 'fallback F112 sem destino People recusado' );
+	wp_update_post(
+		array(
+			'ID'           => $f112['pages']['communications'],
+			'post_content' => '<!-- wp:paragraph --><p>Alterado</p><!-- /wp:paragraph -->',
+		)
+	);
+	$assert( array( 'calendar' ) === array_column( ( new ServiceDirectory() )->items(), 'id' ), 'F112 adulterado excluído sem ocultar calendário' );
+	$login( $f112['user_ids']['a'], false );
+	$assert( array() === ( new ServiceDirectory() )->items(), 'geração F112 inválida' );
+	$login( $ids['manager'] );
+	$standalone_list = do_blocks( '<!-- wp:page-list /-->' );
+	$assert( str_contains( $standalone_list, 'href="' . esc_url( get_permalink( $installed['pages']['team'] ) ) . '"' ), 'lista fora da navegação mantém comportamento nativo' );
+	$pages_before_error = array_column( get_pages(), 'ID' );
+	$wrapped            = NavigationPageList::arguments(
+		array(
+			'render_callback' => static function (): never {
+				throw new RuntimeException( 'Falha de renderização fictícia' );
+			},
+		),
+		'core/page-list'
+	);
+	$thrown             = false;
+	try {
+		$wrapped['render_callback'](
+			array(),
+			'',
+			new WP_Block(
+				array(
+					'blockName' => 'core/page-list',
+					'attrs'     => array(),
+				),
+				array( 'showSubmenuIcon' => true )
+			)
+		);
+	} catch ( RuntimeException ) {
+		$thrown = true;
+	}
+	$assert( $thrown && array_column( get_pages(), 'ID' ) === $pages_before_error, 'filtro temporário restaurado após excepção' );
+	require_once ABSPATH . 'wp-admin/includes/class-wp-screen.php';
+	require_once ABSPATH . 'wp-admin/includes/screen.php';
+	$GLOBALS['current_screen'] = WP_Screen::get( 'dashboard' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Contexto administrativo apenas neste processo CLI de teste.
+	$assert( array() === PeopleNavigation::destinations() && array() === Navigation::destinations(), 'admin' );
+	unset( $GLOBALS['current_screen'] );
+	define( 'REST_REQUEST', true );
+	$assert( array() === PeopleNavigation::destinations() && array() === Navigation::destinations(), 'REST' );
+	echo esc_html( 'Services WordPress: ' . $checks . ' verificações.' . PHP_EOL );
+} finally {
+	wp_set_current_user( $admin );
+	unset( $GLOBALS['current_screen'] );
+	if ( null === $cookie ) {
+		unset( $_COOKIE[ LOGGED_IN_COOKIE ] );
+	} else {
+		$_COOKIE[ LOGGED_IN_COOKIE ] = $cookie;
+	}
+	remove_action( 'save_post_page', $capture_page, PHP_INT_MIN );
+	remove_action( 'user_register', $capture_user, PHP_INT_MIN );
+	delete_option( InstallationState::optionName( $wpdb->prefix ) );
+	foreach ( $owned_pages as $service_page_id ) {
+		wp_delete_post( $service_page_id, true );
+		if ( null !== get_post( $service_page_id ) ) {
+			throw new RuntimeException( 'Limpeza de página de ensaio falhou.' );
+		}
+	}
+	require_once ABSPATH . 'wp-admin/includes/user.php';
+	foreach ( $owned_users as $service_user_id ) {
+		wp_delete_user( $service_user_id );
+		if ( false !== get_userdata( $service_user_id ) ) {
+			throw new RuntimeException( 'Limpeza de conta de ensaio falhou.' );
+		}
+	}
+	foreach ( $suffixes as $suffix ) {
+		if ( false === $db->query( $db->prepare( 'DROP TABLE IF EXISTS %i', $wpdb->prefix . $suffix ) ) ) {
+			throw new RuntimeException( 'Limpeza de tabela de ensaio falhou.' );
+		}
+	}
+	$password_files = glob( $root . DIRECTORY_SEPARATOR . '*.password' );
+	foreach ( false === $password_files ? array() : $password_files as $file ) {
+		if ( ! is_link( $file ) && dirname( $file ) === $root ) {
+			unlink( $file );
+		}
+	}
+	rmdir( $root );
+	$db->close();
+}

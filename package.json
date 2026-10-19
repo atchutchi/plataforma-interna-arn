@@ -30,6 +30,7 @@
     "test:units:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/local-units.php --user=admin",
     "test:people:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/people.php --user=admin",
     "test:people-installer:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/people-installer.php --user=admin",
+    "test:services:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/service-navigation.php --user=admin",
     "test:communications:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp --require=tests/integration/f112-cli-bootstrap.php eval-file tests/integration/communications.php --user=admin",
     "test:calendar:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp --require=tests/integration/f112-cli-bootstrap.php eval-file tests/integration/calendar.php --user=admin",
     "test:f112-installer:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp --require=tests/integration/f112-cli-bootstrap.php eval-file tests/integration/f112-installer.php --user=admin",

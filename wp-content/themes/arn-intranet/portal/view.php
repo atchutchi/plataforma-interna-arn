@@ -55,7 +55,7 @@ $intro        = array(
 	'news'        => 'Circulares, notas internas, despachos e comunicação sindical. Consulta as comunicações por assunto, categoria ou ano.',
 	'documents'   => 'Encontra os documentos do arquivo e consulta a sua fonte original.',
 	'regulations' => 'Consulta os regulamentos disponíveis e a informação documental que os acompanha.',
-	'services'    => 'Conhece os serviços previstos para o portal e acompanha a sua preparação.',
+	'services'    => 'Encontra os acessos disponíveis para a tua conta e acompanha a preparação dos próximos serviços.',
 );
 ?>
 <div class="arn-portal alignwide">
@@ -149,10 +149,7 @@ $intro        = array(
 	<?php else : ?>
 		<header class="arn-portal-page-heading"><p class="arn-portal-kicker">Portal interno</p><h1><?php echo esc_html( $portal_title ); ?></h1><p><?php echo esc_html( $intro[ $view ] ?? '' ); ?></p></header>
 		<?php if ( 'services' === $view ) : ?>
-			<section class="arn-portal-services" aria-labelledby="arn-services-title"><h2 id="arn-services-title">Serviços em preparação</h2><p>A disponibilização destes serviços depende da validação dos processos e das permissões de acesso.</p>
-				<dl><div><dt>Pedidos internos e férias</dt><dd>Submissão e acompanhamento de pedidos. Em preparação.</dd></div><div><dt>Diretório e unidades</dt><dd>Consulta de contactos e da estrutura institucional. Em preparação.</dd></div><div><dt>Suporte informático</dt><dd>Registo e acompanhamento de pedidos de apoio. Em preparação.</dd></div></dl>
-				<p>A consulta de notícias, documentos e regulamentos está disponível através do menu do portal.</p>
-			</section>
+			<?php get_template_part( 'portal/services', null, array( 'services' => $portal['services'] ?? array() ) ); ?>
 		<?php else : ?>
 			<?php get_template_part( 'portal/notice', null, array( 'available' => $available ) ); ?>
 			<?php

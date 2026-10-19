@@ -18,10 +18,36 @@ final class Navigation {
 	}
 
 	public static function links( WP_Block_List $blocks ): WP_Block_List {
-		if ( ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || is_admin() ) {
-			return $blocks;
+		foreach ( self::destinations() as $destination ) {
+			$exists = false;
+			foreach ( $blocks as $block ) {
+				if ( 'core/navigation-link' === $block->name && ( $block->attributes['url'] ?? null ) === $destination['url'] ) {
+					$exists = true;
+				}
+			}
+			if ( ! $exists ) {
+				$blocks[] = array(
+					'blockName'    => 'core/navigation-link',
+					'attrs'        => $destination + array(
+						'kind' => 'post-type',
+						'type' => 'page',
+					),
+					'innerBlocks'  => array(),
+					'innerHTML'    => '',
+					'innerContent' => array(),
+				);
+			}
 		}
-		$pages = new Pages();
+		return $blocks;
+	}
+
+	/** Same guarded destinations for native navigation and the services page. */
+	public static function destinations(): array {
+		if ( ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || is_admin() ) {
+			return array();
+		}
+		$pages  = new Pages();
+		$result = array();
 		foreach ( array(
 			'communications' => 'Comunicados',
 			'calendar'       => 'Calendário',
@@ -33,29 +59,12 @@ final class Navigation {
 			if ( ! $post instanceof WP_Post || $pages->viewFor( $post ) !== $module ) {
 				continue;
 			}
-			$url    = get_permalink( $post );
-			$exists = false;
-			foreach ( $blocks as $block ) {
-				if ( 'core/navigation-link' === $block->name && ( $block->attributes['url'] ?? null ) === $url ) {
-					$exists = true;
-				}
-			}
-			if ( ! $exists ) {
-				$blocks[] = array(
-					'blockName'    => 'core/navigation-link',
-					'attrs'        => array(
-						'label' => $label,
-						'url'   => $url,
-						'kind'  => 'post-type',
-						'type'  => 'page',
-						'id'    => $post->ID,
-					),
-					'innerBlocks'  => array(),
-					'innerHTML'    => '',
-					'innerContent' => array(),
-				);
-			}
+			$result[ $module ] = array(
+				'label' => $label,
+				'url'   => get_permalink( $post ),
+				'id'    => $post->ID,
+			);
 		}
-		return $blocks;
+		return $result;
 	}
 }

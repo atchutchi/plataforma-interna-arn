@@ -129,6 +129,11 @@ final class Portal {
 	 * @return array<string,mixed> Modelo para o tema.
 	 */
 	public static function model( string $view, array $input ): array {
+		if ( 'services' === $view ) {
+			$model             = self::reviewModel( $view, array() );
+			$model['services'] = ( new ServiceDirectory() )->items();
+			return $model;
+		}
 		if ( 'news' === $view && NewsPreviewController::requested() && null !== NewsPreviewController::current() ) {
 			return array(
 				'view' => 'news_preview',

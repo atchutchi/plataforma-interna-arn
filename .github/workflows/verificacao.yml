@@ -129,6 +129,7 @@ jobs:
           npm run test:calendar:integration
           npm run test:f112-installer:integration
           npm run test:f112-readiness:integration
+          npm run test:services:integration
       - name: Activar local apenas no contentor efémero desta job
         run: node scripts/wp-env.mjs --tests run cli wp config set WP_ENVIRONMENT_TYPE local --type=constant
       - name: Comunicações com SQL, sessão nativa e dois escritores
@@ -139,6 +140,8 @@ jobs:
         run: npm run test:f112-installer:integration
       - name: Instalação incompleta mantém rotas fechadas
         run: npm run test:f112-readiness:integration
+      - name: Serviços e navegação com autoridades reais e contas temporárias
+        run: npm run test:services:integration
       - if: always()
         run: npm run env:stop:tests
 
