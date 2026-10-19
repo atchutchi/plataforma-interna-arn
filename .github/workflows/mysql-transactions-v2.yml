@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - fix/atchutchi-mysql-transaction-guard-v2
+      - fix/albertina-pr41-review-findings
   pull_request:
     branches:
       - main
+      - fix/atchutchi-mysql-transaction-guard-v2
 
 permissions:
   contents: read
