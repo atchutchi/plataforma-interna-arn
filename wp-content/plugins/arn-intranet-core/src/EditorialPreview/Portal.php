@@ -168,6 +168,7 @@ final class Portal {
 			$model['counts']         = $news['counts'];
 			$model['published_news'] = true;
 			$model['services']       = ( new ServiceDirectory() )->items();
+			$model['dashboard']      = ( new HomeDashboard() )->model( $model['services'] );
 			return $model;
 		}
 		return self::reviewModel( $view, $input );

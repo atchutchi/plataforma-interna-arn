@@ -97,12 +97,13 @@ $intro        = array(
 			<?php get_template_part( 'portal/access-links', null, array( 'services' => $portal['services'] ?? array() ) ); ?>
 		</div>
 		<?php
+		get_template_part( 'portal/home-dashboard', null, array( 'dashboard' => $portal['dashboard'] ?? array() ) );
 		if ( empty( $portal['published_news'] ) ) {
 			get_template_part( 'portal/notice', null, array( 'available' => $available ) ); }
 		?>
 		<div class="arn-portal-columns">
 			<section aria-labelledby="arn-news-title">
-				<div class="arn-portal-section-heading"><h2 id="arn-news-title">Comunicações recentes</h2><a href="<?php echo esc_url( arn_intranet_portal_url( 'noticias' ) ); ?>">Todas as notícias <span aria-hidden="true">↗</span></a></div>
+				<div class="arn-portal-section-heading"><h2 id="arn-news-title">Notícias recentes</h2><a href="<?php echo esc_url( arn_intranet_portal_url( 'noticias' ) ); ?>">Todas as notícias <span aria-hidden="true">↗</span></a></div>
 				<?php if ( ! empty( $portal['featured'] ) ) : ?>
 					<?php
 					get_template_part(

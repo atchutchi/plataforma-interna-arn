@@ -74,6 +74,7 @@ if ( ! mkdir( $root, 0700 ) ) {
 $owned_pages             = array();
 $owned_users             = array();
 $owned_navigation        = array();
+$owned_anchors           = array();
 $navigation_fixture_slug = 'arn-services-fixture-' . bin2hex( random_bytes( 5 ) );
 $capture_page            = static function ( int $id ) use ( &$owned_pages, $navigation_fixture_slug ): void {
 	$post = get_post( $id );
@@ -359,6 +360,9 @@ try {
 	$assert( array( 'communications', 'calendar' ) === array_column( $expected_f112, 'id' ) && Portal::model( 'services', array() )['services'] === $expected_f112, 'modelo F112 positivo com autoridade real' );
 	$assert( Portal::model( 'home', array() )['services'] === $expected_f112, 'início F112 coincide com destinos autorizados' );
 	$assert( str_contains( $home_html(), 'href="' . esc_url( get_permalink( $f112['pages']['calendar'] ) ) . '"' ), 'início renderiza acesso F112 real' );
+	require_once __DIR__ . '/home-dashboard-fixture.php';
+	$dashboard_cleanup = arn_home_dashboard_fixture( $db, $f112['user_ids'], $login, $assert, $home_table, $owned_anchors );
+	$dashboard_cleanup();
 	$f112_blocks = Navigation::links( new WP_Block_List( array(), array() ) );
 	$f112_blocks = Navigation::links( $f112_blocks );
 	$f112_urls   = array();
@@ -408,6 +412,8 @@ try {
 	);
 	$assert( array( 'calendar' ) === array_column( ( new ServiceDirectory() )->items(), 'id' ), 'F112 adulterado excluído sem ocultar calendário' );
 	$assert( array( 'calendar' ) === array_column( Portal::model( 'home', array() )['services'], 'id' ), 'início conserva calendário quando comunicado indisponível' );
+	$partial_dashboard = Portal::model( 'home', array() )['dashboard'];
+	$assert( ! $partial_dashboard['communications']['available'] && $partial_dashboard['calendar']['available'], 'painel isola página de comunicados indisponível' );
 	$login( $f112['user_ids']['a'], false );
 	$assert( array() === ( new ServiceDirectory() )->items(), 'geração F112 inválida' );
 	$login( $ids['manager'] );
@@ -462,6 +468,12 @@ try {
 	}
 	remove_action( 'save_post_page', $capture_page, PHP_INT_MIN );
 	remove_action( 'user_register', $capture_user, PHP_INT_MIN );
+	foreach ( $owned_anchors as $anchor_id ) {
+		wp_delete_post( $anchor_id, true );
+		if ( null !== get_post( $anchor_id ) ) {
+			throw new RuntimeException( 'Limpeza de âncora de ensaio falhou.' );
+		}
+	}
 	foreach ( $owned_navigation as $navigation_id ) {
 		wp_delete_post( $navigation_id, true );
 	}

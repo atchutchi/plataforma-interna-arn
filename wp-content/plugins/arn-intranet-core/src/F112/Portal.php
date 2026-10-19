@@ -55,8 +55,14 @@ final class Portal {
 	private NoticeRepository|EventRepository|null $repository = null;
 	private string $secret                                    = '';
 	private readonly int $now;
+	private ?IdentityWpdb $connection = null;
 	public function __construct( public readonly string $module ) {
 		$this->now = time();
+	}
+
+	/** Release only this portal's dedicated connection, including failed preparation. */
+	public function __destruct() {
+		$this->connection?->close();
 	}
 
 	private function prepare(): bool {
@@ -75,13 +81,16 @@ final class Portal {
 				return false;
 			}
 			global $wpdb;
-			$db = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+			$db               = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+			$this->connection = $db;
 			$db->set_prefix( $wpdb->prefix );
 			$db->suppress_errors( true );
 			$clock   = static fn(): int => time();
 			$actors  = new CurrentActor( $db, $this->module, $roster, $clock );
 			$context = $actors->read();
 			if ( null === $context ) {
+				$this->connection->close();
+				$this->connection = null;
 				return false;
 			}
 			$schema = 'communications' === $this->module ? new NoticeSchema( $db ) : new EventSchema( $db );
@@ -91,6 +100,8 @@ final class Portal {
 			$this->context    = $context;
 			return true;
 		} catch ( Throwable ) {
+			$this->connection?->close();
+			$this->connection = null;
 			return false;
 		}
 	}
