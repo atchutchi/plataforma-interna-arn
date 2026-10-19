@@ -13,6 +13,10 @@ $portal = $args['portal'] ?? array();
 if ( ! is_array( $portal ) || empty( $portal['view'] ) ) {
 	return;
 }
+if ( 'search' === $portal['view'] ) {
+	get_template_part( 'portal/search', null, array( 'search' => $portal ) );
+	return;
+}
 if ( 'news_preview' === $portal['view'] && is_array( $portal['news'] ?? null ) ) {
 	get_template_part( 'portal/news-preview', null, array( 'news' => $portal['news'] ) );
 	return;
@@ -87,10 +91,11 @@ $intro        = array(
 	<?php elseif ( 'home' === $view ) : ?>
 		<section class="arn-portal-welcome" aria-labelledby="arn-portal-title">
 			<div><p class="arn-portal-kicker">Portal interno da ARN</p><h1 id="arn-portal-title">Bem-vindo ao teu espaço de informação</h1><p>Consulta as comunicações da ARN e encontra os documentos de que precisas.</p></div>
-			<form class="arn-portal-search" action="<?php echo esc_url( arn_intranet_portal_url( 'documentos' ) ); ?>" method="get" role="search">
-				<?php arn_intranet_portal_form_route( arn_intranet_portal_url( 'documentos' ) ); ?>
-				<label for="arn-home-search">O que procuras?</label><div class="arn-portal-search-controls"><input id="arn-home-search" type="search" name="q" placeholder="Pesquisar no arquivo" maxlength="160"><button type="submit">Pesquisar</button></div>
-				<p>Pesquisa por assunto, palavra ou referência.</p>
+			<form class="arn-portal-search" action="<?php echo esc_url( get_permalink() ); ?>" method="get" role="search" aria-label="Pesquisa integrada">
+				<?php arn_intranet_portal_form_route( get_permalink() ); ?>
+				<input type="hidden" name="arn_search" value="1">
+				<label for="arn-home-search">O que procuras?</label><div class="arn-portal-search-controls"><input id="arn-home-search" type="search" name="q" placeholder="Pesquisar no portal" maxlength="100" required><button type="submit">Pesquisar</button></div>
+				<p>Pesquisa funcionários e conteúdos disponíveis para a tua conta.</p>
 			</form>
 		</section>
 		<div class="arn-home-accesses">

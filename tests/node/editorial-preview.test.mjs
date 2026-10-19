@@ -35,7 +35,7 @@ test('bloco editorial edita a secção sem solicitar dados privados', () => {
   assert.equal(editor.children[0].type, 'SelectControl');
   assert.equal(editor.children[0].props.label, 'Secção');
   assert.equal(editor.children[0].props.value, 'documents');
-  assert.deepEqual(Array.from(editor.children[0].props.options, ({ value }) => value), ['home', 'news', 'documents', 'regulations', 'services']);
+  assert.deepEqual(Array.from(editor.children[0].props.options, ({ value }) => value), ['home', 'news', 'documents', 'regulations', 'services', 'search']);
   editor.children[0].props.onChange('news');
   assert.equal(changes.length, 1);
   assert.equal(changes[0].view, 'news');

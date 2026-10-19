@@ -43,11 +43,11 @@ final class PeopleNavigation {
 	}
 
 	/** Same guarded destinations for native navigation and the services page. */
-	public static function destinations(): array {
+	public static function destinations( ?LocalPeopleDirectory $source = null ): array {
 		if ( ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || is_admin() || ! PeopleConfiguration::current() ) {
 			return array();
 		}
-		$source = new LocalPeopleDirectory();
+		$source = $source ?? new LocalPeopleDirectory();
 		$own    = $source->own();
 		if ( null === $own ) {
 			return array();

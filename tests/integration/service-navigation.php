@@ -42,7 +42,8 @@ foreach ( array( 'arn_comm_', 'arn_calendar_' ) as $module_prefix ) {
 		$suffixes[] = $module_prefix . $part;
 	}
 }
-$db = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+$suffixes = array_merge( $suffixes, array( 'arn_news', 'arn_news_versions', 'arn_news_assets', 'arn_news_audit', 'arn_news_notifications', 'arn_news_schema', 'arn_news_schema_history', 'arn_documents', 'arn_document_versions', 'arn_document_audit', 'arn_document_schema', 'arn_private_files', 'arn_private_file_audit', 'arn_private_file_schema' ) );
+$db       = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
 $db->set_prefix( $wpdb->prefix );
 // Refuse before creating anything if an existing business module could be affected.
 foreach ( $suffixes as $suffix ) {
@@ -54,9 +55,17 @@ $logins = LocalPeopleRoster::logins();
 foreach ( LocalRoster::definitions() as $label => $person ) {
 	$logins[ 'f112_' . $label ] = $person['login'];
 }
+foreach ( array( 'autor.noticias.teste', 'editor.noticias.teste', 'editor.suplente.teste', 'colaborador.noticias.a.teste', 'colaborador.noticias.b.teste', 'ana.teste', 'rh.documentos.teste' ) as $login ) {
+	$logins[ $login ] = $login;
+}
 foreach ( $logins as $login ) {
 	if ( false !== get_user_by( 'login', $login ) || false !== get_user_by( 'email', $login . '@example.invalid' ) ) {
 		throw new RuntimeException( 'O ensaio exige contas fictícias ausentes.' );
+	}
+}
+foreach ( array( 'noticias', 'documentos' ) as $slug ) {
+	if ( null !== get_page_by_path( $slug, OBJECT, 'page' ) ) {
+		throw new RuntimeException( 'O ensaio exige colecções de pesquisa ausentes.' );
 	}
 }
 $service_pages = new PeoplePages();
@@ -78,7 +87,7 @@ $owned_anchors           = array();
 $navigation_fixture_slug = 'arn-services-fixture-' . bin2hex( random_bytes( 5 ) );
 $capture_page            = static function ( int $id ) use ( &$owned_pages, $navigation_fixture_slug ): void {
 	$post = get_post( $id );
-	if ( $post instanceof WP_Post && ( $navigation_fixture_slug === $post->post_name || in_array( $post->post_name, array( 'funcionarios', 'meu-perfil', 'minha-equipa', 'comunicados', 'calendario' ), true ) ) ) {
+	if ( $post instanceof WP_Post && ( $navigation_fixture_slug === $post->post_name || in_array( $post->post_name, array( 'funcionarios', 'meu-perfil', 'minha-equipa', 'comunicados', 'calendario', 'noticias', 'documentos' ), true ) ) ) {
 		$owned_pages[ $id ] = $id;
 	}
 };
@@ -363,6 +372,8 @@ try {
 	require_once __DIR__ . '/home-dashboard-fixture.php';
 	$dashboard_cleanup = arn_home_dashboard_fixture( $db, $f112['user_ids'], $login, $assert, $home_table, $owned_anchors );
 	$dashboard_cleanup();
+	require_once __DIR__ . '/integrated-search-fixture.php';
+	arn_integrated_search_fixture( $db, $admin, $ids, $f112['user_ids'], $login, $assert, $home_table, $suffixes, $owned_anchors );
 	$f112_blocks = Navigation::links( new WP_Block_List( array(), array() ) );
 	$f112_blocks = Navigation::links( $f112_blocks );
 	$f112_urls   = array();
@@ -450,12 +461,14 @@ try {
 	$GLOBALS['current_screen'] = WP_Screen::get( 'dashboard' ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Contexto administrativo apenas neste processo CLI de teste.
 	$assert( array() === PeopleNavigation::destinations() && array() === Navigation::destinations(), 'admin' );
 	$assert( array() === Portal::model( 'home', array() )['services'], 'início sem atalhos no contexto admin' );
+	$assert( 0 === Portal::model( 'search', array( 'q' => 'Pesquisa' ) )['total'], 'pesquisa não consulta fontes no contexto administrativo' );
 	$editor_blocks = new WP_Block_List( parse_blocks( $manual_content ) );
 	$assert( ModuleNavigation::links( $editor_blocks ) === $editor_blocks, 'edição administrativa não filtrada' );
 	unset( $GLOBALS['current_screen'] );
 	define( 'REST_REQUEST', true );
 	$assert( array() === PeopleNavigation::destinations() && array() === Navigation::destinations(), 'REST' );
 	$assert( array() === Portal::model( 'home', array() )['services'], 'início sem atalhos no REST' );
+	$assert( 0 === Portal::model( 'search', array( 'q' => 'Pesquisa' ) )['total'], 'pesquisa não consulta fontes em REST' );
 	$assert( ModuleNavigation::links( $editor_blocks ) === $editor_blocks, 'REST conserva blocos para as guardas nativas' );
 	echo esc_html( 'Services WordPress: ' . $checks . ' verificações.' . PHP_EOL );
 } finally {
