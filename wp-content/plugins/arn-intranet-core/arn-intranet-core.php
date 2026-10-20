@@ -53,6 +53,8 @@ require_once __DIR__ . '/src/Autoloader.php';
 
 Autoloader::register( __DIR__ . '/src' );
 
+\Arn\Intranet\Documents\PrivateFiles\NativeMediaBoundary::register();
+
 $arn_vendor = defined( 'ARN_OIDC_VENDOR_AUTOLOAD' ) ? ARN_OIDC_VENDOR_AUTOLOAD : dirname( __DIR__, 3 ) . '/vendor/autoload.php';
 if ( is_string( $arn_vendor ) && is_readable( $arn_vendor ) ) {
 	require_once $arn_vendor;
