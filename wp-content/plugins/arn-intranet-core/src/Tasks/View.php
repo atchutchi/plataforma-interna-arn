@@ -45,6 +45,35 @@ final class View {
 		return ( $model['input']['operation'] ?? null ) === $operation && is_string( $model['input'][ $key ] ?? null ) ? $model['input'][ $key ] : $fallback;
 	}
 
+	public static function unapplied( array $model ): void {
+		$operation = $model['input']['operation'] ?? null;
+		if ( 'detail' !== $model['screen'] || ! $model['errors'] || ! is_string( $operation ) || in_array( $operation, $model['data']['operations'], true ) ) {
+			return;
+		}
+		$fields = array();
+		foreach ( array(
+			'reason'      => 'Nota ou motivo indicado',
+			'body'        => 'Comentário indicado',
+			'due'         => 'Prazo indicado',
+			'assignee_id' => 'Responsável indicado (ID)',
+		) as $key => $caption ) {
+			$value = $model['input'][ $key ] ?? null;
+			if ( is_string( $value ) && ( '' !== $value || isset( $model['errors'][ $key ] ) || 'due' === $key ) ) {
+				$fields[ $key ] = array( $caption, $value );
+			}
+		}
+		if ( ! $fields ) {
+			return;
+		}
+		?>
+		<section class="arn-task-unsaved" aria-label="Dados da tentativa anterior"><h2>Dados da tentativa anterior</h2><p>Esta operação já não está disponível. Os dados abaixo não foram guardados.</p><dl>
+		<?php foreach ( $fields as $key => [$caption, $value] ) : ?>
+			<dt><?php echo esc_html( $caption ); ?></dt><dd id="<?php echo esc_attr( 'arn-task-' . $operation . '-' . $key ); ?>" tabindex="-1"><?php echo nl2br( esc_html( '' === $value ? ( 'due' === $key ? 'Sem prazo' : 'Em branco' ) : $value ) ); ?></dd>
+		<?php endforeach; ?>
+		</dl></section>
+		<?php
+	}
+
 	private static function error( array $model, string $operation, string $key ): ?string {
 		return ( $model['input']['operation'] ?? null ) === $operation && is_string( $model['errors'][ $key ] ?? null ) ? $model['errors'][ $key ] : null;
 	}
@@ -64,7 +93,8 @@ final class View {
 			}
 		}
 		foreach ( $values as $key => $value ) {
-			?><input type="hidden" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( $value ); ?>">
+			?>
+			<input type="hidden" name="<?php echo esc_attr( $key ); ?>" value="<?php echo esc_attr( $value ); ?>">
 			<?php
 		}
 	}

@@ -134,5 +134,42 @@ final class TaskRenderingTest extends TestCase {
 		self::assertStringContainsString( 'q=alfa&amp;arn_tasks_page=1', $html );
 		self::assertStringContainsString( 'q=alfa&amp;arn_tasks_page=3', $html );
 		self::assertStringContainsString( '>1 tarefa</h2>', $html );
+		$model['screen'] = 'detail';
+		$model['errors'] = array( 'form' => 'A tarefa mudou.' );
+		$model['input']  = array(
+			'operation'         => 'start',
+			'reason'            => 'Nota própria <conservar>',
+			'expected_revision' => '1',
+		);
+		$model['data']   = array(
+			'id'          => 9,
+			'revision'    => 2,
+			'title'       => 'Tarefa',
+			'description' => '',
+			'state'       => 'in_progress',
+			'priority'    => 'normal',
+			'overdue'     => false,
+			'assignee'    => 'Alfa',
+			'author'      => 'Gestor',
+			'unit_id'     => 'LAB-A',
+			'due_at'      => null,
+			'updated_at'  => 1700000000,
+			'operations'  => array( 'complete', 'comment' ),
+			'comments'    => array(),
+			'history'     => array(),
+		);
+		$html            = $render( $model );
+		self::assertStringContainsString( 'Nota própria &lt;conservar&gt;', $html );
+		self::assertStringNotContainsString( '>Iniciar tarefa</button>', $html );
+		$model['input']  = array(
+			'operation'         => 'cancel',
+			'reason'            => '',
+			'expected_revision' => '1',
+		);
+		$model['errors'] = array( 'reason' => 'Indica um motivo.' );
+		$html            = $render( $model );
+		self::assertStringContainsString( 'id="arn-task-cancel-reason"', $html );
+		self::assertStringContainsString( '>Em branco</dd>', $html );
+		self::assertStringNotContainsString( '>Cancelar tarefa</button>', $html );
 	}
 }

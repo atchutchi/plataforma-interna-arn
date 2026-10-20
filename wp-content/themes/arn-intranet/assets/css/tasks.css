@@ -43,6 +43,10 @@
 .arn-task-state { border: 1px solid #d8e1e7; padding: .125rem .5rem; background: #fff; color: #0b3a5b; }
 .arn-task-overdue { color: #792b25; }
 .arn-task-empty { max-width: 65ch; padding-block: 2rem; }
+.arn-task-unsaved { max-width: 65ch; margin-block: 2rem; padding: 1rem 1.5rem; background: #fff; border: 1px solid #526373; }
+.arn-task-unsaved dt { font-weight: 600; }
+.arn-task-unsaved dd { margin: .5rem 0 1rem; overflow-wrap: anywhere; }
+.arn-task-unsaved dd:focus { outline: 3px solid #1f6b4a; outline-offset: 3px; }
 .arn-task-pagination { justify-content: space-between; margin-top: 2rem; }
 .arn-task-detail-grid { display: grid; gap: 2rem 3rem; min-width: 0; }
 .arn-task-detail { max-width: 65ch; min-width: 0; }

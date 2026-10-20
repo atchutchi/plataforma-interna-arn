@@ -10,14 +10,14 @@ As provas são a suite PHP, tasks-storage.php (90), tasks-installer.php (31) e a
 | CA-F113-02 | Alfa executa `start` na própria, de `open` para `in_progress`, com `expected_revision` exacta. | Uma revisão, um evento, 303. Responsável A vê o novo estado. Dados profissionais e concessões iguais. | SQL e formulário Playwright | Passou local |
 | CA-F113-03 | Alfa tenta `complete` ou `start` na tarefa de Beta, ou POST com título/unidade/`author_id`/`assignee_id` adulterados. | Recusa sem escrita. IDs e relações vêm do servidor. Forma inválida ou objecto alheio = 404 vazio. | POST adulterado e snapshot | Passou local |
 | CA-F113-04 | Responsável A executa `create` e atribui a Alfa em LAB-A. | Uma tarefa, `author_id`=gestor, responsável=Alfa. Beta não lê. Atribuição a LAB-B ou população recusa. Destinatários calculados na transacção a partir do estado `open`. | SQL transaccional e CMS | Passou local |
-| CA-F113-05 | Responsável A acompanha a equipa A, filtra por Alfa e por estado. | Duas linhas elegíveis no preset; Beta ausente. Filtro inválido 404 antes da fonte. | Playwright e unitários de parse | Parcial |
+| CA-F113-05 | Responsável A acompanha a equipa A, filtra por Alfa e por estado. | Duas linhas elegíveis no preset; Beta ausente. Filtro inválido 404 antes da fonte. | Playwright e unitários de parse | Passou local |
 | CA-F113-06 | Prazo 2030-01-15T10:00:00Z; relógio 10:00:01Z. | Atraso visível na equipa. Sem prazo não é atraso. GET não escreve. | Relógio injectado | Passou local |
 | CA-F113-07 | Datas não UTC, 2030-02-29, overflow, CRLF isolado no título. | Recusa sem conversão silenciosa. 2032-02-29 aceite se usado. | Unitários parametrizados | Passou local |
 | CA-F113-08 | `cancel` com motivo pelo gestor A. | Destinatário deixa de actualizar. Detalhe de equipa mostra cancelada sem motivo interno ao Alfa. | SQL e browser | Passou local |
 | CA-F113-09 | `reopen` sobre `completed`. | Só se a proposta institucional for aceite; senão recusa documentada, sem escrita. | Política e POST negativo | Passou local |
 | CA-F113-10 | `reassign` de Alfa para outro membro Active de LAB-A. | Alfa perde Minhas tarefas e detalhe. Novo responsável lê. Autor original imutável. Histórico conserva. Avisos do estado resultante, não do browser. | SQL antes/depois e Playwright | Passou local |
 | CA-F113-11 | Unidade inactiva, conta suspensa ou concessão revogada/expirada. | Leitura e escrita negadas. Uma causa por cenário. Reactivação não recupera sessão antiga. | Serviço auditado e Playwright | Parcial |
-| CA-F113-12 | lab_admin e editor de notícias autenticados nas duas páginas. | 404 vazio. Sem excepção `manage_options`. | REST users/me positivo + GET People-style | Parcial |
+| CA-F113-12 | lab_admin e editor de notícias autenticados nas duas páginas. | 404 vazio. Sem excepção `manage_options`. | REST users/me positivo + GET People-style | Passou local |
 | CA-F113-13 | Duas páginas com a mesma revisão; uma grava. | Segunda recusa CAS: permanece na página autorizada com erro de formulário, conserva campos próprios, sem 404 do objecto já visível. | Playwright duas origens | Passou local |
 | CA-F113-14 | Dois processos SQL no mesmo objecto. | Um commit, uma recusa, um evento, avisos únicos. Sobreposição real sob lock, não só barreira anunciada. | Barreira entre processos | Passou local |
 | CA-F113-15 | Nonce inválido, extras, actor/unidade/estado adulterados, no-op. | Nonce/extras/adulteração: 404 vazio sem escrita. No-op com CAS exacto: 303, revisão/auditoria/avisos inalterados. GET/HEAD sem mutação. | HTTP real e hashes de tabela | Passou local |
@@ -32,7 +32,7 @@ As provas são a suite PHP, tasks-storage.php (90), tasks-installer.php (31) e a
 | CA-F113-24 | Upload ou URL estática de anexo. | Recusa. Lacuna US-ARN-08 registada, sem media pública. | POST negativo | Passou local |
 | CA-F113-25 | Instalação CLI, repetição, parcial, colisão de página. | Só CLI local administradora. Repetição integral também após edição. Recusa parcial. | Prefixo `arn_tsk_` e limpeza | Passou local |
 | CA-F113-26 | Flag ausente/false/0/'true'; schema incompatível; development. | Fecha antes da fonte. Restaurar configuração em finally. Não reutiliza flags F1-12 para abrir tarefas. | Unitários e browser | Parcial |
-| CA-F113-27 | Navegação: só ligações aplicáveis; destinos People e F1-12 conservados. | Menu não substitui guarda. Back mantém filtros. | Playwright actores | Parcial |
+| CA-F113-27 | Navegação: só ligações aplicáveis; destinos People e F1-12 conservados. | Menu não substitui guarda. Back mantém filtros. | Playwright actores | Passou local |
 | CA-F113-28 | 320/390/768/1280, teclado, labels, erros, 44 px, inputs 16 px. | Sem overflow, h1 único, marca/fontes locais. | Capturas privadas | Passou local |
 | CA-F113-29 | Zoom nativo 200% separado de CSS raiz 200%. | Medir ambos. Não declarar equivalência. | Playwright + anotação Windows | Parcial |
 | CA-F113-30 | Preservação de contas, concessões, sessões, People, F1-12 e opções. | Só deltas auditados previstos. Hashes por nome de opção. | Baselines imutáveis | Parcial |
@@ -56,3 +56,5 @@ CA-31 não executou nova comparação física dos22 originais. CA-32 aguarda a C
 ## Preparação histórica
 
 Fixtures `f113.*` novas. Não usar as contas People `f107.*`, as fixtures F1-12 `f112.*` nem a lista real. Relógio de teste 2030-01-15T10:00:00Z. LAB-A/B activas. Controlos positivos antes de cada recusa. Sem email ou Google. A restrição de não implementar aplicava-se à PR documental original. A continuação central autorizada implementa a parcela local, conservando os limites institucionais. Sem `@@session.in_transaction` no adaptador futuro.
+
+Fecho de demonstração em 4927d67: CA-05 passou filtros reais por responsável/estado, CA-12 passou o editor de notícias com controlo positivo no seu módulo e CA-27 passou a regressão People/F1-12 e os acessos Tasks. As referências anteriores a essas parcelas pendentes descrevem a etapa anterior. CI inicial20 checks aprovada. A correcção de conservação de campos após conflito aguarda a CI do novo head.

@@ -85,6 +85,7 @@ elseif ( isset( $tasks['query']['get']['saved'] ) ) :
 	?>
 	<p class="arn-task-saved" role="status">Alteração guardada.</p><?php endif; ?>
 
+<?php View::unapplied( $tasks ); ?>
 <?php if ( 'create' === $screen ) : ?>
 <form class="arn-task-form" data-task-form method="post" action="<?php echo esc_url( add_query_arg( 'new', '1', $base ) ); ?>"><fieldset><legend>Dados da tarefa</legend>
 	<?php
