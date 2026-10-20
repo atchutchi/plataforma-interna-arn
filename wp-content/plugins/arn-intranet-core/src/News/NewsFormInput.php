@@ -51,7 +51,7 @@ final class NewsFormInput {
 		if ( ! is_string( $body ) || ! Content::plainText( str_replace( "\r\n", "\n", $body ), 0, 20000, true ) ) {
 			$errors['body'] = 'Usa texto simples até 20 000 caracteres, sem controlos.';
 		}
-		if ( ! is_string( $category ) || ! in_array( $category, array( 'circular', 'nota-interna', 'despacho', 'comunicacao-sindical' ), true ) ) {
+		if ( ! is_string( $category ) || ! isset( NewsPortal::categories()[ $category ] ) ) {
 			$errors['category'] = 'Selecciona uma categoria válida.';
 		}
 		if ( ! is_string( $reason ) || '' === trim( $reason ) || strlen( $reason ) > 500 || 1 !== preg_match( '/\A[^\p{C}<>]+\z/u', $reason ) || trim( $reason ) !== $reason ) {
@@ -68,7 +68,7 @@ final class NewsFormInput {
 				$errors['featured'] = '' !== $error->getMessage() ? $error->getMessage() : 'Indica uma imagem válida e o texto alternativo ou retira o destaque.';
 			}
 		}
-		$gallery     = self::list( $post['gallery'] ?? array(), $files['gallery_file'] ?? null, 'gallery', 8, $errors );
+		$gallery     = self::list( $post['gallery'] ?? array(), $files['gallery_file'] ?? null, 'gallery', Content::GALLERY_LIMIT, $errors );
 		$attachments = self::list( $post['attachments'] ?? array(), $files['attachment_file'] ?? null, 'attachments', 5, $errors );
 		if ( array() !== $errors ) {
 			return array(

@@ -17,7 +17,7 @@ final readonly class DraftInput {
 	public array $attachments;
 
 	public function __construct( public string $title, public string $body, public string $category, public ?MediaInput $featured, array $gallery, array $attachments, public ?Audience $audience = null ) {
-		if ( ! self::strict( $gallery ) || ! self::strict( $attachments ) || count( $gallery ) > 8 || count( $attachments ) > 5 ) {
+		if ( ! self::strict( $gallery ) || ! self::strict( $attachments ) || count( $gallery ) > Content::GALLERY_LIMIT || count( $attachments ) > 5 ) {
 			throw new InvalidArgumentException( 'Entrada editorial inválida.' );
 		}
 		$gallery_copy = array();
