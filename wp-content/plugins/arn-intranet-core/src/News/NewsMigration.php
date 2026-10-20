@@ -20,7 +20,7 @@ final class NewsMigration {
 	public function __construct( private readonly IdentityWpdb $database, private readonly NewsSchema $schema ) {}
 
 	public function upgrade( int $actor_id, int $at ): array {
-		if ( $actor_id < 1 || $at < 0 || '0' !== (string) $this->database->get_var( 'SELECT @@session.in_transaction' ) || '' !== $this->database->last_error ) {
+		if ( $actor_id < 1 || $at < 0 || $this->database->inTransaction() ) {
 			throw new RuntimeException( self::ERROR );
 		}
 		$key = 'arn-news-upgrade-' . hash( 'sha256', $this->database->prefix );

@@ -85,7 +85,7 @@ final class CurrentActor {
 	}
 
 	public function locked(): array {
-		if ( ! Configuration::current( $this->module ) || '1' !== (string) $this->database->get_var( 'SELECT @@session.in_transaction' ) || '' !== $this->database->last_error ) {
+		if ( ! Configuration::current( $this->module ) || ! $this->database->inTransaction() ) {
 			throw new RuntimeException( 'Transacção F112 ausente.' );
 		}
 		$resolved = $this->resolve();
