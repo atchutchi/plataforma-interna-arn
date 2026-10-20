@@ -366,7 +366,9 @@ try {
 		$deadline = microtime( true ) + 15;
 		while ( ! $waiting && microtime( true ) < $deadline && proc_get_status( $worker )['running'] ) {
 			$waiting = 0 < (int) $reader_db->get_var( $reader_db->prepare( 'SELECT COUNT(*) FROM information_schema.INNODB_LOCK_WAITS w JOIN information_schema.INNODB_TRX t ON t.trx_id=w.requesting_trx_id WHERE t.trx_mysql_thread_id=%d', $worker_connection ) );
-			usleep( 50000 );
+			// A cache InnoDB partilhada precisa de mais de 100 ms sem leitura.
+			// Mesma janela provada em editorial-lock-observation.php, sem alargar o prazo.
+			usleep( 150000 );
 		}
 		$worker_status = proc_get_status( $worker );
 		$assert( $waiting, sprintf( 'authority real aguarda account lock noutra ligação (connection=%d, worker=%s, exit=%d, observer=%s)', $worker_connection, $worker_status['running'] ? 'running' : 'stopped', $worker_status['exitcode'], '' === $reader_db->last_error ? 'ok' : 'sql_error' ) );

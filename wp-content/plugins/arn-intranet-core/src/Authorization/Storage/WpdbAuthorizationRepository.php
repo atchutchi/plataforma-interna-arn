@@ -230,8 +230,7 @@ final class WpdbAuthorizationRepository implements AuthorizationRepository {
 		$this->positive( $user_id );
 		return $this->silently(
 			function () use ( $user_id ): ?AuthorizationSnapshot {
-				$row = $this->database->get_row( 'SELECT @@session.in_transaction AS active' );
-				if ( ! is_object( $row ) || '' !== $this->database->last_error || '1' !== (string) $row->active ) {
+				if ( ! $this->database->inTransaction() ) {
 					throw new RuntimeException( 'Transacção de autorização ausente.' );
 				}
 				return $this->lockedSnapshot( $user_id );
