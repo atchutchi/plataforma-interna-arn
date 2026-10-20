@@ -496,6 +496,10 @@ final class SqlBoundary {
 		if ( str_starts_with( implode( '', $parts ), '@' ) && ! str_starts_with( implode( '', $parts ), '@@' ) ) {
 			return '';
 		}
+		// Um prefixo separado não introduz um segmento vazio antes do âmbito.
+		if ( '@@' === ( $parts[0] ?? '' ) ) {
+			array_shift( $parts );
+		}
 		$joined = ltrim( implode( '.', $parts ), '@' );
 		if ( 1 === preg_match( '/^(?:GLOBAL|PERSIST|PERSIST_ONLY)(?:\.|$)/', $joined ) ) {
 			return null;
