@@ -39,6 +39,19 @@ try {
 		'SET /*!80000 SESSION */ TRANSACTION ISOLATION LEVEL READ UNCOMMITTED',
 		'SET /*!80000 GLOBAL */ max_connections=100',
 	);
+
+	$characteristic_values = array(
+		'transaction_read_only' => 'ON',
+		'tx_read_only'          => 'ON',
+		'transaction_isolation' => "'READ-UNCOMMITTED'",
+		'tx_isolation'          => "'READ-UNCOMMITTED'",
+	);
+	foreach ( $characteristic_values as $name => $value ) {
+		foreach ( array( '', 'SESSION ', 'LOCAL ', '@@session.', '@@local.', '@@', '@marker=1, ', '@marker=1, @@session.' ) as $prefix ) {
+			$scoped_sets[] = 'SET ' . $prefix . '`' . $name . '`=' . $value;
+		}
+	}
+	$session_characteristics = $db->get_var( "SELECT CONCAT(@@session.transaction_isolation,':',@@session.transaction_read_only)" );
 	foreach ( array( false, true ) as $inside_transaction ) {
 		if ( $inside_transaction ) {
 			$assert( false !== $db->query( 'START TRANSACTION' ) && false !== $db->query( 'INSERT INTO `' . $table . '` VALUES (5,5)' ), 'sentinela de âmbitos SET' );
@@ -49,6 +62,7 @@ try {
 			$queries = $db->num_queries;
 			$assert( false === $db->query( $sql ) && $queries === $db->num_queries, 'âmbito SET recusado antes do motor' );
 			$assert( $inside_transaction === $db->inTransaction(), 'recusa SET preserva a guarda' );
+			$assert( $session_characteristics === $db->get_var( "SELECT CONCAT(@@session.transaction_isolation,':',@@session.transaction_read_only)" ), 'recusa SET preserva características de sessão' );
 		}
 		if ( $inside_transaction ) {
 			$assert( false !== $db->query( 'ROLLBACK' ) && '0' === (string) $owner->get_var( 'SELECT COUNT(*) FROM `' . $table . '`' ), 'âmbitos SET não confirmaram sentinela' );
@@ -56,6 +70,15 @@ try {
 	}
 	$assert( false !== $db->query( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED' ), 'isolamento apenas da próxima transacção preservado' );
 	$assert( false !== $db->query( 'SET @scope_marker=1' ) && false !== $db->query( 'SET SESSION wait_timeout=600' ), 'atribuições de utilizador e sessão preservadas' );
+	$assert( false !== $owner->query( 'START TRANSACTION' ) && false !== $owner->query( 'INSERT INTO `' . $table . '` VALUES (6,6)' ), 'sentinela não confirmada do observador' );
+	for ( $iteration = 0; $iteration < 2; ++$iteration ) {
+		$assert( false !== $db->query( 'START TRANSACTION' ) && $db->inTransaction(), 'transacção seguinte conserva guarda' );
+		$assert( '0' === (string) $db->get_var( 'SELECT COUNT(*) FROM `' . $table . '`' ), 'transacção seguinte não permite leitura suja' );
+		$assert( false !== $db->query( 'INSERT INTO `' . $table . '` VALUES (7,7)' ), 'transacção seguinte mantém escrita' );
+		$assert( false !== $db->query( 'ROLLBACK' ), 'transacção seguinte reverte escrita' );
+	}
+	$assert( false !== $owner->query( 'ROLLBACK' ) && '0' === (string) $owner->get_var( 'SELECT COUNT(*) FROM `' . $table . '`' ), 'sentinelas seguintes totalmente revertidas' );
+	$assert( $session_characteristics === $db->get_var( "SELECT CONCAT(@@session.transaction_isolation,':',@@session.transaction_read_only)" ), 'isolamento da próxima transacção não altera default de sessão' );
 	$assert( false !== $db->query( 'START TRANSACTION' ), 'início CASE' );
 	$assert( false !== $db->query( 'INSERT INTO `' . $table . '` VALUES (1,CASE WHEN 1=1 THEN 7 ELSE 0 END)' ), 'escrita CASE' );
 	$assert( 'THEN' === $db->get_var( "SELECT 'THEN'" ), 'literal THEN' );

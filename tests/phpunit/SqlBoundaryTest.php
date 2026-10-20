@@ -17,6 +17,30 @@ use PHPUnit\Framework\TestCase;
  */
 final class SqlBoundaryTest extends TestCase {
 
+	/** O modo de leitura da sessão inclui o alias MariaDB. */
+	public function testRefusesReadOnlyVariableAssignments(): void {
+		foreach ( array( '8.0.44', '8.4.0', '11.8.3-MariaDB' ) as $server ) {
+			foreach ( array( 'transaction_read_only', 'tx_read_only' ) as $name ) {
+				foreach ( array( '', 'SESSION ', 'LOCAL ', '@@session.', '@@local.', '@@', '@marker=1, ', '@marker=1, @@session.' ) as $prefix ) {
+					$sql = 'SET ' . $prefix . '`' . $name . '`=ON';
+					self::assertFalse( SqlBoundary::classify( $sql, $server )['trusted'], $server . ': ' . $sql );
+				}
+			}
+		}
+	}
+
+	/** O isolamento de sessão não se confunde com SET TRANSACTION. */
+	public function testRefusesIsolationVariableAssignments(): void {
+		foreach ( array( '8.0.44', '8.4.0', '11.8.3-MariaDB' ) as $server ) {
+			foreach ( array( 'transaction_isolation', 'tx_isolation' ) as $name ) {
+				foreach ( array( '', 'SESSION ', 'LOCAL ', '@@session.', '@@local.', '@@', '@marker=1, ', '@marker=1, @@session.' ) as $prefix ) {
+					$sql = 'SET ' . $prefix . '`' . $name . "`='READ-UNCOMMITTED'";
+					self::assertFalse( SqlBoundary::classify( $sql, $server )['trusted'], $server . ': ' . $sql );
+				}
+			}
+		}
+	}
+
 	/** O âmbito de sessão não pode alterar as transacções seguintes. */
 	public function testRefusesScopedTransactionCharacteristics(): void {
 		foreach ( array( '8.0.44', '8.4.0', '11.8.3-MariaDB' ) as $server ) {
@@ -44,7 +68,7 @@ final class SqlBoundaryTest extends TestCase {
 	/** Conserva o isolamento da próxima transacção e atribuições de sessão/utilizador. */
 	public function testKeepsSupportedTransactionAndSessionAssignments(): void {
 		foreach ( array( '8.0.44', '8.4.0', '11.8.3-MariaDB' ) as $server ) {
-			foreach ( array( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED', 'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ', 'SET SESSION wait_timeout=60', 'SET LOCAL wait_timeout=60', 'SET @@session.wait_timeout=60', 'SET @@local.wait_timeout=60', 'SET @global=1, @persist_only=2', "SET @text='GLOBAL TRANSACTION', @marker=1" ) as $sql ) {
+			foreach ( array( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED', 'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ', 'SET SESSION wait_timeout=60', 'SET LOCAL wait_timeout=60', 'SET @@session.wait_timeout=60', 'SET @@local.wait_timeout=60', 'SET @global=1, @persist_only=2', 'SET @transaction_read_only=1, @tx_isolation=2', "SET @text='GLOBAL TRANSACTION', @marker=1" ) as $sql ) {
 				self::assertTrue( SqlBoundary::classify( $sql, $server )['trusted'], $server . ': ' . $sql );
 			}
 		}

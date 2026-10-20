@@ -431,7 +431,9 @@ final class SqlBoundary {
 			if ( 'COMPLETION_TYPE' === $name ) {
 				$result['completion_type'] = true;
 			}
-			if ( in_array( $name, array( 'SQL_MODE', 'CHARACTER_SET_CLIENT', 'CHARACTER_SET_CONNECTION', 'COLLATION_CONNECTION' ), true ) ) {
+			// Características transaccionais usam SET TRANSACTION sem âmbito;
+			// atribuições de variáveis (incluindo aliases MariaDB) não são admitidas.
+			if ( in_array( $name, array( 'SQL_MODE', 'CHARACTER_SET_CLIENT', 'CHARACTER_SET_CONNECTION', 'COLLATION_CONNECTION', 'TRANSACTION_ISOLATION', 'TX_ISOLATION', 'TRANSACTION_READ_ONLY', 'TX_READ_ONLY' ), true ) ) {
 				$result['trusted'] = false;
 			}
 		}
