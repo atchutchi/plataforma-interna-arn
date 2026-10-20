@@ -6,7 +6,7 @@ Este README apresenta o estado actual e o trabalho necessário para concluir o s
 
 ## Concluído no laboratório
 
-“Concluído local” significa que a parcela indicada está implementada e ensaiada com o âmbito descrito no relatório. A integração é rastreável na PR correspondente. Em main, estas entregas já estão integradas. Não significa aprovação institucional ou homologação no servidor. Não voltar a implementar estas entregas.
+“Concluído local” significa que a parcela indicada está implementada e ensaiada com o âmbito descrito no relatório. O estado da integração é rastreável na PR correspondente. Não significa aprovação institucional ou homologação no servidor. Não voltar a implementar estas entregas.
 
 | Parcela concluída local | Evidência e limites |
 | --- | --- |
@@ -17,6 +17,7 @@ Este README apresenta o estado actual e o trabalho necessário para concluir o s
 | F1-05: unidades fictícias e pré-validação de importações sintéticas sem escrita | [Unidades](docs/unidades-locais-f1-05.md) e [validador](docs/validacao-sintetica-f1-05.md). Não é um importador operacional de pessoas. |
 | F1-07: directório e perfil autorizados | Implementação integrada pelas PRs #25/#27. Validar os dados profissionais e permissões com RH antes da utilização institucional. |
 | F1-08: armazenamento imutável, registo/auditoria e entrega privada por objecto/versão | [Ficheiros privados](docs/ficheiros-privados-locais-f1-08.md). Ligado a notícias e documentos. Lacunas comuns na tabela seguinte. |
+| F1-08/09/10: reconciliação de ficheiros, apenas diagnóstico | [Aceitação e recuperação](docs/reconciliacao-ficheiros-local-f1-08.md). Compara bytes, registo, auditoria e referências de notícias/documentos. Detecta possíveis órfãos sem apagar ou reparar. 33 verificações Playwright e 23 integradas. |
 | F1-08/09/10: fronteira da media nativa pública | [Aceitação](docs/fronteira-media-nativa-f1-08.md), [PR #60](https://github.com/atchutchi/plataforma-interna-arn/pull/60). Uploads/derivados nativos, REST/AJAX, oEmbed, exportação e projecções de attachments fechados. 37 verificações Playwright e 48 verificações integradas. Os uploads privados continuam funcionais. |
 | F1-09: catálogo de documentos e regulamentos, versões, publicação e download | [Catálogo documental](docs/catalogo-documental-local-f1-09.md). Competência de gestão distinta de administração técnica. |
 | F1-10/F1-11: autoria, destaque, galeria, anexos, submissão, decisão e publicação de notícias | [Autoria](docs/noticias-locais-f1-10.md) e [aceitação editorial](docs/qa-publicacao-editorial-local-f1-11.md). Só a versão aprovada chega à audiência autorizada. |
@@ -32,16 +33,15 @@ O pré-cadastro Workspace tem documentação própria em docs e dados privados e
 
 | Ordem | Entrega | Estado | Critério de fecho |
 | --- | --- | --- | --- |
-| 1 | F1-08/09/10: reconciliação de ficheiros | Por implementar | Diagnosticar referências/bytes/auditoria divergentes e órfãos. Não apagar automaticamente originais ou versões. Definir recuperação auditada. |
-| 2 | F1-08/09/10: processamento privado e admissão completa | Por implementar | Derivados privados ligados à versão e audiência, limites por envio e análise antimalware/quarentena. Validar ficheiros maiores, falhas e concorrência. Completar anexos privados de tarefas conforme US-ARN-08. A fronteira nativa não substitui estas funções. |
-| 3 | F1-03/05: lacunas de cadastro e delegações | Parcial | Importador operacional auditado, manutenção do cadastro e delegações persistentes. Ensaiar com dados fictícios. RH valida a origem, hierarquia e atribuições reais. |
-| 4 | F2-01/02: pedidos internos e decisões | Por implementar | Tipos configuráveis, estados, referência, anexos privados, decisão autorizada, substituição, histórico e notificações consistentes. |
-| 5 | F2-03: férias e ausências | Por implementar | 22 dias úteis anuais repartíveis, pedido prévio, decisão final RH, saldo/reservas/reposições auditados e calendário colectivo sem motivos privados. PEN-14 continua a definir os parâmetros institucionais. |
-| 6 | F2-04: suporte e tickets | Por implementar | Abertura, atribuição, prioridade, estados, resposta, anexos e acompanhamento autorizado. |
-| 7 | F2-05/06: composição e aceitação dos serviços | Por implementar | Pedidos, férias e suporte no painel, pesquisa, notificações e CMS, com autorização em todas as projecções. |
-| 8 | Google Calendar | Por implementar | Consentimento e configuração externos ao Git, calendário/fonte oficial, sentido de sincronização, conflitos, revogação, erros e reconciliação. Não inferir permissões de Calendar a partir do login Google. |
-| 9 | F1-16: QA global | Parcial por módulo | Matriz completa por objecto, REST/AJAX/media, acessibilidade, carga, concorrência e recuperação. Testes de restauro e auditoria das permissões recuperadas. |
-| 10 | F1-17: documentação e pacote de entrega | Por preparar | Manuais de administração/utilização, release por commit, migrações, inventário, rollback e guião de aceitação piloto. |
+| 1 | F1-08/09/10: processamento privado e admissão completa | Por implementar | Derivados privados ligados à versão e audiência, limites por envio e análise antimalware/quarentena. Validar ficheiros maiores, falhas e concorrência. Completar anexos privados de tarefas conforme US-ARN-08. A fronteira nativa não substitui estas funções. |
+| 2 | F1-03/05: lacunas de cadastro e delegações | Parcial | Importador operacional auditado, manutenção do cadastro e delegações persistentes. Ensaiar com dados fictícios. RH valida a origem, hierarquia e atribuições reais. |
+| 3 | F2-01/02: pedidos internos e decisões | Por implementar | Tipos configuráveis, estados, referência, anexos privados, decisão autorizada, substituição, histórico e notificações consistentes. |
+| 4 | F2-03: férias e ausências | Por implementar | 22 dias úteis anuais repartíveis, pedido prévio, decisão final RH, saldo/reservas/reposições auditados e calendário colectivo sem motivos privados. PEN-14 continua a definir os parâmetros institucionais. |
+| 5 | F2-04: suporte e tickets | Por implementar | Abertura, atribuição, prioridade, estados, resposta, anexos e acompanhamento autorizado. |
+| 6 | F2-05/06: composição e aceitação dos serviços | Por implementar | Pedidos, férias e suporte no painel, pesquisa, notificações e CMS, com autorização em todas as projecções. |
+| 7 | Google Calendar | Por implementar | Consentimento e configuração externos ao Git, calendário/fonte oficial, sentido de sincronização, conflitos, revogação, erros e reconciliação. Não inferir permissões de Calendar a partir do login Google. |
+| 8 | F1-16: QA global e recuperação | Parcial por módulo | Matriz completa por objecto, REST/AJAX/media, acessibilidade, carga e concorrência. Implementar recuperação controlada e auditada de ficheiros a partir do procedimento definido, com aprovação do responsável. Ensaiar restauro e permissões recuperadas. |
+| 9 | F1-17: documentação e pacote de entrega | Por preparar | Manuais de administração/utilização, release por commit, migrações, inventário, rollback e guião de aceitação piloto. |
 
 F1-04/06/14/15 acompanham os módulos novos. Não são tarefas para reconstruir os módulos já aceites. F3 fora do requisito Google Calendar fica sujeito a prioridade e fonte oficial aprovadas.
 
@@ -88,6 +88,7 @@ npm run build
 npm run test:php
 npm run lint:php
 npm run test:native-media:integration
+npm run test:file-reconciliation:integration
 npm run env:stop:tests
 ~~~
 
