@@ -12,6 +12,8 @@ use InvalidArgumentException;
 
 /** Plain text stays unescaped until presentation. */
 final readonly class Content {
+	/** Maximum number of ordered private gallery images, excluding the cover. */
+	public const GALLERY_LIMIT = 12;
 	/** Ordered gallery assets.
 	 *
 	 * @var array<Asset>
@@ -56,9 +58,9 @@ final readonly class Content {
 		$normal = str_replace( "\r\n", "\n", $body );
 		if ( ! self::plainText( $title, 1, 200 )
 			|| ! self::plainText( $normal, 0, 20000, true )
-			|| ! in_array( $category, array( 'circular', 'nota-interna', 'despacho', 'comunicacao-sindical' ), true )
+			|| ! in_array( $category, array( 'noticia-institucional', 'circular', 'nota-interna', 'despacho', 'comunicacao-sindical' ), true )
 			|| ( null !== $featured && 'featured' !== $featured->kind )
-			|| count( $gallery ) > 8 || count( $attachments ) > 5
+			|| count( $gallery ) > self::GALLERY_LIMIT || count( $attachments ) > 5
 			|| ! self::orderedAssets( $gallery, 'gallery' ) || ! self::orderedAssets( $attachments, 'attachment' ) ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Constant domain message.
 			throw new InvalidArgumentException( 'Conteúdo de notícia inválido.' );

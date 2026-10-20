@@ -83,7 +83,7 @@ final class NewsFormInputTest extends TestCase {
 		$this->assertSame( str_repeat( 'b', 32 ), NewsFormInput::validate( $base, array() )['draft']->gallery[1]->existing_id );
 		$this->assertArrayHasKey( 'form', NewsFormInput::validate( array_replace( $base, array( 'actor_id' => '17' ) ), array() )['errors'] );
 		$this->assertArrayHasKey( 'form', NewsFormInput::validate( array_replace( $base, array( 'review_queue' => 'alheia' ) ), array() )['errors'] );
-		$this->assertArrayHasKey( 'gallery', NewsFormInput::validate( array_replace( $base, array( 'gallery' => array_fill( 0, 9, $base['gallery'][0] ) ) ), array() )['errors'] );
+		$this->assertArrayHasKey( 'gallery', NewsFormInput::validate( array_replace( $base, array( 'gallery' => array_fill( 0, 13, $base['gallery'][0] ) ) ), array() )['errors'] );
 	}
 
 	/** Size errors retain the exact media position instead of becoming form errors. */

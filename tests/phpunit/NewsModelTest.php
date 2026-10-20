@@ -148,7 +148,7 @@ final class NewsModelTest extends TestCase {
 		$this->invalid( fn() => new Content( 'T', '', 'circular', null, array( $first, 'bad' ), array() ) );
 		$this->invalid( fn() => new Content( 'T', '', 'circular', null, array( 1 => $first ), array() ) );
 		$this->invalid( fn() => new Content( 'T', '', 'circular', $first, array(), array() ) );
-		$this->invalid( fn() => new Content( 'T', '', 'circular', null, array_fill( 0, 9, $first ), array() ) );
+		$this->invalid( fn() => new Content( 'T', '', 'circular', null, array_fill( 0, 13, $first ), array() ) );
 		$attachment = new Asset( 'attachment', $this->blob( 'c', 'application/pdf' ), 'Ficheiro' );
 		$this->invalid( fn() => new Content( 'T', '', 'circular', null, array(), array_fill( 0, 6, $attachment ) ) );
 		$this->invalid( fn() => new Content( 'T', '', 'circular', null, array(), array( $first ) ) );
