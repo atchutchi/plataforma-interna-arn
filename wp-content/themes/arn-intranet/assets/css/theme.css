@@ -182,6 +182,7 @@ a:hover { text-decoration-thickness: 0.12em; }
 .arn-search-results h3 { font-size: var(--wp--preset--font-size--subheading); overflow-wrap: anywhere; }
 @media (max-width: 64rem) { .arn-integrated-search-form { grid-template-columns: minmax(0, 1fr); } }
 .arn-home-dashboard { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--arn-space-6); margin-block: var(--arn-space-6); }
+.arn-home-dashboard .arn-portal-section-heading > a { min-height: 2.75rem; }
 .arn-home-summary-list { list-style: none; margin: 0; padding: 0; }
 .arn-home-summary-list > li { border-top: 1px solid var(--wp--preset--color--border); padding-block: var(--arn-space-2); }
 .arn-home-summary-list h3 { margin: 0; font-size: var(--wp--preset--font-size--subheading); overflow-wrap: anywhere; }

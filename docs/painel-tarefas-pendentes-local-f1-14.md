@@ -25,15 +25,25 @@ Preserva logo, fontes, cores e componentes institucionais, segundo PRODUCT.md e 
 | Só próprias, outra unidade isolada, reatribuição e suspensão revalidadas | Integração SQL no prefixo exclusivo, sem excepção administrativa |
 | Leitura sem escrita em tarefas, comentários, auditoria ou recibos | Comparação das tabelas antes/depois em SQL |
 | Vazio distinto de indisponível e fontes independentes | Testes puros e rendering |
-| Composição WordPress, ligações, REST autenticado e adaptação visual | Pendente do percurso Playwright após CI verde |
-| Commit, push, revisão e CI no head entregue antes de integrar | Revisão estática sem achados. CI própria exigida antes de merge |
+| Composição WordPress, ligações, REST autenticado e adaptação visual | Playwright passou 23 verificações em 6144149, com quatro perfis Tasks/leitura e conservação da notícia |
+| Commit, push, revisão e CI no head entregue antes de integrar | PR #57. Código 6144149 passou 20 checks. O head final exige CI própria antes do merge |
 
 Os testes foram agrupados no fecho. A regressão executada contra os dois ficheiros originais produziu uma falta de método e cinco falhas de comportamento. Depois da implementação, a suite focal passou 16 testes e 118 asserções. A suite PHP completa passou 947 testes e 4638 asserções, com quatro omissões Windows anteriores. Node passou 55 testes, lint e construção. PHPCS passou os sete ficheiros PHP alterados ou novos. MariaDB passou 100 verificações no ensaio Tasks, incluindo dez do novo painel, e removeu as suas contas e tabelas exclusivas. As contas e sessões anteriores do WordPress de ensaio conservaram os hashes.
 
 A revisão independente confirmou a fronteira pessoal, a exclusão de terminais antes da paginação, a projecção fechada e o fecho da ligação. Foi estática. Não substitui o percurso HTTP da composição real.
 
+## Fecho da demonstração
+
+Depois dos 20 checks aprovados em 6144149, o laboratório recebeu apenas os quatro ficheiros de execução alterados. Os 311 ficheiros WordPress versionados ficaram com hashes iguais aos do commit. Não houve instalação, criação de contas, alteração de concessões ou reposição dos exemplos.
+
+Playwright passou 23 verificações. Alfa recebeu duas pendentes próprias. O gestor com uma tarefa concluída e Beta sem pendentes receberam o estado vazio. Um leitor F1-12 sem Tasks recebeu indisponibilidade, sem ligação pessoal. Parâmetros externos não alteraram a consulta fixa. A ligação abriu o detalhe próprio por teclado. REST confirmou primeiro a identidade autenticada e o ID real da página inicial, ambos com 200, e depois a ausência dos títulos das tarefas na projecção REST.
+
+As larguras 320/390/768/1440 passaram sem transbordo, com H1 único e alvos das tarefas de pelo menos 44px. As capturas móvel e ampla foram inspeccionadas. Texto CSS a 200% também não produziu transbordo no computador. Isto não prova zoom nativo ou certificação de acessibilidade. A medição adicional encontrou 43,2px na ligação de cabeçalho à lista. O fecho acrescenta a altura mínima de 44px, a confirmar depois da nova CI e aplicação do CSS final.
+
+As 39 tabelas de negócio da demonstração, incluindo tarefas, comentários, auditoria, notificações, autorização e os restantes módulos presentes, conservaram exactamente os hashes antes/depois de todo o percurso. As sessões nativas das contas fictícias tiveram os logins de QA previstos e não fazem parte dessa alegação de igualdade. A notícia do Fórum e as dez fotografias ficaram conservadas. Dados concretos, cookies, nonce, credenciais e capturas permanecem privados.
+
 ## Operação e limites
 
-O laboratório estável só recebe o código após CI verde. Não repetir LocalInstaller, criar pessoas ou reconstituir as revisões das três tarefas de demonstração. O novo resumo usa os exemplos fictícios já existentes. Configurações, credenciais, capturas e logs ficam fora do GitHub. A notícia real autorizada separadamente na PR #52 fica preservada.
+O laboratório estável só recebe o código após CI verde. Não repetir LocalInstaller, criar pessoas ou reconstituir as revisões das três tarefas de demonstração. O novo resumo usa os exemplos fictícios já existentes. O SHA entregue e a CI final são consultáveis na [PR #57](https://github.com/atchutchi/plataforma-interna-arn/pull/57).
 
 Esta entrega conclui o resumo pessoal de tarefas no painel local. Não conclui F1-14 institucional, painel de notificações, parâmetros críticos do CMS, acessibilidade certificada, comparação física dos originais ou homologação IIS/MySQL/rede.
