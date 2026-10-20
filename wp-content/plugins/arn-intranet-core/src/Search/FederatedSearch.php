@@ -48,6 +48,11 @@ final class FederatedSearch {
 			'label' => 'Evento cancelado',
 			'size'  => 20,
 		),
+		'tasks'              => array(
+			'type'  => 'tasks',
+			'label' => 'Tarefa',
+			'size'  => 20,
+		),
 	);
 
 	public function __construct( private readonly Closure $fetch ) {}

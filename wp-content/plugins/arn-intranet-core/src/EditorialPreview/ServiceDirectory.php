@@ -9,6 +9,7 @@ namespace Arn\Intranet\EditorialPreview;
 
 use Arn\Intranet\People\PeopleNavigation;
 use Arn\Intranet\F112\Navigation;
+use Arn\Intranet\Tasks\Navigation as TaskNavigation;
 use Closure;
 use Throwable;
 
@@ -20,19 +21,23 @@ final class ServiceDirectory {
 		'team'           => array( 'A minha equipa', 'Consulta os contactos da equipa que podes acompanhar.' ),
 		'communications' => array( 'Comunicados', 'Lê as comunicações publicadas para ti e consulta os avisos internos.' ),
 		'calendar'       => array( 'Calendário', 'Consulta os eventos disponíveis para ti e recupera o histórico.' ),
+		'tasks_own'      => array( 'Minhas tarefas', 'Consulta o trabalho que te está atribuído e actualiza o progresso.' ),
+		'tasks_team'     => array( 'Tarefas da equipa', 'Atribui e acompanha o trabalho na unidade que podes gerir.' ),
 	);
 	private readonly Closure $people;
 	private readonly Closure $communications;
+	private readonly Closure $tasks;
 
-	public function __construct( ?Closure $people = null, ?Closure $communications = null ) {
+	public function __construct( ?Closure $people = null, ?Closure $communications = null, ?Closure $tasks = null ) {
 		$this->people         = $people ?? PeopleNavigation::destinations( ... );
 		$this->communications = $communications ?? Navigation::destinations( ... );
+		$this->tasks          = $tasks ?? TaskNavigation::destinations( ... );
 	}
 
 	/** No capability, account data, private content or arbitrary labels reach the view. */
 	public function items(): array {
 		$links = array();
-		foreach ( array( $this->people, $this->communications ) as $source ) {
+		foreach ( array( $this->people, $this->communications, $this->tasks ) as $source ) {
 			try {
 				$items = $source();
 				if ( ! is_array( $items ) ) {

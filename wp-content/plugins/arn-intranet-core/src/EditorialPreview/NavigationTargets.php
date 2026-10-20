@@ -16,6 +16,8 @@ final class NavigationTargets {
 		'team'           => 'minha-equipa',
 		'communications' => 'comunicados',
 		'calendar'       => 'calendario',
+		'tasks_own'      => 'minhas-tarefas',
+		'tasks_team'     => 'tarefas-da-equipa',
 	);
 	private readonly array $site;
 	public function __construct( string $site, private readonly array $page_ids ) {
