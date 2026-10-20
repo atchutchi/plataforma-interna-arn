@@ -442,7 +442,7 @@ final class NoticeRepository {
 		$previous = $this->database->suppress_errors( true );
 		try {
 			$this->schema->assertReady();
-			if ( '0' !== (string) $this->database->get_var( 'SELECT @@session.in_transaction' ) || '' !== $this->database->last_error ) {
+			if ( $this->database->inTransaction() ) {
 				throw new RuntimeException( 'Ligação de comunicado ocupada.' );
 			}
 			if ( null === $this->actors->read() ) {

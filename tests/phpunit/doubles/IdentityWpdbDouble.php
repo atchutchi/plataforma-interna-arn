@@ -106,6 +106,24 @@ class wpdb {
 	 * @var array<array<mixed>>
 	 */
 	public array $bindings = array();
+	/**
+	 * A ligação simulada nunca fica pronta.
+	 *
+	 * @var bool
+	 */
+	public bool $ready = false;
+	/**
+	 * Sem handle mysqli.
+	 *
+	 * @var object|null
+	 */
+	public $dbh = null;
+	/**
+	 * Último SQL observado pelo core.
+	 *
+	 * @var string
+	 */
+	public string $last_query = '';
 
 	/**
 	 * Aceita os argumentos habituais sem abrir ligação real.
@@ -156,8 +174,9 @@ class wpdb {
 	 * @param string $query SQL preparado.
 	 * @return int|false
 	 */
-	public function query( string $query ): int|false {
+	public function query( $query ) {
 		$this->queries[]  = $query;
+		$this->last_query = $query;
 		$this->last_error = '';
 		if ( '' !== $this->fail_prefix && str_starts_with( $query, $this->fail_prefix ) ) {
 			$this->last_error = 'erro privado fictício';
