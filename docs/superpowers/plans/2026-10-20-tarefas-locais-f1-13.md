@@ -64,10 +64,13 @@ Uma página, filtro, REST nonce válido, contagem ou resultado de pesquisa não 
 ## Tarefa 4: apresentação, aceitação e entrega
 
 - [x] Usar Impeccable e UI UX Pro Max na extensão do tema existente, preservando logo e fontes locais.
-- [ ] Executar Playwright com o elenco próprio, 320/390/768/1280, teclado, filtros, formulários, duas origens CAS e estado vazio. Distinguir zoom nativo de CSS a 200%.
-- [ ] Agrupar PHP, PHPCS, Node, construção e integrações no fecho. Preencher os 36 critérios com prova efectiva ou limite explícito.
+- [x] Executar Playwright com o elenco próprio, 320/390/768/1280, teclado, filtros, formulários, duas origens CAS e estado vazio. Distinguir zoom nativo de CSS a 200%.
+- [x] Agrupar PHP, PHPCS, Node, construção e integrações no fecho. Preencher os 36 critérios com prova efectiva ou limite explícito.
 - [x] Obter revisão independente final e corrigir bloqueadores. Guardar configuração, cookies, capturas, dados e logs fora do Git.
-- [ ] Actualizar README/AGENTS, fazer push e abrir PR. Só integrar com CI verde no head final.
-- [ ] Actualizar a demonstração fictícia apenas depois da revisão e continuar as lacunas F1-14/15/16/17 possíveis localmente.
+- [x] Actualizar README/AGENTS, fazer push e abrir PR. Só integrar com CI verde no head final.
+- [x] Actualizar a demonstração fictícia apenas depois da revisão.
+- [ ] Continuar em entrega própria as lacunas F1-14/15/16/17 possíveis localmente.
 
 A igualdade global acima refere-se ao ensaio do instalador (127 tabelas). No HTTP houve quatro transients de padrões na options da demonstração exterior, registados sem os apagar. CSS 200% não substitui zoom nativo. A pesquisa WordPress, a composição final e os percursos People/F1-12 na demonstração são fechados depois da CI. A PR #54 integrou a correcção revista de SET/NAMES sobre a proposta #53. Não integrar o head antigo b760 com o bloqueador.
+
+Fecho funcional: demonstração activa em 00fde38 após20 checks. Suite na CI 941/4600. Playwright final 28 mais sete CAS/estado, além das matrizes anteriores, e gate false/restauro por HTTP aprovados. Zoom nativo continua não executado. A actualização de documentação e do rótulo Serviços tem nova CI obrigatória antes da integração. Os critérios parciais não foram convertidos em aceitação institucional.

@@ -34,7 +34,7 @@ final class ServiceRenderingTest extends TestCase {
 		include $file;
 		$empty = (string) ob_get_clean();
 		self::assertStringContainsString( 'Ainda não há acessos disponíveis para a tua conta', $empty );
-		self::assertStringContainsString( 'Tarefas de equipa', $empty );
+		self::assertStringNotContainsString( 'Tarefas de equipa', $empty );
 		self::assertStringNotContainsString( '<a ', $empty );
 		self::assertStringNotContainsString( '<button', $empty );
 		$args['services'] = array(
