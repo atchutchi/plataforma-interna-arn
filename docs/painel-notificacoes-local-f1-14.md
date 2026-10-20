@@ -35,3 +35,9 @@ Preserva PRODUCT.md, DESIGN.md, logótipo, fontes e cores institucionais. Impecc
 No fecho, PHP passou 954 testes e 4675 asserções, com quatro omissões Windows anteriores. Node passou 55 testes, lint e construção. PHPCS passou os oito ficheiros PHP alterados ou novos. O ensaio Tasks passou 107 verificações, incluindo as sete adicionais do resumo de avisos, e removeu as suas tabelas e contas exclusivas. A revisão independente foi estática e não identificou achados. Pediu confirmação no runtime dos cinco adaptadores e preservação dos recibos durante GET.
 
 O laboratório estável só recebe código após CI verde no head candidato. Não repetir instaladores ou fixtures. Os testes HTTP usam as contas fictícias existentes e conservam os originais de revisão e a notícia autorizada já presente. Credenciais, cookies, resultados detalhados e capturas ficam fora do Git. Esta parcela não conclui a aceitação institucional da F1-14, a homologação IIS/MySQL ou o site completo.
+
+## Correcção identificada pela CI
+
+O candidato c7250a9 falhou os dois ensaios de Serviços da CI durante a abertura de uma ligação do instalador F1-12. O adaptador de avisos consultava três vezes o ServiceDirectory completo por leitura do Início, incluindo People, que não é fonte de avisos. Essa composição abre ligações sem fecho explícito e as chamadas repetidas atingiram o limite de ligações no ensaio.
+
+A nova regressão em service-navigation mede Threads_connected antes e depois dos três leitores de avisos ainda indisponíveis. Falhou localmente contra o candidato original. A correcção fornece uma fonte People vazia apenas neste adaptador. Mantém os leitores, destinos e guardas nativos de F1-12 e Tasks e elimina a consulta que não era necessária. Não aumenta limites SQL nem altera o comportamento do directório de funcionários. Exige nova CI e o ensaio completo de Serviços aprovado antes de aplicar ao laboratório estável.

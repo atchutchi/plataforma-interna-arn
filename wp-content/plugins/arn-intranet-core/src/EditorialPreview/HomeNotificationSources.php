@@ -74,7 +74,8 @@ final class HomeNotificationSources {
 					),
 				);
 			}
-			$destinations = array_column( ( new ServiceDirectory() )->items(), 'url', 'id' );
+			// People is not a notice source. Do not open unrelated directory connections.
+			$destinations = array_column( ( new ServiceDirectory( people: static fn(): array => array() ) )->items(), 'url', 'id' );
 			if ( ! isset( $destinations[ $module ] ) ) {
 				return null; }
 			$list = 'tasks_own' === $module ? ( new TaskPortal() )->notices( 1 ) : ( new Portal( $module ) )->notices( 1 );
