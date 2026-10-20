@@ -1,5 +1,7 @@
 # Tarefas locais F1-13
 
+Estado corrente: transporte, instalador explícito, vistas privadas, navegação e fonte de pesquisa implementados. Lista própria/equipa, atribuição, progresso, prazos, reatribuição, cancelamento, comentários, histórico e avisos foram exercitados no WordPress separado. A [QA local](qa-tarefas-locais-f1-13.md) distingue as provas efectivas, as falhas corrigidas e os limites. MariaDB passou 90 verificações de persistência e 31 do instalador com preservação de 127 tabelas. A CI da parcela SQL em db96050 passou. A composição final, a pesquisa no browser e a activação da demonstração aguardam o fecho da correcção da PR #53. Os registos seguintes descrevem as parcelas históricas.
+
 20 de outubro de 2026. Branch feat/tarefas-locais-f1-13. Base main e081efb, com a correcção transaccional da PR #51 já integrada e CI aprovada. Execução directa do plano 2026-10-20-tarefas-locais-f1-13.md, sem novas atribuições à colaboradora.
 
 ## Parcela de domínio concluída

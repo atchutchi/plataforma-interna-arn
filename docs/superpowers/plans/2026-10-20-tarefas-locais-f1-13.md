@@ -51,21 +51,23 @@ Uma página, filtro, REST nonce válido, contagem ou resultado de pesquisa não 
 - [x] Implementar autoridade e cinco tabelas, com versão e índices exactos, sem migração em leitura ou activação.
 - [x] Implementar create idempotente, CAS e mutações com destinatários do estado resultante dentro da transacção.
 - [x] Provar rollback de auditoria/último aviso, reenvio de create, recibo idempotente e concorrência real entre processos. Preset de destinatário único, sem alegar entrega parcial de vários avisos.
-- [ ] Confirmar igualdade das tabelas anteriores e remover só os recursos exclusivos do ensaio.
+- [x] Confirmar igualdade das tabelas anteriores e remover só os recursos exclusivos do ensaio.
 
 ## Tarefa 3: percursos completos WordPress
 
-- [ ] Acrescentar testes de forma, nonce, autorizações, filtros e matriz HTTP antes dos handlers.
-- [ ] Criar lista própria, equipa, detalhe, criação, actualizações, comentários e avisos, com erros acessíveis.
-- [ ] Instalar explicitamente as três fixtures e páginas num prefixo novo de laboratório. Não reutilizar contas existentes.
-- [ ] Ligar menus, Serviços e pesquisa às autoridades do módulo. Conservar os percursos People e F1-12.
-- [ ] Verificar REST, feed, search, oEmbed, meta e block-renderer com autenticação positiva antes das recusas.
+- [x] Acrescentar testes de forma, nonce, autorizações, filtros e matriz HTTP antes dos handlers.
+- [x] Criar lista própria, equipa, detalhe, criação, actualizações, comentários e avisos, com erros acessíveis.
+- [x] Instalar explicitamente as três fixtures e páginas num prefixo novo de laboratório. Não reutilizar contas existentes.
+- [x] Ligar menus, Serviços e pesquisa às autoridades do módulo. Conservar os percursos People e F1-12.
+- [x] Verificar REST, feed, search, oEmbed, meta e block-renderer com autenticação positiva antes das recusas.
 
 ## Tarefa 4: apresentação, aceitação e entrega
 
-- [ ] Usar Impeccable e UI UX Pro Max na extensão do tema existente, preservando logo e fontes locais.
+- [x] Usar Impeccable e UI UX Pro Max na extensão do tema existente, preservando logo e fontes locais.
 - [ ] Executar Playwright com o elenco próprio, 320/390/768/1280, teclado, filtros, formulários, duas origens CAS e estado vazio. Distinguir zoom nativo de CSS a 200%.
 - [ ] Agrupar PHP, PHPCS, Node, construção e integrações no fecho. Preencher os 36 critérios com prova efectiva ou limite explícito.
-- [ ] Obter revisão independente final e corrigir bloqueadores. Guardar configuração, cookies, capturas, dados e logs fora do Git.
+- [x] Obter revisão independente final e corrigir bloqueadores. Guardar configuração, cookies, capturas, dados e logs fora do Git.
 - [ ] Actualizar README/AGENTS, fazer push e abrir PR. Só integrar com CI verde no head final.
 - [ ] Actualizar a demonstração fictícia apenas depois da revisão e continuar as lacunas F1-14/15/16/17 possíveis localmente.
+
+A igualdade global acima refere-se ao ensaio do instalador (127 tabelas). No HTTP houve quatro transients de padrões na options da demonstração exterior, registados sem os apagar. CSS 200% não substitui zoom nativo. A pesquisa WordPress, a composição final e os percursos People/F1-12 na demonstração são fechados depois da CI. A PR #54 integrou a correcção revista de SET/NAMES sobre a proposta #53. Não integrar o head antigo b760 com o bloqueador.

@@ -150,7 +150,7 @@ add_filter( 'show_admin_bar', 'arn_intranet_editor_toolbar' );
  * @return string HTML de apresentação.
  */
 function arn_intranet_portal_heading( string $content, array $block ): string {
-	if ( ! is_singular() || ( ! has_block( 'arn/portal-view', get_post() ) && ! has_block( 'arn/people-view', get_post() ) && ! has_block( 'arn/f112-view', get_post() ) ) ) {
+	if ( ! is_singular() || ( ! has_block( 'arn/portal-view', get_post() ) && ! has_block( 'arn/people-view', get_post() ) && ! has_block( 'arn/f112-view', get_post() ) && ! has_block( 'arn/tasks-view', get_post() ) ) ) {
 		return $content;
 	}
 	$class = $block['attrs']['className'] ?? '';

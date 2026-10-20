@@ -82,6 +82,96 @@ final class TaskRepository {
 			return null; }
 	}
 
+	/** Surface capabilities and eligible targets use the same locked authority. */
+	public function access( string $mode ): ?array {
+		if ( ! in_array( $mode, array( 'own', 'team' ), true ) ) {
+			return null;
+		}
+		try {
+			return $this->transaction(
+				function ( ActorContext $actor, array $people, int $now ) use ( $mode ): ?array {
+					if ( ! $this->scope( $mode, $actor, $now ) ) {
+						return null;
+					}
+					$units     = array_values( array_filter( $actor->units, static fn( string $unit ): bool => TaskPolicy::create( $unit, $actor, $now ) ) );
+					$create    = 'team' === $mode && 1 === count( $units );
+					$assignees = array();
+					if ( $create ) {
+						foreach ( $people as $id => $person ) {
+							if ( TaskPolicy::recipient( $person, $units[0], $now ) ) {
+								$assignees[] = $id;
+							}
+						}
+					}
+					$members = array();
+					if ( 'team' === $mode ) {
+						foreach ( $people as $id => $person ) {
+							foreach ( $actor->units as $unit ) {
+								if ( in_array( $unit, $actor->active_units, true ) && in_array( $unit, $person->units, true ) && $actor->allows( Action::ReadUnitTask, Scope::units( array( $unit ) ), $actor->id(), $now ) ) {
+									$members[] = $id;
+									break;
+								}
+							}
+						}
+					}
+					return array(
+						'actor_id'  => $actor->id(),
+						'create'    => $create,
+						'assignees' => $assignees,
+						'members'   => $members,
+					);
+				}
+			);
+		} catch ( DomainException ) {
+			return null;
+		}
+	}
+
+	/** Projection stays inside the transaction, including private-reason policy. */
+	public function detail( int $id, string $mode ): ?array {
+		if ( $id < 1 || ! in_array( $mode, array( 'own', 'team' ), true ) ) {
+			return null;
+		}
+		try {
+			return $this->transaction(
+				function ( ActorContext $actor, array $people, int $now ) use ( $id, $mode ): ?array {
+					$task = $this->load( $id, $mode, $actor, $now );
+					return null === $task ? null : TaskProjection::detail( $task, $actor, $now );
+				}
+			);
+		} catch ( DomainException ) {
+			return null;
+		}
+	}
+
+	public function listing( TaskSelection $selection, string $mode ): ?array {
+		if ( ! in_array( $mode, array( 'own', 'team' ), true ) ) {
+			return null;
+		}
+		try {
+			return $this->transaction(
+				function ( ActorContext $actor, array $people, int $now ) use ( $selection, $mode ): ?array {
+					$clauses = $this->scope( $mode, $actor, $now );
+					if ( ! $clauses ) {
+						return null;
+					}
+					$items = array();
+					foreach ( $this->rows( $this->database->prepare( 'SELECT id FROM %i WHERE (', $this->schema->table( 'tasks' ) ) . implode( ' OR ', $clauses ) . ') ORDER BY id FOR UPDATE' ) as $row ) {
+						$task = $this->load( self::number( $row->id ), $mode, $actor, $now );
+						if ( null !== $task ) {
+							$items[] = $task;
+						}
+					}
+					$selected          = $selection->apply( $items );
+					$selected['items'] = array_map( static fn( Task $task ): array => TaskProjection::row( $task, $actor, $now ), $selected['items'] );
+					return $selected;
+				}
+			);
+		} catch ( DomainException ) {
+			return null;
+		}
+	}
+
 	public function change( int $id, string $operation, int $expected, array $fields ): Task {
 		self::validateFields( $operation, $fields );
 		if ( $id < 1 || $expected < 1 ) {
@@ -176,7 +266,7 @@ final class TaskRepository {
 		}
 	}
 
-	private function load( int $id, string $mode, ActorContext $actor, int $now ): ?Task {
+	private function scope( string $mode, ActorContext $actor, int $now ): array {
 		$clauses = array();
 		foreach ( $actor->units as $unit ) {
 			if ( ! in_array( $unit, $actor->active_units, true ) ) {
@@ -187,6 +277,11 @@ final class TaskRepository {
 				$clauses[] = $this->database->prepare( '(unit_id=%s AND assignee_id=%d)', $unit, $actor->id() );
 			}
 		}
+		return $clauses;
+	}
+
+	private function load( int $id, string $mode, ActorContext $actor, int $now ): ?Task {
+		$clauses = $this->scope( $mode, $actor, $now );
 		if ( ! $clauses ) {
 			return null; }
 		$rows = $this->rows( $this->database->prepare( 'SELECT * FROM %i WHERE id=%d AND (', $this->schema->table( 'tasks' ), $id ) . implode( ' OR ', $clauses ) . ') FOR UPDATE' );

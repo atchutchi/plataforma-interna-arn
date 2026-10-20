@@ -15,6 +15,10 @@ $login( $ids['manager'] );
 $content = new TaskContent( 'Parecer sintético de laboratório', 'Texto sem dados pessoais.', 'normal', '2030-01-16T10:00:00Z' );
 $request = bin2hex( random_bytes( 16 ) );
 $first   = $repo->create( $content, $ids['a'], $request );
+$access  = $repo->access( 'team' );
+$assert( $ids['manager'] === $access['actor_id'] && true === $access['create'] && array( $ids['a'], $ids['manager'] ) === $access['assignees'], 'equipa só oferece destinatários elegíveis da mesma unidade' );
+$dto = $repo->detail( $first->id, 'team' );
+$assert( null !== $dto && ! isset( $dto['create_request_id'] ) && isset( $dto['history'][0]['reason'] ), 'projecção usa autoridade corrente dentro da transacção' );
 $assert( $first->id > 0 && $first->author_id === $ids['manager'] && $first->assignee_id === $ids['a'] && 'LAB-A' === $first->unit_id, 'criação e âmbito derivados do servidor' );
 $again = $repo->create( $content, $ids['a'], $request );
 $assert( $again->id === $first->id && 1 === $again->revision && '1' === (string) $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM %i', $schema->table( 'tasks' ) ) ), 'reenvio de criação não duplica tarefa' );
@@ -107,6 +111,46 @@ foreach ( array( 'audit', 'notifications' ) as $part ) {
 	$assert( $snapshot() === $before, 'rollback integral de tarefa comentário auditoria e último aviso' );
 }
 $assert( 4 === $repo->find( $first->id )?->revision, 'revisão não avançou após falhas injectadas' );
+wp_set_current_user( $admin );
+$team_b_grant = $service->createGrant( new \Arn\Intranet\Authorization\Grant( $ids['b'], \Arn\Intranet\Authorization\Role::UnitManager, \Arn\Intranet\Authorization\Scope::units( array( 'LAB-B' ) ), $now, $now + 100 ), $auth->find( $ids['b'] )->revision, $context() );
+$login( $ids['b'] );
+$other_unit = $repo->create( new TaskContent( 'Tarefa exclusiva de Beta', 'Conteúdo de outra unidade.', 'normal', null ), $ids['b'], bin2hex( random_bytes( 16 ) ) );
+wp_set_current_user( $admin );
+$service->revokeGrant( $ids['b'], $team_b_grant, $auth->find( $ids['b'] )->revision, $context() );
+$login( $ids['b'] );
+$assert( $other_unit->id === $repo->find( $other_unit->id )?->id, 'Beta conserva tarefa própria sem a concessão temporária de gestão' );
+$login( $ids['a'] );
+$assert( null === $repo->find( $other_unit->id ), 'Alfa não lê tarefa existente de Beta' );
+try {
+	$repo->change( $other_unit->id, 'start', 1, array( 'reason' => '' ) );
+	$assert( false, 'Alfa alterou tarefa de Beta' );
+} catch ( DomainException ) {
+	$assert( true, 'Alfa não altera tarefa existente de Beta' );
+}
+$login( $ids['manager'] );
+$assert( null === $repo->find( $other_unit->id, 'team' ), 'gestor A não recupera tarefa existente em B' );
+$page_ids = array();
+for ( $number = 1; 21 >= $number; ++$number ) {
+	$page_ids[] = $repo->create( new TaskContent( sprintf( 'Paginação sintética %02d', $number ), '', 'normal', null ), $ids['a'], bin2hex( random_bytes( 16 ) ) )->id;
+}
+$query = static fn( string $page ): \Arn\Intranet\Tasks\TaskSelection => \Arn\Intranet\Tasks\TaskSelection::parse(
+	array(
+		'q'    => 'Paginação sintética',
+		'page' => $page,
+	)
+);
+$one   = $repo->listing( $query( '1' ), 'team' );
+$two   = $repo->listing( $query( '2' ), 'team' );
+$assert( 21 === $one['total'] && 20 === count( $one['items'] ) && 1 === count( $two['items'] ), 'selecção SQL autorizada pagina vinte mais um' );
+$assert( array_merge( array_column( $one['items'], 'id' ), array_column( $two['items'], 'id' ) ) === $page_ids, 'ordem estável sem duplicados entre páginas' );
+$assert( array() === $repo->listing( $query( (string) PHP_INT_MAX ), 'team' )['items'], 'página excessiva vazia sem overflow' );
+$assert( 0 === $repo->listing( $query( '1' ), 'own' )['total'], 'gestão não transforma tarefas da equipa em próprias' );
+$login( $ids['a'] );
+$assert( 21 === $repo->listing( $query( '1' ), 'own' )['total'], 'destinatário conta apenas tarefas próprias autorizadas' );
+$assert( ! isset( $repo->detail( $page_ids[0], 'own' )['history'][0]['reason'] ), 'destinatário não recebe motivos de gestão na projecção SQL' );
+$login( $ids['b'] );
+$assert( 0 === $repo->listing( $query( '1' ), 'own' )['total'] && null === $repo->listing( $query( '1' ), 'team' ), 'outra unidade não infere linhas ou contagens' );
+$login( $ids['manager'] );
 $race = $repo->create( new TaskContent( 'Concorrência sintética', '', 'normal', null ), $ids['a'], bin2hex( random_bytes( 16 ) ) );
 $login( $ids['a'] );
 ++$now;

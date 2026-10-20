@@ -16,6 +16,8 @@ use Arn\Intranet\Documents\Catalog\DocumentPortal;
 use Arn\Intranet\Communications\NoticeSelection;
 use Arn\Intranet\Calendar\AgendaSelection;
 use Arn\Intranet\F112\Portal;
+use Arn\Intranet\Tasks\Portal as TaskPortal;
+use Arn\Intranet\Tasks\TaskSelection;
 use WP_Post;
 
 // phpcs:disable Squiz.Commenting -- No preview, management, filesystem or raw SQL source is used.
@@ -53,8 +55,11 @@ final class WordPressSources {
 			$parameter = 'news' === $key ? 'arn_news' : 'arn_doc';
 		} else {
 			$this->destinations ??= array_column( ( new ServiceDirectory( people: static fn(): array => PeopleNavigation::destinations( Readers::people( $connections ) ) ) )->items(), 'url', 'id' );
-			$module               = str_starts_with( $key, 'calendar' ) ? 'calendar' : $key;
-			$url                  = $this->destinations[ $module ] ?? null;
+			// In the closed local roster, team scope includes the manager's own unit.
+			// Choose one authorised surface so overlapping own/team rows are not duplicated.
+			$task_view = isset( $this->destinations['tasks_team'] ) ? 'team' : 'own';
+			$module    = 'tasks' === $key ? 'tasks_' . $task_view : ( str_starts_with( $key, 'calendar' ) ? 'calendar' : $key );
+			$url       = $this->destinations[ $module ] ?? null;
 			if ( null === $url ) {
 				return null; }
 			if ( 'directory' === $key ) {
@@ -66,6 +71,15 @@ final class WordPressSources {
 				);
 				$list      = null === $selection ? null : Readers::people( $connections )->contactList( $selection );
 				$parameter = 'person';
+			} elseif ( 'tasks' === $key ) {
+				$selection = TaskSelection::parse(
+					array(
+						'q'    => $query->q,
+						'page' => (string) $page,
+					)
+				);
+				$list      = null === $selection ? null : ( new TaskPortal() )->listing( $selection, $task_view );
+				$parameter = 'entry';
 			} else {
 				$state = match ( $key ) {
 					'calendar_history' => 'history', 'calendar_cancelled' => 'cancelled', default => 'future' };
