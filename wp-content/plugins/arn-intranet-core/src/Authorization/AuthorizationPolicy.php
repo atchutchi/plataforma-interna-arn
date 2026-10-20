@@ -77,6 +77,7 @@ final class AuthorizationPolicy {
 			Role::NoticeReviewer => array( Action::ReviewInstitutionalNotice, Action::DecideInstitutionalNotice ),
 			Role::UnitEventManager => array( Action::ManageUnitEvent ),
 			Role::InstitutionalEventManager => array( Action::ManageInstitutionalEvent ),
+			Role::CmsAdministrator => array( Action::ManageCmsSettings ),
 		};
 		return in_array( $action, $actions, true );
 	}
