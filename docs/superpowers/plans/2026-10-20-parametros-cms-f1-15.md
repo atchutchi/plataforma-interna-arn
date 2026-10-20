@@ -34,18 +34,18 @@ Criar Cms/SettingsSchema.php, Cms/SettingsRepository.php, Cms/CurrentActor.php e
 
 Criar instalador explícito, página de parâmetros com motivo e revisão, histórico paginado e recuperação de campos. Registar o destino autorizado no Painel ARN. Ligar a política efectiva aos novos uploads de News e Documents/Catalog. Manter as leituras e duplicação de versões anteriores com os limites estruturais originais. Revalidar admissão no commit dos dois repositórios. Documentar a limpeza de blobs temporários e implementar os ensaios de falha correspondentes.
 
-- [x] Implementar instalador, transporte, interface e consumidores sem activar fixtures reais. Aceitação HTTP ainda por executar.
-- [x] Aplicar as orientações Impeccable e UI UX Pro Max à interface existente. Inspecção visual e interacção no browser ainda pendentes.
+- [x] Implementar instalador, transporte, interface e consumidores sem activar fixtures reais. Aceitação HTTP concluída no laboratório separado 8892.
+- [x] Aplicar as orientações Impeccable e UI UX Pro Max à interface existente. Inspecção visual e interacção no browser concluídas, com limites registados na QA.
 
-Progresso: SettingsReader e UploadAdmission ligados a create/revise. O runtime envia proveniência, revalidada contra a versão bloqueada. As autoridades implementam assertUploadCurrent, sem repetir leituras de conta noutra ligação. ImportBatch exige propriedade exacta e ausência bloqueada em files/audit antes do descarte. MariaDB passou 92 controlos com runtimes/ficheiros reais e identidade/sessão sintéticas, preservando as 40 tabelas de negócio. LocalInstaller cria apenas as duas fixtures novas e recusa colisões ou reparação parcial. SettingsPage usa nonce, revisão e autoridade corrente, SettingsView apresenta política em vigor, campos recuperados e histórico. Ensaio nativo CLI passou 31 controlos e preservou 152 tabelas anteriores. Próximo trabalho obrigatório: HTTP/Playwright com os dois consumidores. Não activar a parcela na demonstração antes da aceitação.
+Progresso: SettingsReader e UploadAdmission ligados a create/revise. O runtime envia proveniência, revalidada contra a versão bloqueada. As autoridades implementam assertUploadCurrent, sem repetir leituras de conta noutra ligação. ImportBatch exige propriedade exacta e ausência bloqueada em files/audit antes do descarte. MariaDB passou 92 controlos com runtimes/ficheiros reais e identidade/sessão sintéticas, preservando as 40 tabelas de negócio. LocalInstaller cria apenas as duas fixtures novas e recusa colisões ou reparação parcial. SettingsPage usa nonce, revisão e autoridade corrente, SettingsView apresenta política em vigor, campos recuperados e histórico. Ensaio nativo CLI passou 31 controlos e preservou 152 tabelas anteriores. HTTP/Playwright com os dois consumidores concluído e documentado. A demonstração 8888 não foi alterada.
 
 ## Tarefa 4: aceitação e entrega
 
 - [x] Suite PHP 974/4983/quatro omissões Windows, Node 55, PHPCS 19, lint/build e ensaio nativo CLI 31. SQL de consumidores 92 no incremento anterior, sem alterações a esses contratos nesta parcela.
 - [x] Revisão independente da implementação nativa sem achados. Acrescentados depois quatro controlos de renderização e foco do erro.
-- [ ] Commit, push, PR e CI no SHA exacto.
-- [ ] Instalação explícita no laboratório fictício, Playwright CFG-13, preservação de versões/tabelas e relatório CFG-01 a CFG-14.
-- [ ] README com resultados reais, limitações e próximo módulo. Merge apenas depois da CI final verde.
+- [x] Implementação em commit/push/PR, com vinte checks em 4bf27a6. O commit documental final exige nova CI antes do merge.
+- [x] Instalação explícita no laboratório fictício, Playwright CFG-13, preservação de versões/tabelas e relatório CFG-01 a CFG-14.
+- [x] README com resultados reais, limitações e próximos módulos. Merge apenas depois da CI final verde, com resultado registado na PR #59.
 
 ## Continuidade do objectivo completo
 
