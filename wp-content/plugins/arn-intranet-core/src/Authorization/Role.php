@@ -23,4 +23,5 @@ enum Role {
 	case NoticeReviewer;
 	case UnitEventManager;
 	case InstitutionalEventManager;
+	case CmsAdministrator;
 }

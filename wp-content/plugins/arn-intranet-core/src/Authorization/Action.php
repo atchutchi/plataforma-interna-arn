@@ -34,4 +34,5 @@ enum Action {
 	case ManageAccount;
 	case ManageGrants;
 	case ManageDocuments;
+	case ManageCmsSettings;
 }

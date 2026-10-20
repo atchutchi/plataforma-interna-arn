@@ -57,6 +57,8 @@ $current    = new CurrentNewsActor(
 $real       = new WpdbNewsAuthority( $db, $current );
 $authority  = new class( $real, $context['entered'], $db ) implements NewsAuthority {
 	public function __construct( private readonly NewsAuthority $real, private readonly string $entered, private readonly IdentityWpdb $database ) {}
+	public function assertUploadCurrent(): void {
+		$this->real->assertUploadCurrent(); }
 	public function lockAndAssert( int $author_id, Scope $review_scope, string $operation ): array {
 		if ( false === file_put_contents( $this->entered, (string) $this->database->get_var( 'SELECT CONNECTION_ID()' ), LOCK_EX ) ) {
 			throw new RuntimeException( 'Sinal de ensaio indisponível.' );

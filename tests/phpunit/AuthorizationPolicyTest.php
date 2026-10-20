@@ -37,6 +37,7 @@ final class AuthorizationPolicyTest extends TestCase {
 			'NoticeReviewer'            => array( 'ReviewInstitutionalNotice', 'DecideInstitutionalNotice' ),
 			'UnitEventManager'          => array( 'ManageUnitEvent' ),
 			'InstitutionalEventManager' => array( 'ManageInstitutionalEvent' ),
+			'CmsAdministrator'          => array( 'ManageCmsSettings' ),
 		);
 		foreach ( Role::cases() as $role ) {
 			foreach ( Action::cases() as $action ) {

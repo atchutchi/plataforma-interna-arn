@@ -8,6 +8,7 @@ declare(strict_types=1);
 namespace Arn\Intranet\News;
 
 use Arn\Intranet\Authorization\Scope;
+use Arn\Intranet\Cms\UploadAdmission;
 use Arn\Intranet\Authorization\Storage\AuthorizationSchema;
 use Arn\Intranet\Documents\PrivateFiles\FileRecord;
 use Arn\Intranet\Documents\PrivateFiles\FileSchema;
@@ -46,6 +47,7 @@ final class WpdbNewsRepository {
 				if ( $author_id !== $decision['actor_id'] ) {
 						throw new RuntimeException( self::ERROR );
 				}
+				$this->admit( $initial, null, array() );
 				$now = gmdate( 'Y-m-d H:i:s', $initial->created_at );
 				$this->execute( $this->database->prepare( "INSERT INTO %i (post_author,post_date,post_date_gmt,post_content,post_title,post_status,post_type,post_name,post_modified,post_modified_gmt) VALUES (%d,%s,%s,'','Notícia privada','private','arn_noticia','',%s,%s)", $this->schema->table( 'posts' ), $author_id, $now, $now, $now, $now ), 1 );
 				$id      = (int) $this->database->insert_id;
@@ -53,25 +55,28 @@ final class WpdbNewsRepository {
 				$this->execute( $this->database->prepare( 'INSERT INTO %i (id,author_id,review_queue,revision,submitted_version,submitted_at,created_at) VALUES (%d,%d,%s,1,NULL,NULL,%d)', $this->schema->table( 'news' ), $id, $author_id, $review_scope->targets[0], $initial->created_at ), 1 );
 				$this->insertVersion( $id, $initial );
 				$this->audit( $id, 1, 'created', $author_id, $reason, $initial->created_at, 1 );
+				$this->authority->assertUploadCurrent();
 				return $article;
 			}
 		);
 	}
 
-	public function revise( int $id, Version $next, int $expected, string $reason ): Article {
+	public function revise( int $id, Version $next, int $expected, string $reason, array $retained = array() ): Article {
 		$this->reason( $reason );
 		$preflight = $this->preflight( $id );
 		return $this->transaction(
-			function () use ( $id, $next, $expected, $reason, $preflight ): Article {
+			function () use ( $id, $next, $expected, $reason, $preflight, $retained ): Article {
 				$decision = $this->authority->lockAndAssert( $preflight['author_id'], $preflight['scope'], 'revise' );
 				if ( $decision['actor_id'] !== $next->actor_id ) {
 						throw new RuntimeException( self::ERROR );
 				}
 				$before = $this->lockedArticle( $id, $preflight );
 				$after  = $before->revise( $next, $expected, $reason );
+				$this->admit( $next, $before->version( count( $before->versions ) ), $retained );
 				$this->insertVersion( $id, $next );
 				$this->execute( $this->database->prepare( 'UPDATE %i SET revision=%d WHERE id=%d AND revision=%d', $this->schema->table( 'news' ), $after->revision, $id, $expected ), 1 );
 				$this->audit( $id, $after->revision, 'revised', $decision['actor_id'], $reason, $next->created_at, $next->number );
+				$this->authority->assertUploadCurrent();
 				return $after;
 			}
 		);
@@ -249,6 +254,34 @@ final class WpdbNewsRepository {
 
 	private function assertFile( object $row ): void {
 		( new NewsHydrator( $this->database ) )->assertFile( $row );
+	}
+
+	/** Validate provenance against the locked latest version, never a request assertion. */
+	private function admit( Version $next, ?Version $previous, array $retained ): void {
+		$assets = static fn( Version $version ): array => array_merge( null === $version->content->featured ? array() : array( $version->content->featured ), $version->content->gallery, $version->content->attachments );
+		$before = array();
+		foreach ( null === $previous ? array() : $assets( $previous ) as $asset ) {
+			$before[ $asset->blob->id ] = $asset;
+		}
+		$next_assets = $assets( $next );
+		$policy      = array() === $next_assets ? null : ( new UploadAdmission( $this->database ) )->policy();
+		$seen        = array();
+		foreach ( $next_assets as $asset ) {
+			$source = null;
+			if ( array_key_exists( $asset->blob->id, $retained ) ) {
+				$id = $retained[ $asset->blob->id ];
+				if ( ! is_string( $id ) || ! isset( $before[ $id ] ) || $before[ $id ]->kind !== $asset->kind || isset( $seen[ $id ] ) ) {
+					throw new RuntimeException( self::ERROR );
+				}
+				$seen[ $id ] = true;
+				$source      = $before[ $id ]->blob;
+				unset( $retained[ $asset->blob->id ] );
+			}
+			UploadAdmission::assertAllowed( $policy, 'attachment' === $asset->kind ? 'news_attachment' : 'news_image', $asset->blob, $source );
+		}
+		if ( array() !== $retained ) {
+			throw new RuntimeException( self::ERROR );
+		}
 	}
 
 	private function insertVersion( int $id, Version $version ): void {

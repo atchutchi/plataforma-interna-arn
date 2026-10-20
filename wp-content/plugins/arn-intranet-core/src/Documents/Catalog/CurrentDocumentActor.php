@@ -66,6 +66,12 @@ final class CurrentDocumentActor {
 		return ( $this->session_reader )( $user_id );
 	}
 
+	/** Current server principal only, without a new authorization transaction. */
+	public function principalId(): ?int {
+		$id = ( $this->principal )();
+		return is_int( $id ) && $id > 0 ? $id : null;
+	}
+
 	/** Re-read token metadata after SQL locks rather than trusting a prior copy. */
 	public static function session( int $user_id ): array {
 		$token = wp_get_session_token();

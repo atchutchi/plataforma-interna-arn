@@ -14,11 +14,98 @@ use Arn\Intranet\Documents\PrivateFiles\PrivateFileDelivery;
 use Arn\Intranet\Documents\PrivateFiles\BlobDescriptor;
 use Arn\Intranet\Documents\PrivateFiles\FileRecord;
 use Arn\Intranet\Documents\PrivateFiles\PrivateFilesReadControl;
+use Arn\Intranet\Documents\PrivateFiles\ImportBatch;
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/PrivateFilesReadDouble.php';
 
 final class PrivateFilesTest extends TestCase {
+	public function testDiscardRequiresExactOwnedDescriptorAndPreservesOriginal(): void {
+		$source = $this->base . '/public/source.pdf';
+		file_put_contents( $source, "%PDF-1.4\n%%EOF\n" );
+		$store = new PrivateBlobStore( $this->base . '/private', array( $this->base . '/public' ), array( 'application/pdf' ), 100 );
+		$other = new PrivateBlobStore( $this->base . '/private', array( $this->base . '/public' ), array( 'application/pdf' ), 100 );
+		$first = $store->importFile( $source );
+		$copy  = $store->duplicate( $first );
+		foreach ( array( array( $other, $copy ), array( $store, clone $copy ) ) as [$candidate, $descriptor] ) {
+			try {
+				$candidate->discardCreated( $descriptor );
+				self::fail( 'Foreign descriptor accepted.' );
+			} catch ( RuntimeException ) {
+				self::assertFileExists( $this->base . '/private/' . $copy->id );
+			}
+		}
+		$store->discardCreated( $copy );
+		self::assertFileDoesNotExist( $this->base . '/private/' . $copy->id );
+		self::assertFileExists( $this->base . '/private/' . $first->id );
+		$store->releaseCreated( $first );
+		$this->expectException( RuntimeException::class );
+		$store->discardCreated( $first );
+	}
+
+	public function testDiscardRefusesChangedBytes(): void {
+		$source = $this->base . '/public/source.pdf';
+		file_put_contents( $source, "%PDF-1.4\n%%EOF\n" );
+		$store = new PrivateBlobStore( $this->base . '/private', array( $this->base . '/public' ), array( 'application/pdf' ), 100 );
+		$blob  = $store->importFile( $source );
+		$path  = $this->base . '/private/' . $blob->id;
+		file_put_contents( $path, "%PDF-1.5\n%%EOF\n" );
+		try {
+			$store->discardCreated( $blob );
+			self::fail( 'Modified copy removed.' );
+		} catch ( RuntimeException ) {
+			self::assertFileExists( $path );
+		}
+	}
+
+	public function testBatchRetainsBytesWhenRegistryUnavailableAndPreservesOriginalError(): void {
+		$source = $this->base . '/public/source.pdf';
+		file_put_contents( $source, "%PDF-1.4\n%%EOF\n" );
+		$store    = new PrivateBlobStore( $this->base . '/private', array( $this->base . '/public' ), array( 'application/pdf' ), 100 );
+		$batch    = new ImportBatch( $store );
+		$original = new RuntimeException( 'Original refusal' );
+		$created  = array();
+		$attempts = 0;
+		try {
+			$batch->run(
+				static function ( ImportBatch $attempt ) use ( $source, $original, &$created ): void {
+					$created[] = $attempt->importFile( $source );
+					$created[] = $attempt->duplicate( $created[0] );
+					throw $original;
+				},
+				static function () use ( &$attempts ): never {
+					++$attempts;
+					throw new RuntimeException( 'Database unavailable' );
+				}
+			);
+			self::fail( 'Failure swallowed.' );
+		} catch ( RuntimeException $caught ) {
+			self::assertSame( $original, $caught );
+		}
+		self::assertSame( 2, $attempts );
+		foreach ( $created as $blob ) {
+			self::assertFileExists( $this->base . '/private/' . $blob->id );
+		}
+		$this->expectException( RuntimeException::class );
+		$batch->importFile( $source );
+	}
+
+	public function testSuccessfulBatchReleasesOwnershipAndCannotRunAgain(): void {
+		$source = $this->base . '/public/source.pdf';
+		file_put_contents( $source, "%PDF-1.4\n%%EOF\n" );
+		$store = new PrivateBlobStore( $this->base . '/private', array( $this->base . '/public' ), array( 'application/pdf' ), 100 );
+		$batch = new ImportBatch( $store );
+		$blob  = $batch->run( static fn( ImportBatch $attempt ): BlobDescriptor => $attempt->importFile( $source ), static fn() => throw new RuntimeException( 'Must not resolve registry' ) );
+		try {
+			$store->discardCreated( $blob );
+			self::fail( 'Successful copy removed.' );
+		} catch ( RuntimeException ) {
+			self::assertFileExists( $this->base . '/private/' . $blob->id );
+		}
+		$this->expectException( RuntimeException::class );
+		$batch->run( static fn() => null, static fn() => null );
+	}
+
 	public function testDuplicateCreatesIndependentVerifiedBlob(): void {
 		$source = $this->base . '/public/source.pdf';
 		file_put_contents( $source, "%PDF-1.4\n%%EOF\n" );

@@ -35,6 +35,6 @@ Após os 20 checks aprovados em 071d0cb, foi aplicado apenas SqlBoundary.php à 
 
 ## Próximas fases
 
-A próxima implementação é F1-15, parâmetros autorizados e auditados do CMS. O [escopo e os critérios preparados](parametros-cms-local-f1-15.md) distinguem o mecanismo técnico da atribuição institucional de competências. F1-15 continua parcial até à implementação, testes e aceitação dessa parcela.
+Actualização de fecho: a parcela F1-15 de limites e formatos de uploads passou a aceitação no laboratório separado 8892. O [escopo](parametros-cms-local-f1-15.md) e a [matriz de evidência](qa-parametros-cms-local-f1-15.md) distinguem a entrega técnica da atribuição institucional de competências. A PR #59 exige CI verde do SHA final antes de integrar. A demonstração 8888 não foi alterada. F1-15 institucional e as operações dos módulos restantes continuam em curso.
 
 Depois seguem as lacunas comuns F1-08/09/10 de media e ficheiros, F2-01/02 pedidos e decisões, F2-03 férias, F2-04 suporte e F2-05/06 painel/pesquisa/notificações. A aceitação final F1-16, a infraestrutura representativa e F1-17/release ficam no fim, conforme a sequência obrigatória do README. Os ensaios de segurança por módulo continuam durante o desenvolvimento. Não se declara F1/F2 ou o site completo concluído com estas integrações.

@@ -69,6 +69,12 @@ final class CurrentNewsActor {
 		return ( $this->session_reader )( $user_id );
 	}
 
+	/** Current server principal only, without a new authorization transaction. */
+	public function principalId(): ?int {
+		$id = ( $this->principal )();
+		return is_int( $id ) && $id > 0 && null !== $this->unitsFor( $id ) ? $id : null;
+	}
+
 	/** Trusted server roster; grants and account state are checked after locks. */
 	public function reviewerIds(): array {
 		return ( $this->reviewer_provider )();

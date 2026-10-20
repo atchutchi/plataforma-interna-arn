@@ -23,7 +23,8 @@ use RuntimeException;
 final class WpdbDocumentAuthority implements DocumentAuthority {
 	private readonly WpdbAuthorizationRepository $repository;
 	private readonly AuthorizationSchema $schema;
-	private array $locked = array();
+	private array $locked          = array();
+	private ?array $upload_context = null;
 
 	public function __construct( private readonly IdentityWpdb $database, private readonly CurrentDocumentActor $current ) {
 		$this->schema     = new AuthorizationSchema( $database );
@@ -31,7 +32,8 @@ final class WpdbDocumentAuthority implements DocumentAuthority {
 	}
 
 	public function lockAndAssert( Scope $scope, array $recipient_ids ): int {
-		$this->locked = array();
+		$this->upload_context = null;
+		$this->locked         = array();
 		if ( ! $this->database->inTransaction() ) {
 			throw new RuntimeException( 'Autoridade documental indisponível.' );
 		}
@@ -57,7 +59,24 @@ final class WpdbDocumentAuthority implements DocumentAuthority {
 		if ( $session !== $fresh_session || ! LocalAccountSessionPolicy::valid( $this->locked[ $actor_id ], $actor_id, $fresh_session, true ) || ! DocumentPolicy::canManageScope( $scope, $this->locked[ $actor_id ], $fresh_session, time() ) ) {
 			throw new RuntimeException( 'Operação documental não autorizada.' );
 		}
+		$this->upload_context = array(
+			'actor_id' => $actor_id,
+			'scope'    => $scope,
+			'session'  => $fresh_session,
+		);
 		return $actor_id;
+	}
+
+	public function assertUploadCurrent(): void {
+		$context = $this->upload_context;
+		if ( ! $this->database->inTransaction() || null === $context ) {
+			throw new RuntimeException( 'Autoridade documental indisponível.' );
+		}
+		$actor = $context['actor_id'];
+		$fresh = $this->current->sessionFor( $actor );
+		if ( $actor !== $this->current->principalId() || $fresh !== $context['session'] || ! DocumentPolicy::canManageScope( $context['scope'], $this->locked[ $actor ], $fresh, time() ) ) {
+			throw new RuntimeException( 'Operação documental não autorizada.' );
+		}
 	}
 
 	public function assertActiveRecipients( array $recipient_ids ): void {

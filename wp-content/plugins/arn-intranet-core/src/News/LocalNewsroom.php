@@ -9,6 +9,7 @@ namespace Arn\Intranet\News;
 
 use Arn\Intranet\Authorization\Scope;
 use Arn\Intranet\Documents\PrivateFiles\LocalPrivateFiles;
+use Arn\Intranet\Documents\PrivateFiles\ImportBatch;
 use Arn\Intranet\Documents\PrivateFiles\PrivateBlobStore;
 use Arn\Intranet\Documents\PrivateFiles\WpdbFileRegistry;
 use Arn\Intranet\Identity\IdentityWpdb;
@@ -62,9 +63,14 @@ final class LocalNewsroom {
 		if ( $this->hasExisting( $input ) ) {
 			throw new RuntimeException( self::ERROR );
 		}
-		$content      = $this->content( $input, null );
-		[$repository] = ( $this->repository_factory )();
-		return $repository->create( $actor[1], Scope::queues( array( 'editorial-ficticia' ) ), new Version( 1, $content, $actor[1], time() ), $reason );
+		return ( new ImportBatch( ( $this->store_factory )() ) )->run(
+			function ( ImportBatch $batch ) use ( $input, $actor, $reason ): Article {
+				$content      = $this->content( $input, null, $batch );
+				[$repository] = ( $this->repository_factory )();
+				return $repository->create( $actor[1], Scope::queues( array( 'editorial-ficticia' ) ), new Version( 1, $content, $actor[1], time() ), $reason );
+			},
+			fn(): WpdbFileRegistry => ( $this->repository_factory )()[1]
+		);
 	}
 
 	/** Append only from the latest authorised draft version. */
@@ -76,8 +82,14 @@ final class LocalNewsroom {
 			throw new RuntimeException( self::ERROR );
 		}
 		$this->validateText( $input );
-		$content = $this->content( $input, $before );
-		return $repository->revise( $id, new Version( count( $before->versions ) + 1, $content, $actor[1], time() ), $expected, $reason );
+		return ( new ImportBatch( ( $this->store_factory )() ) )->run(
+			function ( ImportBatch $batch ) use ( $input, $before, $repository, $id, $actor, $expected, $reason ): Article {
+				$retained = array();
+				$content  = $this->content( $input, $before, $batch, $retained );
+				return $repository->revise( $id, new Version( count( $before->versions ) + 1, $content, $actor[1], time() ), $expected, $reason, $retained );
+			},
+			fn(): WpdbFileRegistry => ( $this->repository_factory )()[1]
+		);
 	}
 
 	public function submit( int $id, int $expected, string $reason ): Article {
@@ -308,7 +320,7 @@ final class LocalNewsroom {
 		return false;
 	}
 
-	private function content( DraftInput $input, ?Article $before ): Content {
+	private function content( DraftInput $input, ?Article $before, ImportBatch $batch, array &$retained = array() ): Content {
 		$latest  = null === $before ? array() : array_merge(
 			null === $before->version( count( $before->versions ) )->content->featured ? array() : array( $before->version( count( $before->versions ) )->content->featured ),
 			$before->version( count( $before->versions ) )->content->gallery,
@@ -332,11 +344,13 @@ final class LocalNewsroom {
 				$used[ $media->existing_id ] = true;
 			}
 		}
-		$store       = ( $this->store_factory )();
-		$make        = function ( string $kind, MediaInput $media ) use ( $store, $allowed ): Asset {
-			$blob = null !== $media->existing_id ? $store->duplicate( $allowed[ $media->existing_id ]->blob ) : $store->importFile( $media->source );
+		$make        = function ( string $kind, MediaInput $media ) use ( $batch, $allowed, &$retained ): Asset {
+			$blob = null !== $media->existing_id ? $batch->duplicate( $allowed[ $media->existing_id ]->blob ) : $batch->importFile( $media->source );
+			if ( null !== $media->existing_id ) {
+				$retained[ $blob->id ] = $media->existing_id;
+			}
 			if ( 'attachment' !== $kind ) {
-				$this->assertImage( $store, $blob );
+				$this->assertImage( $batch->store, $blob );
 			}
 			return new Asset( $kind, $blob, $media->description );
 		};

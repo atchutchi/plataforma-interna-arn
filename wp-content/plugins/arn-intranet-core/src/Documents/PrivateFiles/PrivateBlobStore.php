@@ -15,6 +15,11 @@ use Throwable;
 
 /** Copia ficheiros para fora das raízes públicas e valida cada leitura. */
 final class PrivateBlobStore {
+	/** Exact descriptors created by this instance and not yet released.
+	 *
+	 * @var array<string, BlobDescriptor>
+	 */
+	private array $created = array();
 	/**
 	 * Raiz canónica privada.
 	 *
@@ -116,7 +121,9 @@ final class PrivateBlobStore {
 			if ( $size !== $verified['size'] || ! hash_equals( hash_final( $hash ), $verified['hash'] ) || ! in_array( $verified['mime'], $this->allowed_mimes, true ) ) {
 				throw new RuntimeException( 'Ficheiro privado indisponível.' );
 			}
-			return new BlobDescriptor( $id, $verified['hash'], $size, $verified['mime'] );
+			$blob                 = new BlobDescriptor( $id, $verified['hash'], $size, $verified['mime'] );
+			$this->created[ $id ] = $blob;
+			return $blob;
 		} catch ( Throwable ) {
 			if ( is_resource( $output ) ) {
 				fclose( $output );
@@ -169,6 +176,7 @@ final class PrivateBlobStore {
 			$copy   = new BlobDescriptor( $id, $source->sha256, $source->size, $source->mime );
 			$check  = $this->open( $copy );
 			fclose( $check );
+			$this->created[ $id ] = $copy;
 			return $copy;
 		} catch ( Throwable ) {
 			if ( is_resource( $output ) ) {
@@ -181,6 +189,36 @@ final class PrivateBlobStore {
 		} finally {
 			fclose( $input );
 		}
+	}
+
+	/** Forget ownership after a successful registration, without removing bytes.
+	 *
+	 * @param BlobDescriptor $blob Exact descriptor returned by this instance.
+	 */
+	public function releaseCreated( BlobDescriptor $blob ): void {
+		if ( ( $this->created[ $blob->id ] ?? null ) === $blob ) {
+			unset( $this->created[ $blob->id ] );
+		}
+	}
+
+	/** Remove only an owned, unchanged copy after the caller locks SQL absence.
+	 *
+	 * @param BlobDescriptor $blob Exact descriptor returned by this instance.
+	 * @throws RuntimeException When ownership or byte integrity cannot be proved.
+	 */
+	public function discardCreated( BlobDescriptor $blob ): void {
+		if ( ( $this->created[ $blob->id ] ?? null ) !== $blob ) {
+			throw new RuntimeException( 'Ficheiro privado indisponível.' );
+		}
+		$handle = $this->open( $blob );
+		fclose( $handle );
+		$this->assertRoot();
+		$path = $this->root . DIRECTORY_SEPARATOR . $blob->id;
+		self::assertNoLinks( $path );
+		if ( ! @unlink( $path ) ) {
+			throw new RuntimeException( 'Ficheiro privado indisponível.' );
+		}
+		$this->releaseCreated( $blob );
 	}
 
 	/**

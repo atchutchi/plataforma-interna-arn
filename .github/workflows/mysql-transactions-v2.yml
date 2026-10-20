@@ -79,6 +79,13 @@ jobs:
           ARN_TX_TEST_NAME: arn_tx_test
           ARN_TX_TEST_HOST: 127.0.0.1:3306
         run: php tests/integration/mysql-transaction-completion.php /tmp/class-wpdb.php
+      - name: Validar parâmetros CMS, auditoria e concorrência
+        env:
+          ARN_TX_TEST_USER: arn_tx
+          ARN_TX_TEST_PASSWORD: test
+          ARN_TX_TEST_NAME: arn_tx_test
+          ARN_TX_TEST_HOST: 127.0.0.1:3306
+        run: php tests/integration/mysql-cms-settings.php /tmp/class-wpdb.php ${{ github.workspace }}
       - name: Executar revisão adversarial
         env:
           ARN_TX_ADVERSARIAL_REVIEW: '1'
@@ -141,3 +148,10 @@ jobs:
           ARN_TX_TEST_NAME: arn_tx_test
           ARN_TX_TEST_HOST: 127.0.0.1:3307
         run: php tests/integration/mysql-transaction-completion.php /tmp/class-wpdb.php
+      - name: Validar parâmetros CMS, auditoria e concorrência
+        env:
+          ARN_TX_TEST_USER: arn_tx
+          ARN_TX_TEST_PASSWORD: test
+          ARN_TX_TEST_NAME: arn_tx_test
+          ARN_TX_TEST_HOST: 127.0.0.1:3307
+        run: php tests/integration/mysql-cms-settings.php /tmp/class-wpdb.php ${{ github.workspace }}

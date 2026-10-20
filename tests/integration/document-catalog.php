@@ -92,6 +92,7 @@ try {
 	$assert( '0' === (string) $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM %i', $files->table( 'files' ) ) ), 'rollback exterior reverte registo' );
 	$authority  = new class() implements DocumentAuthority {
 		// phpcs:disable Generic.CodeAnalysis.UnusedFunctionParameter
+		public function assertUploadCurrent(): void {  }
 		public function lockAndAssert( Scope $scope, array $recipient_ids ): int {
 			return 1; }
 		public function assertActiveRecipients( array $recipient_ids ): void {}
