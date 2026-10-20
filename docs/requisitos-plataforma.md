@@ -1047,4 +1047,3 @@ Referências de infraestrutura consultadas em 8 de outubro de 2026 e de desenvol
 - [W39] [Microsoft, sistemas de ficheiros WSL](https://learn.microsoft.com/en-us/windows/wsl/filesystems) e [GitHub, email de commits](https://docs.github.com/en/account-and-profile/how-tos/email-preferences/setting-your-commit-email-address).
 - [W40] [npm, npm ci](https://docs.npmjs.com/cli/v11/commands/npm-ci/).
 - [W41] [Docker Compose, COMPOSE_ENV_FILES e precedência das variáveis](https://docs.docker.com/compose/how-tos/environment-variables/envvars/#compose_env_files).
-

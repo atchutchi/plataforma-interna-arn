@@ -29,7 +29,7 @@ try {
 	file_put_contents( $source, base64_decode( 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=', true ) );
 	$source_hash = hash_file( 'sha256', $source );
 	$assert( ! current_user_can( 'upload_files' ) && ! current_user_can( 'unfiltered_upload' ), 'administrador sem uploads nativos' );
-	$assert( ! current_user_can( 'export' ), 'exportador nativo indisponível' );
+	$assert( ! current_user_can( 'export' ) && ! current_user_can( 'export_others_personal_data' ), 'exportador nativo indisponível' );
 	$assert( NativeMediaBoundary::MESSAGE === wp_upload_dir( null, false, true )['error'], 'directório nativo fechado' );
 	$before = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts}" );
 	$assert( is_wp_error( wp_insert_attachment( array( 'post_title' => $fixture_tag ), false, 0, true ) ), 'inserção de attachment recusada' );

@@ -54,6 +54,6 @@ Os artefactos de QA e os binários ficam em pastas ignoradas. Não são conteúd
 
 ## Critérios ainda abertos
 
-F1-08 permanece Em curso. Falta ligar o armazenamento aos módulos operacionais de documentos e notícias, proteger todos os caminhos de media nativa e derivados, definir admissão institucional e reconciliar órfãos. Faltam ainda testes representativos de tamanho e concorrência, reparse points, ACL, IIS, MySQL 8.4, URL/API e caminhos alternativos de entrega. Os testes locais e a CI devem ser registados com o SHA da entrega.
+Actualização de 20 de outubro: o núcleo e a ligação aos módulos de documentos e notícias estão concluídos localmente. A admissão configurável e transaccional está aceite na PR #59. A [fronteira nativa](fronteira-media-nativa-f1-08.md) fecha a alternativa pública do WordPress. F1-08 ainda precisa de reconciliação, derivados privados, antimalware/quarentena e política institucional. Faltam ensaios representativos de tamanho, concorrência, reparse points, ACL, IIS, MySQL 8.4 e caminhos estáticos alternativos. O README distingue estas lacunas das parcelas já concluídas.
 
 Os 22 anexos reais conservam o circuito de revisão administrativa em `EditorialPreview`. Não são migrados ou disponibilizados à Ana Teste por esta etapa. A configuração e os dados de laboratório ficam fora do Git.

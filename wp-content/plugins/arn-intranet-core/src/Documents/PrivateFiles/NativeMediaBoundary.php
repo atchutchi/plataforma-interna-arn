@@ -53,7 +53,7 @@ final class NativeMediaBoundary {
 	 * @return array Capacidades efectivas.
 	 */
 	public static function capabilities( array $caps, string $cap, int $user_id, array $args ): array {
-		if ( in_array( $cap, array( 'upload_files', 'unfiltered_upload', 'export' ), true ) ) {
+		if ( in_array( $cap, array( 'upload_files', 'unfiltered_upload', 'export', 'export_others_personal_data' ), true ) ) {
 			return array( 'do_not_allow' );
 		}
 		if ( in_array( $cap, array( 'read_post', 'edit_post', 'delete_post', 'edit_post_meta', 'delete_post_meta', 'add_post_meta' ), true ) && isset( $args[0] ) && 'attachment' === get_post_type( (int) $args[0] ) ) {
@@ -191,12 +191,12 @@ final class NativeMediaBoundary {
 	/** Fecha biblioteca, carregamento clássico/assíncrono e AJAX antes dos handlers. */
 	public static function adminRequest(): void {
 		$page = (string) ( $GLOBALS['pagenow'] ?? '' );
-		if ( in_array( $page, array( 'upload.php', 'media-new.php', 'media.php', 'async-upload.php', 'export.php' ), true ) ) {
+		if ( in_array( $page, array( 'upload.php', 'media-new.php', 'media.php', 'async-upload.php', 'export.php', 'export-personal-data.php' ), true ) ) {
 			self::deny();
 		}
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Só decide recusa, nunca executa a acção.
 		$action = $_REQUEST['action'] ?? '';
-		if ( 'admin-ajax.php' === $page && is_string( $action ) && in_array( $action, array( 'query-attachments', 'upload-attachment', 'get-attachment', 'save-attachment', 'save-attachment-compat', 'send-attachment-to-editor', 'image-editor', 'crop-image', 'get-post-thumbnail-html', 'set-post-thumbnail' ), true ) ) {
+		if ( 'admin-ajax.php' === $page && is_string( $action ) && in_array( $action, array( 'query-attachments', 'upload-attachment', 'get-attachment', 'save-attachment', 'save-attachment-compat', 'send-attachment-to-editor', 'image-editor', 'crop-image', 'get-post-thumbnail-html', 'set-post-thumbnail', 'wp-privacy-export-personal-data' ), true ) ) {
 			self::deny();
 		}
 	}

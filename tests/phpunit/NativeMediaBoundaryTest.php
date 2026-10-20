@@ -39,7 +39,7 @@ final class NativeMediaBoundaryTest extends TestCase {
 
 	/** Nem as capacidades de superadministrador abrem os uploads. */
 	public function testNoUploadCapabilityException(): void {
-		foreach ( array( 'upload_files', 'unfiltered_upload', 'export' ) as $cap ) {
+		foreach ( array( 'upload_files', 'unfiltered_upload', 'export', 'export_others_personal_data' ) as $cap ) {
 			foreach ( array( 0, 1, 99 ) as $id ) {
 				self::assertSame( array( 'do_not_allow' ), NativeMediaBoundary::capabilities( array( 'manage_options' ), $cap, $id, array() ) );
 			}
