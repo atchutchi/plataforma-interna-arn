@@ -27,7 +27,7 @@ Criar Cms/UploadPolicy.php, Cms/SettingsState.php e Cms/SettingsActor.php. Acres
 
 Criar Cms/SettingsSchema.php, Cms/SettingsRepository.php, Cms/CurrentActor.php e Cms/Configuration.php. Usar tabelas próprias de estado, auditoria e esquema. O repositório liga-se à autoridade na mesma ligação. read() e history() revalidam acesso. change() bloqueia autoridade e estado, verifica CAS e confirma auditoria/estado juntos. A interface de admissão valida os descritores novos sob bloqueio da revisão até ao commit do módulo consumidor. Testes SQL exclusivos cobrem instalação, rollback, concorrência, revogação e leitura sem escrita.
 
-- [x] Implementar persistência e testes SQL reais. MariaDB passou 32 verificações. Falta a admissão atómica dos consumidores e a prova integrada do adaptador WordPress.
+- [x] Implementar persistência e testes SQL reais. MariaDB passou 69 verificações com admissão atómica em News/Documents, cópias conservadas e expiração durante espera. Autoridades reais usam uma leitura externa por operação. Identidade, sessão e descritores são sintéticos. Falta a prova integrada WordPress.
 - [x] Comprovar conservação de tabelas exteriores e limpeza exclusiva. As 40 tabelas de negócio conservaram os hashes.
 
 ## Tarefa 3: CMS, instalador e consumidores
@@ -36,6 +36,8 @@ Criar instalador explícito, página de parâmetros com motivo e revisão, hist�
 
 - [ ] Implementar o circuito completo sem activar fixtures reais.
 - [ ] Aplicar Impeccable e UI UX Pro Max à interface existente.
+
+Progresso parcial: SettingsReader e UploadAdmission ligados a create/revise. O runtime envia proveniência, revalidada contra a versão bloqueada. As autoridades implementam assertUploadCurrent, sem repetir leituras de conta noutra ligação. Próximo trabalho obrigatório: ciclo de vida dos blobs após erro SQL, inclusive commit de resultado incerto. Só remover bytes próprios da tentativa e comprovadamente sem referências. Não limpar versões anteriores nem aplicar os limites novos ao leitor existente. Depois seguem instalador, página CMS e circuito HTTP/Playwright.
 
 ## Tarefa 4: aceitação e entrega
 

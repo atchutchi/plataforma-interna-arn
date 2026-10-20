@@ -138,7 +138,7 @@ final class LocalDocumentCatalog {
 		}
 		$store = ( $this->store_factory )();
 		$blob  = null === $source ? $store->duplicate( $before->version( count( $before->versions ) )->blob ) : $store->importFile( $source );
-		return $repository->revise( $id, new Revision( count( $before->versions ) + 1, $metadata, $blob, $actor[1], time() ), $expected, $reason );
+		return $repository->revise( $id, new Revision( count( $before->versions ) + 1, $metadata, $blob, $actor[1], time() ), $expected, $reason, null === $source ? $before->version( count( $before->versions ) )->blob->id : null );
 	}
 
 	/** Repository revalidates publication authority and audience under locks. */

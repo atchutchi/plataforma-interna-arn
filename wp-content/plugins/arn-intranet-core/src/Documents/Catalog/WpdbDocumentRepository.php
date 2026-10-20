@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace Arn\Intranet\Documents\Catalog;
 
 use Arn\Intranet\Authorization\Scope;
+use Arn\Intranet\Cms\UploadAdmission;
 use Arn\Intranet\Authorization\Storage\AuthorizationSchema;
 use Arn\Intranet\Documents\PrivateFiles\BlobDescriptor;
 use Arn\Intranet\Documents\PrivateFiles\FileRecord;
@@ -49,6 +50,8 @@ final class WpdbDocumentRepository {
 				if ( $initial->actor_id !== $actor ) {
 					throw new RuntimeException( self::ERROR );
 				}
+				$admission = new UploadAdmission( $this->database );
+				UploadAdmission::assertAllowed( $admission->policy(), 'document', $initial->blob );
 				$now = gmdate( 'Y-m-d H:i:s', $initial->created_at );
 				$this->execute( $this->database->prepare( "INSERT INTO %i (post_author,post_date,post_date_gmt,post_content,post_title,post_status,post_type,post_name,post_modified,post_modified_gmt) VALUES (%d,%s,%s,'','Documento privado','private','arn_documento','',%s,%s)", $this->schema->table( 'posts' ), $actor, $now, $now, $now, $now ), 1 );
 				$id = (int) $this->database->insert_id;
@@ -59,26 +62,36 @@ final class WpdbDocumentRepository {
 				$this->execute( $this->database->prepare( 'INSERT INTO %i (id,scope_type,scope_targets_json,revision,published_version,archived,created_at) VALUES (%d,%s,%s,1,NULL,0,%d)', $this->schema->table( 'documents' ), $id, $scope->type->name, $this->json( $scope->targets ), $initial->created_at ), 1 );
 				$this->insertVersion( $id, $initial );
 				$this->audit( $id, 1, 'created', $actor, $reason, $initial->created_at );
+				$this->authority->assertUploadCurrent();
 				return $doc;
 			}
 		);
 	}
 
 	/** Append a fully independent private original. */
-	public function revise( int $id, Revision $next, int $expected, string $reason ): Document {
+	public function revise( int $id, Revision $next, int $expected, string $reason, ?string $retained_id = null ): Document {
 		$this->reason( $reason );
 		$scope = $this->preflightScope( $id );
 		return $this->transaction(
-			function () use ( $id, $next, $expected, $reason, $scope ): Document {
+			function () use ( $id, $next, $expected, $reason, $scope, $retained_id ): Document {
 				$actor = $this->authority->lockAndAssert( $scope, $next->metadata->recipient_ids );
 				if ( $actor !== $next->actor_id ) {
 					throw new RuntimeException( self::ERROR );
 				}
-				$before = $this->lockedDocument( $id, $scope );
-				$after  = $before->revise( $next, $expected );
+				$before   = $this->lockedDocument( $id, $scope );
+				$after    = $before->revise( $next, $expected );
+				$previous = null;
+				if ( null !== $retained_id ) {
+					$previous = $before->version( count( $before->versions ) )->blob;
+					if ( $previous->id !== $retained_id ) {
+						throw new RuntimeException( self::ERROR );
+					}
+				}
+				UploadAdmission::assertAllowed( ( new UploadAdmission( $this->database ) )->policy(), 'document', $next->blob, $previous );
 				$this->insertVersion( $id, $next );
 				$this->execute( $this->database->prepare( 'UPDATE %i SET revision=%d WHERE id=%d AND revision=%d', $this->schema->table( 'documents' ), $after->revision, $id, $expected ), 1 );
 				$this->audit( $id, $after->revision, 'revised', $actor, $reason, $next->created_at );
+				$this->authority->assertUploadCurrent();
 				return $after;
 			}
 		);

@@ -26,6 +26,7 @@ final class WpdbNewsAuthority implements NewsAuthority, EditorialAuthority {
 	private readonly WpdbAuthorizationRepository $repository;
 	private readonly Closure $reviewer_provider;
 	private readonly Closure $participant_provider;
+	private ?array $upload_context = null;
 
 	public function __construct( private readonly IdentityWpdb $database, private readonly CurrentNewsActor $current, ?Closure $reviewer_provider = null, ?Closure $participant_provider = null ) {
 		$this->repository           = new WpdbAuthorizationRepository( $database );
@@ -35,6 +36,7 @@ final class WpdbNewsAuthority implements NewsAuthority, EditorialAuthority {
 
 	/** Locks actor, author and server-selected reviewers in ascending account ID order. */
 	public function lockAndAssert( int $author_id, Scope $review_scope, string $operation ): array {
+		$this->upload_context = null;
 		if ( ! $this->database->inTransaction() || $author_id < 1 || ScopeType::Queues !== $review_scope->type || 1 !== count( $review_scope->targets )
 			|| ! in_array( $operation, array( 'create', 'revise', 'submit', 'read_notification', 'approve', 'reject', 'return', 'archive' ), true ) ) {
 			throw new RuntimeException( self::ERROR );
@@ -105,7 +107,7 @@ final class WpdbNewsAuthority implements NewsAuthority, EditorialAuthority {
 		if ( 'submit' === $operation && array() === $eligible ) {
 			throw new RuntimeException( self::ERROR );
 		}
-		return array(
+		$context              = array(
 			'actor_id'     => $actor_id,
 			'reviewer_ids' => $eligible,
 			'snapshots'    => $locked,
@@ -113,6 +115,20 @@ final class WpdbNewsAuthority implements NewsAuthority, EditorialAuthority {
 			'participants' => $participants,
 			'operation'    => $operation,
 		);
+		$this->upload_context = in_array( $operation, array( 'create', 'revise' ), true ) ? $context : null;
+		return $context;
+	}
+
+	public function assertUploadCurrent(): void {
+		$context = $this->upload_context;
+		if ( ! $this->database->inTransaction() || null === $context ) {
+			throw new RuntimeException( self::ERROR );
+		}
+		$actor = $context['actor_id'];
+		$fresh = $this->current->sessionFor( $actor );
+		if ( $actor !== $this->current->principalId() || $fresh !== $context['session'] || ! NewsPolicy::canAuthorAction( Action::CreateNewsDraft, $actor, $context['snapshots'][ $actor ], $fresh, time() ) ) {
+			throw new RuntimeException( self::ERROR );
+		}
 	}
 
 	public function authorizeDecision( Article $article, int $version, string $operation, array $locked ): array {

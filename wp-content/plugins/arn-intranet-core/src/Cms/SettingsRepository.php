@@ -40,7 +40,7 @@ final class SettingsRepository {
 					throw new RuntimeException( 'Estado inicial incompatível.' );
 				}
 				$state = SettingsState::initial();
-				$json  = self::json( $state );
+				$json  = SettingsReader::json( $state );
 				$this->write(
 					$this->database->insert(
 						$this->schema->table( 'state' ),
@@ -74,8 +74,8 @@ final class SettingsRepository {
 				if ( $after === $before ) {
 					return $before;
 				}
-				$before_json = self::json( $before );
-				$after_json  = self::json( $after );
+				$before_json = SettingsReader::json( $before );
+				$after_json  = SettingsReader::json( $after );
 				$this->write(
 					$this->database->update(
 						$this->schema->table( 'state' ),
@@ -121,7 +121,7 @@ final class SettingsRepository {
 			function () use ( $before_revision, $limit ): array {
 				$this->load();
 				$rows = $this->rows( $this->database->prepare( 'SELECT * FROM %i WHERE revision < %d ORDER BY revision DESC LIMIT %d', $this->schema->table( 'audit' ), $before_revision, $limit ) );
-				return array_map( fn( object $row ): array => $this->event( $row ), $rows );
+				return array_map( fn( object $row ): array => ( new SettingsReader( $this->database ) )->event( $row ), $rows );
 			}
 		);
 	}
@@ -159,54 +159,7 @@ final class SettingsRepository {
 	}
 
 	private function load(): SettingsState {
-		$rows = $this->rows( $this->database->prepare( 'SELECT * FROM %i FOR UPDATE', $this->schema->table( 'state' ) ) );
-		if ( 1 !== count( $rows ) || '1' !== (string) $rows[0]->id ) {
-			throw new RuntimeException( 'Estado de parâmetros ausente ou incompatível.' );
-		}
-		$row   = $rows[0];
-		$state = self::decode( $row->payload, $row->digest );
-		$count = $this->rows( $this->database->prepare( 'SELECT COUNT(*) AS total FROM %i', $this->schema->table( 'audit' ) ) );
-		if ( (string) $state->revision !== (string) $row->revision || 1 !== count( $count ) || (string) ( $state->revision - 1 ) !== (string) $count[0]->total ) {
-			throw new RuntimeException( 'Histórico de parâmetros incompleto.' );
-		}
-		if ( $state->revision > 1 ) {
-			$latest = $this->rows( $this->database->prepare( 'SELECT * FROM %i WHERE revision=%d', $this->schema->table( 'audit' ), $state->revision ) );
-			if ( 1 !== count( $latest ) || $this->event( $latest[0] )['after'] !== $state->toArray() ) {
-				throw new RuntimeException( 'Histórico de parâmetros divergente.' );
-			}
-		}
-		return $state;
-	}
-
-	private function event( object $row ): array {
-		$before = self::decode( $row->before_payload, $row->before_hash );
-		$after  = self::decode( $row->after_payload, $row->after_hash );
-		if ( $after->revision !== $before->revision + 1 || (string) $after->revision !== (string) $row->revision || (string) $after->actor_id !== (string) $row->actor_id || (string) $after->occurred_at !== (string) $row->occurred_at || $before->change( $after->policy, $before->revision, $after->actor_id, $after->occurred_at, $after->reason )->toArray() !== $after->toArray() ) {
-			throw new RuntimeException( 'Evento de parâmetros incompatível.' );
-		}
-		return array(
-			'before' => $before->toArray(),
-			'after'  => $after->toArray(),
-		);
-	}
-
-	private static function decode( mixed $payload, mixed $digest ): SettingsState {
-		if ( ! is_string( $payload ) || ! is_string( $digest ) || ! hash_equals( hash( 'sha256', $payload ), $digest ) ) {
-			throw new RuntimeException( 'Integridade de parâmetros inválida.' );
-		}
-		$value = json_decode( $payload, true, 16, JSON_THROW_ON_ERROR );
-		if ( ! is_array( $value ) ) {
-			throw new RuntimeException( 'Payload de parâmetros inválido.' );
-		}
-		$state = SettingsState::fromArray( $value );
-		if ( self::json( $state ) !== $payload ) {
-			throw new RuntimeException( 'Representação de parâmetros incompatível.' );
-		}
-		return $state;
-	}
-
-	private static function json( SettingsState $state ): string {
-		return json_encode( $state->toArray(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+		return ( new SettingsReader( $this->database ) )->locked();
 	}
 
 	private function now(): int {

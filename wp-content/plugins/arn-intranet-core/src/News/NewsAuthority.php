@@ -15,4 +15,6 @@ use Arn\Intranet\Authorization\Scope;
 interface NewsAuthority {
 	/** Returns actor_id and sorted eligible reviewer_ids after locking all accounts. */
 	public function lockAndAssert( int $author_id, Scope $review_scope, string $operation ): array;
+	/** Recheck the locked upload context without opening another account reader. */
+	public function assertUploadCurrent(): void;
 }

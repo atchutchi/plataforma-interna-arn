@@ -74,6 +74,8 @@ try {
 	$real      = new WpdbNewsAuthority( $db, $current, null, static fn(): array => $task_context['participants'] );
 	$authority = new class( $real, $task_context['entered'], $db, $trace, $facts ) implements NewsAuthority, EditorialAuthority {
 		public function __construct( private readonly WpdbNewsAuthority $real, private readonly string $entered, private readonly IdentityWpdb $database, private readonly EditorialContentionTrace $trace, private readonly Closure $facts ) {}
+		public function assertUploadCurrent(): void {
+			$this->real->assertUploadCurrent(); }
 		public function lockAndAssert( int $author_id, Scope $review_scope, string $operation ): array {
 			if ( false === file_put_contents( $this->entered, (string) $this->database->get_var( 'SELECT CONNECTION_ID()' ), LOCK_EX ) ) {
 				throw new RuntimeException( 'Marcador exclusivo indisponível.' );

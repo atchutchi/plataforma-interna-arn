@@ -9,7 +9,7 @@ namespace Arn\Intranet\Tests;
 
 use Arn\Intranet\Authorization\{AccountState, Grant, Role, Scope};
 use Arn\Intranet\Authorization\Storage\{AuthorizationSnapshot, StoredGrant};
-use Arn\Intranet\Cms\{Configuration, SettingsActor, SettingsState, UploadPolicy};
+use Arn\Intranet\Cms\{Configuration, SettingsActor, SettingsState, UploadPolicy, UploadAdmission};
 use Arn\Intranet\Documents\PrivateFiles\BlobDescriptor;
 use DomainException;
 use InvalidArgumentException;
@@ -19,6 +19,40 @@ use PHPUnit\Framework\TestCase;
 
 /** These policies apply to new bytes, not to existing file delivery. */
 final class CmsSettingsTest extends TestCase {
+
+	public function testRetainedBytesSurviveReducedSizeAndRemovedMime(): void {
+		$values             = UploadPolicy::defaults()->toArray();
+		$values['document'] = array(
+			'max_bytes' => 1,
+			'mimes'     => array( 'image/png' ),
+		);
+		$policy             = UploadPolicy::fromArray( $values );
+		$previous           = new BlobDescriptor( str_repeat( 'a', 32 ), str_repeat( 'c', 64 ), 100, 'application/pdf' );
+		$copy               = new BlobDescriptor( str_repeat( 'b', 32 ), str_repeat( 'c', 64 ), 100, 'application/pdf' );
+		UploadAdmission::assertAllowed( $policy, 'document', $copy, $previous );
+		self::assertFalse( $policy->allows( 'document', $copy ) );
+		$this->expectException( DomainException::class );
+		UploadAdmission::assertAllowed( $policy, 'document', $copy );
+	}
+
+	public function testRetainedDescriptorsCannotChangeBytesOrWidenDestinationTypes(): void {
+		$previous = new BlobDescriptor( str_repeat( 'a', 32 ), str_repeat( 'c', 64 ), 100, 'application/pdf' );
+		foreach ( array(
+			array( 'document', $previous ),
+			array( 'document', new BlobDescriptor( str_repeat( 'b', 32 ), str_repeat( 'd', 64 ), 100, 'application/pdf' ) ),
+			array( 'document', new BlobDescriptor( str_repeat( 'b', 32 ), str_repeat( 'c', 64 ), 101, 'application/pdf' ) ),
+			array( 'document', new BlobDescriptor( str_repeat( 'b', 32 ), str_repeat( 'c', 64 ), 100, 'image/png' ) ),
+			array( 'news_image', new BlobDescriptor( str_repeat( 'b', 32 ), str_repeat( 'c', 64 ), 100, 'application/pdf' ) ),
+			array( 'unknown', new BlobDescriptor( str_repeat( 'b', 32 ), str_repeat( 'c', 64 ), 100, 'application/pdf' ) ),
+		) as [$destination, $copy] ) {
+			try {
+				UploadAdmission::assertAllowed( UploadPolicy::defaults(), $destination, $copy, $previous );
+				self::fail( 'Invalid retained descriptor accepted.' );
+			} catch ( DomainException ) {
+				self::assertTrue( true );
+			}
+		}
+	}
 
 	public function testConfigurationRequiresEveryExplicitLocalBoolean(): void {
 		self::assertTrue( Configuration::enabled( 'local', true, true, true ) );

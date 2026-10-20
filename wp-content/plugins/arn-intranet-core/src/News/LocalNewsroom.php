@@ -76,8 +76,9 @@ final class LocalNewsroom {
 			throw new RuntimeException( self::ERROR );
 		}
 		$this->validateText( $input );
-		$content = $this->content( $input, $before );
-		return $repository->revise( $id, new Version( count( $before->versions ) + 1, $content, $actor[1], time() ), $expected, $reason );
+		$retained = array();
+		$content  = $this->content( $input, $before, $retained );
+		return $repository->revise( $id, new Version( count( $before->versions ) + 1, $content, $actor[1], time() ), $expected, $reason, $retained );
 	}
 
 	public function submit( int $id, int $expected, string $reason ): Article {
@@ -308,7 +309,7 @@ final class LocalNewsroom {
 		return false;
 	}
 
-	private function content( DraftInput $input, ?Article $before ): Content {
+	private function content( DraftInput $input, ?Article $before, array &$retained = array() ): Content {
 		$latest  = null === $before ? array() : array_merge(
 			null === $before->version( count( $before->versions ) )->content->featured ? array() : array( $before->version( count( $before->versions ) )->content->featured ),
 			$before->version( count( $before->versions ) )->content->gallery,
@@ -333,8 +334,11 @@ final class LocalNewsroom {
 			}
 		}
 		$store       = ( $this->store_factory )();
-		$make        = function ( string $kind, MediaInput $media ) use ( $store, $allowed ): Asset {
+		$make        = function ( string $kind, MediaInput $media ) use ( $store, $allowed, &$retained ): Asset {
 			$blob = null !== $media->existing_id ? $store->duplicate( $allowed[ $media->existing_id ]->blob ) : $store->importFile( $media->source );
+			if ( null !== $media->existing_id ) {
+				$retained[ $blob->id ] = $media->existing_id;
+			}
 			if ( 'attachment' !== $kind ) {
 				$this->assertImage( $store, $blob );
 			}

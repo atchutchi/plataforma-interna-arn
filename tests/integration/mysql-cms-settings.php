@@ -46,7 +46,7 @@ final class ArnCmsSqlAuthority implements SettingsAuthority {
 	}
 }
 
-$worker = 'worker' === ( $argv[3] ?? '' );
+$worker = in_array( $argv[3] ?? '', array( 'worker', 'expire-news', 'expire-document', 'expire-news-revise', 'expire-document-revise' ), true );
 $prefix = $worker ? ( $argv[4] ?? '' ) : 'arn_cms_test_' . bin2hex( random_bytes( 6 ) ) . '_';
 if ( 1 !== preg_match( '/\Aarn_cms_test_[a-f0-9]{12}_\z/D', $prefix ) ) {
 	throw new RuntimeException( 'Exclusive prefix expected.' );
@@ -58,6 +58,11 @@ $authority  = new ArnCmsSqlAuthority( $db );
 $repository = new SettingsRepository( $db, $authority, static fn(): int => 101 );
 $schema     = new SettingsSchema( $db );
 $values     = UploadPolicy::defaults()->toArray();
+if ( $worker && 'worker' !== $argv[3] ) {
+	$expiry_worker = require __DIR__ . '/mysql-cms-expiry-worker.php';
+	$expiry_worker( $db, $argv[3], (int) ( $argv[5] ?? 0 ), (int) ( $argv[6] ?? 0 ) );
+	exit;
+}
 if ( $worker ) {
 	$values['document']['max_bytes'] = (int) ( $argv[5] ?? 2048 );
 	try {
@@ -188,6 +193,8 @@ try {
 	$assert( '0' === (string) $db->get_var( 'SELECT COUNT(*) FROM `' . $schema->table( 'schema' ) . '`' ), 'read did not recreate marker' );
 	$db->query( 'INSERT INTO `' . $schema->table( 'schema' ) . '` (id,version) VALUES (1,1)' );
 	$assert( 3 === $repository->read()->revision, 'valid state restored after exclusive corruption test' );
+	$consumer_checks = require __DIR__ . '/mysql-cms-consumers-fixture.php';
+	$consumer_checks( $db, $repository, $assert, $reject );
 } finally {
 	if ( isset( $owner ) && $owner->inTransaction() ) {
 		$owner->query( 'ROLLBACK' ); }
