@@ -12,7 +12,7 @@ O núcleo recusa sobreposições entre a raiz privada e as raízes públicas con
 
 O prefixo WordPress recebe três tabelas: `arn_private_files`, `arn_private_file_audit` e `arn_private_file_schema`. O schema verifica versão, engine transaccional, colunas e índices antes de operar. A chave única de tipo, objecto, versão e variante impede substituir o anexo dessa versão. Não há operações de alteração ou eliminação no registo.
 
-A gravação no sistema de ficheiros e a transacção SQL não formam uma única transacção distribuída. Se o registo SQL falhar depois da cópia, pode ficar um binário órfão privado. Não há publicação de referência sem evento confirmado. A política de reconciliação e eliminação de órfãos continua por definir antes de usar dados institucionais.
+A gravação no sistema de ficheiros e a transacção SQL não formam uma única transacção distribuída. Se o registo SQL falhar depois da cópia, pode ficar um binário órfão privado. Não há publicação de referência sem evento confirmado. O [diagnóstico de reconciliação](reconciliacao-ficheiros-local-f1-08.md) está implementado no laboratório e define o procedimento de investigação. Não executa recuperação ou eliminação de órfãos. Retenção e intervenção institucional continuam a exigir aprovação própria.
 
 A instalação é explícita por CLI. Não há migração, criação de ficheiros ou atribuição de permissões em pedidos GET. Os ensaios integrados usam prefixos aleatórios e pastas exclusivas. A limpeza desses ensaios não remove as tabelas normais ou os anexos da pré-visualização editorial.
 
@@ -54,6 +54,6 @@ Os artefactos de QA e os binários ficam em pastas ignoradas. Não são conteúd
 
 ## Critérios ainda abertos
 
-Actualização de 20 de outubro: o núcleo e a ligação aos módulos de documentos e notícias estão concluídos localmente. A admissão configurável e transaccional está aceite na PR #59. A [fronteira nativa](fronteira-media-nativa-f1-08.md) fecha a alternativa pública do WordPress. F1-08 ainda precisa de reconciliação, derivados privados, antimalware/quarentena e política institucional. Faltam ensaios representativos de tamanho, concorrência, reparse points, ACL, IIS, MySQL 8.4 e caminhos estáticos alternativos. O README distingue estas lacunas das parcelas já concluídas.
+Actualização de 20 de outubro: o núcleo e a ligação aos módulos de documentos e notícias estão concluídos localmente. A admissão configurável e transaccional está aceite na PR #59. A [fronteira nativa](fronteira-media-nativa-f1-08.md) fecha a alternativa pública do WordPress. A [reconciliação de diagnóstico](reconciliacao-ficheiros-local-f1-08.md) compara bytes, referências e auditoria sem escrita. F1-08 ainda precisa de recuperação controlada, derivados privados, antimalware/quarentena e política institucional. Faltam ensaios representativos de tamanho, concorrência, reparse points, ACL, IIS, MySQL 8.4 e caminhos estáticos alternativos. O README distingue estas lacunas das parcelas já concluídas.
 
 Os 22 anexos reais conservam o circuito de revisão administrativa em `EditorialPreview`. Não são migrados ou disponibilizados à Ana Teste por esta etapa. A configuração e os dados de laboratório ficam fora do Git.

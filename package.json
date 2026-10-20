@@ -42,6 +42,7 @@
     "test:import-preview:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/import-preview.php --user=admin",
     "test:editorial:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/editorial-preview.php --user=admin",
     "test:private-files:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/private-files.php --user=admin",
+    "test:file-reconciliation:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/file-reconciliation.php --user=admin",
     "test:native-media:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/native-media.php --user=admin",
     "test:document-catalog:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/document-catalog.php --user=admin",
     "test:news:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/news-submission.php --user=admin && node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/news-installer.php --user=admin",

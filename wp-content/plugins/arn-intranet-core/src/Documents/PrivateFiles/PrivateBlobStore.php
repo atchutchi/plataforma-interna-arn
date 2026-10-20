@@ -256,20 +256,32 @@ final class PrivateBlobStore {
 	 * Calcula tamanho, hash e MIME por blocos no mesmo handle.
 	 *
 	 * @param resource $handle Handle aberto.
+	 * @param int|null $budget Limite de leitura opcional do diagnóstico.
+	 * @param int|null $read_bytes Bytes efectivamente lidos, mesmo em falha.
 	 * @return array Dados verificados.
 	 * @throws RuntimeException Quando o conteúdo não é admitido.
 	 */
-	private function inspectHandle( $handle ): array {
-		$hash = hash_init( 'sha256' );
-		$size = 0;
-		$head = '';
-		$tail = '';
+	private function inspectHandle( $handle, ?int $budget = null, ?int &$read_bytes = null ): array {
+		$hash       = hash_init( 'sha256' );
+		$size       = 0;
+		$read_bytes = 0;
+		$limit      = min( $this->max_bytes, $budget ?? $this->max_bytes );
+		$head       = '';
+		$tail       = '';
 		while ( ! feof( $handle ) ) {
-			$chunk = fread( $handle, 8192 );
+			if ( $size >= $limit ) {
+				$stat = fstat( $handle );
+				if ( false === $stat || $stat['size'] !== $size ) {
+					throw new RuntimeException( 'Ficheiro privado indisponível.' );
+				}
+				break;
+			}
+			$chunk = fread( $handle, min( 8192, $limit - $size ) );
 			if ( false === $chunk || ( '' === $chunk && ! feof( $handle ) ) ) {
 				throw new RuntimeException( 'Ficheiro privado indisponível.' );
 			}
-			$size += strlen( $chunk );
+			$size      += strlen( $chunk );
+			$read_bytes = $size;
 			if ( $size > $this->max_bytes ) {
 				throw new RuntimeException( 'Ficheiro privado indisponível.' );
 			}
@@ -306,6 +318,95 @@ final class PrivateBlobStore {
 		foreach ( $this->public_roots as $public ) {
 			if ( self::overlap( $this->root, $public ) ) {
 				throw new RuntimeException( 'Ficheiro privado indisponível.' );
+			}
+		}
+	}
+
+	/** Bounded, flat inventory. Never follows directories or links, nor returns paths.
+	 *
+	 * @param int $limit Maximum entries examined.
+	 * @return array Opaque names and stat signatures, without access times.
+	 * @throws RuntimeException When the inventory cannot be completed safely.
+	 */
+	public function inventory( int $limit = 1000 ): array {
+		$this->assertRoot();
+		if ( $limit < 1 || $limit > 1000 ) {
+			throw new RuntimeException( 'Inventário indisponível.' );
+		}
+		$directory = @opendir( $this->root );
+		if ( false === $directory ) {
+			throw new RuntimeException( 'Inventário indisponível.' );
+		}
+		$result = array();
+		try {
+			while ( false !== ( $name = readdir( $directory ) ) ) { // phpcs:ignore Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition -- Bounded directory iteration without materialising an unbounded list.
+				if ( '.' === $name || '..' === $name ) {
+					continue;
+				}
+				if ( count( $result ) >= $limit ) {
+					throw new RuntimeException( 'Limite de inventário atingido.' );
+				}
+				$path = $this->root . DIRECTORY_SEPARATOR . $name;
+				clearstatcache( true, $path );
+				$stat = @lstat( $path );
+				if ( false === $stat ) {
+					throw new RuntimeException( 'Inventário indisponível.' );
+				}
+				$key            = 1 === preg_match( '/^[a-f0-9]{32}$/D', $name ) ? $name : 'unknown:' . hash( 'sha256', $name );
+				$result[ $key ] = array_intersect_key( $stat, array_flip( array( 'dev', 'ino', 'mode', 'nlink', 'size', 'mtime', 'ctime' ) ) );
+			}
+		} finally {
+			closedir( $directory );
+		}
+		ksort( $result );
+		return $result;
+	}
+
+	/** Read-only, nonblocking integrity check, distinct from a delivery permission.
+	 *
+	 * @param BlobDescriptor $blob Registered descriptor.
+	 * @param int            $budget Remaining byte budget for this diagnostic.
+	 * @param int|null       $read_bytes Actual bytes consumed, including failed checks.
+	 * @return string Closed diagnostic status.
+	 */
+	public function diagnose( BlobDescriptor $blob, int $budget, ?int &$read_bytes = null ): string {
+		$handle     = false;
+		$read_bytes = 0;
+		try {
+			$this->assertRoot();
+			$path = $this->root . DIRECTORY_SEPARATOR . $blob->id;
+			self::assertNoLinks( $path );
+			clearstatcache( true, $path );
+			$before = @lstat( $path );
+			if ( false === $before || 0100000 !== ( $before['mode'] & 0170000 ) || 1 !== $before['nlink'] ) {
+				return 'unreadable';
+			}
+			if ( $before['size'] > min( $budget, $this->max_bytes ) ) {
+				return 'limit';
+			}
+			$handle = @fopen( $path, 'rb' );
+			if ( false === $handle || ! flock( $handle, LOCK_SH | LOCK_NB ) ) {
+				return 'unreadable';
+			}
+			$opened = fstat( $handle );
+			if ( false === $opened || $opened['ino'] !== $before['ino'] || $opened['dev'] !== $before['dev'] || $opened['mode'] !== $before['mode'] || $opened['size'] !== $before['size'] ) {
+				return 'changed';
+			}
+			$verified = $this->inspectHandle( $handle, $budget, $read_bytes );
+			$after    = fstat( $handle );
+			clearstatcache( true, $path );
+			$current = @lstat( $path );
+			foreach ( array( 'dev', 'ino', 'mode', 'size', 'mtime', 'ctime' ) as $field ) {
+				if ( false === $after || false === $current || $before[ $field ] !== $after[ $field ] || $before[ $field ] !== $current[ $field ] ) {
+					return 'changed';
+				}
+			}
+			return $verified['size'] === $blob->size && hash_equals( $blob->sha256, $verified['hash'] ) && $verified['mime'] === $blob->mime ? 'verified' : 'mismatch';
+		} catch ( Throwable ) {
+			return 'unreadable';
+		} finally {
+			if ( is_resource( $handle ) ) {
+				fclose( $handle );
 			}
 		}
 	}

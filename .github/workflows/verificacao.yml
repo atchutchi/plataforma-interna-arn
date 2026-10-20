@@ -65,6 +65,7 @@ jobs:
       - run: npm run test:editorial:integration
       - run: npm run test:private-files:integration
       - run: npm run test:native-media:integration
+      - run: npm run test:file-reconciliation:integration
       - run: npm run test:local-private-files:integration
       - if: always()
         run: npm run env:stop:tests
