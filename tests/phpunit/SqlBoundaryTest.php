@@ -17,6 +17,39 @@ use PHPUnit\Framework\TestCase;
  */
 final class SqlBoundaryTest extends TestCase {
 
+	/** O âmbito de sessão não pode alterar as transacções seguintes. */
+	public function testRefusesScopedTransactionCharacteristics(): void {
+		foreach ( array( '8.0.44', '8.4.0', '11.8.3-MariaDB' ) as $server ) {
+			foreach ( array( 'SESSION', 'LOCAL', 'GLOBAL' ) as $scope ) {
+				foreach ( array( 'ISOLATION LEVEL READ UNCOMMITTED', 'ISOLATION LEVEL SERIALIZABLE', 'READ ONLY', 'READ WRITE' ) as $characteristic ) {
+					$sql = 'SET /* âmbito */ ' . $scope . ' TRANSACTION ' . $characteristic;
+					self::assertFalse( SqlBoundary::classify( $sql, $server )['trusted'], $server . ': ' . $sql );
+				}
+			}
+			self::assertFalse( SqlBoundary::classify( 'SET /*!80000 SESSION */ TRANSACTION ISOLATION LEVEL READ UNCOMMITTED', $server )['trusted'] );
+		}
+	}
+
+	/** Âmbitos globais e persistentes nunca são atribuições da sessão dedicada. */
+	public function testRefusesGlobalAndPersistentAssignments(): void {
+		foreach ( array( '8.0.44', '8.4.0', '11.8.3-MariaDB' ) as $server ) {
+			foreach ( array( 'GLOBAL', 'PERSIST', 'PERSIST_ONLY' ) as $scope ) {
+				foreach ( array( 'SET ' . $scope . ' transaction_read_only=ON', 'SET ' . $scope . ' `max_connections`=100', 'SET @marker=1, ' . $scope . ' max_connections=100', 'SET @@' . $scope . '.max_connections=100', 'SET @marker=1, @@' . $scope . '.`max_connections`=100', 'SET /*!80000 ' . $scope . ' */ max_connections=100' ) as $sql ) {
+					self::assertFalse( SqlBoundary::classify( $sql, $server )['trusted'], $server . ': ' . $sql );
+				}
+			}
+		}
+	}
+
+	/** Conserva o isolamento da próxima transacção e atribuições de sessão/utilizador. */
+	public function testKeepsSupportedTransactionAndSessionAssignments(): void {
+		foreach ( array( '8.0.44', '8.4.0', '11.8.3-MariaDB' ) as $server ) {
+			foreach ( array( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED', 'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ', 'SET SESSION wait_timeout=60', 'SET LOCAL wait_timeout=60', 'SET @@session.wait_timeout=60', 'SET @@local.wait_timeout=60', 'SET @global=1, @persist_only=2', "SET @text='GLOBAL TRANSACTION', @marker=1" ) as $sql ) {
+				self::assertTrue( SqlBoundary::classify( $sql, $server )['trusted'], $server . ': ' . $sql );
+			}
+		}
+	}
+
 	/** A gestão de credenciais não pertence à ligação de dados do módulo. */
 	public function testRefusesPasswordStatementsWithoutExecutingThem(): void {
 		foreach ( array( "SET PASSWORD='synthetic-placeholder'", "SET PASSWORD FOR 'fictional'@'localhost'='synthetic-placeholder'", "SET /* comentário */ PASSWORD='synthetic-placeholder'" ) as $sql ) {

@@ -381,6 +381,13 @@ final class SqlBoundary {
 	 * @return array
 	 */
 	private static function classifySet( array $words, array $result ): array {
+		// O âmbito pertence à decisão, não apenas ao nome da variável.
+		$scope = $words[1]['value'] ?? '';
+		if ( in_array( $scope, array( 'GLOBAL', 'PERSIST', 'PERSIST_ONLY' ), true )
+			|| ( in_array( $scope, array( 'SESSION', 'LOCAL' ), true ) && 'TRANSACTION' === ( $words[2]['value'] ?? '' ) ) ) {
+			$result['trusted'] = false;
+			return $result;
+		}
 		if ( isset( $words[1] ) && 'PASSWORD' === $words[1]['value'] ) {
 			$result['trusted']         = false;
 			$result['implicit_commit'] = true;
@@ -481,13 +488,15 @@ final class SqlBoundary {
 				return null;
 			}
 		}
-		$joined = implode( '.', $parts );
-		$joined = ltrim( $joined, '@' );
-		$joined = preg_replace( '/^(?:GLOBAL|SESSION|LOCAL|PERSIST|PERSIST_ONLY)\./', '', $joined ) ?? $joined;
-		$joined = preg_replace( '/^(?:GLOBAL|SESSION|LOCAL|PERSIST|PERSIST_ONLY)$/', '', $joined ) ?? $joined;
 		if ( str_starts_with( implode( '', $parts ), '@' ) && ! str_starts_with( implode( '', $parts ), '@@' ) ) {
 			return '';
 		}
+		$joined = ltrim( implode( '.', $parts ), '@' );
+		if ( 1 === preg_match( '/^(?:GLOBAL|PERSIST|PERSIST_ONLY)(?:\.|$)/', $joined ) ) {
+			return null;
+		}
+		$joined   = preg_replace( '/^(?:SESSION|LOCAL)\./', '', $joined ) ?? $joined;
+		$joined   = preg_replace( '/^(?:SESSION|LOCAL)$/', '', $joined ) ?? $joined;
 		$segments = explode( '.', $joined );
 		return (string) end( $segments );
 	}

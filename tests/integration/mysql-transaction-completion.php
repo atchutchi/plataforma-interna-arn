@@ -25,6 +25,37 @@ try {
 	$assert( false !== $owner->query( 'CREATE TABLE `' . $table . '` (id INT PRIMARY KEY,value INT) ENGINE=InnoDB' ), 'preparação exclusiva' );
 	$db            = arn_tx_connect();
 	$connections[] = $db;
+	// Recusar antes do motor: a falta de privilégios não prova a fronteira.
+	$scoped_sets = array(
+		'SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED',
+		'SET LOCAL TRANSACTION READ ONLY',
+		'SET GLOBAL TRANSACTION ISOLATION LEVEL SERIALIZABLE',
+		'SET GLOBAL transaction_read_only=ON',
+		'SET PERSIST transaction_read_only=ON',
+		'SET PERSIST_ONLY transaction_read_only=ON',
+		'SET @@global.max_connections=100',
+		'SET @marker=1, GLOBAL max_connections=100',
+		'SET @marker=1, @@global.`max_connections`=100',
+		'SET /*!80000 SESSION */ TRANSACTION ISOLATION LEVEL READ UNCOMMITTED',
+		'SET /*!80000 GLOBAL */ max_connections=100',
+	);
+	foreach ( array( false, true ) as $inside_transaction ) {
+		if ( $inside_transaction ) {
+			$assert( false !== $db->query( 'START TRANSACTION' ) && false !== $db->query( 'INSERT INTO `' . $table . '` VALUES (5,5)' ), 'sentinela de âmbitos SET' );
+		}
+		foreach ( $scoped_sets as $sql ) {
+			// A pré-condição permite RED sem enviar alterações globais ao servidor.
+			$assert( ! \Arn\Intranet\Identity\SqlBoundary::classify( $sql, $db->dbh->server_info )['trusted'], 'classificador recusa âmbito SET' );
+			$queries = $db->num_queries;
+			$assert( false === $db->query( $sql ) && $queries === $db->num_queries, 'âmbito SET recusado antes do motor' );
+			$assert( $inside_transaction === $db->inTransaction(), 'recusa SET preserva a guarda' );
+		}
+		if ( $inside_transaction ) {
+			$assert( false !== $db->query( 'ROLLBACK' ) && '0' === (string) $owner->get_var( 'SELECT COUNT(*) FROM `' . $table . '`' ), 'âmbitos SET não confirmaram sentinela' );
+		}
+	}
+	$assert( false !== $db->query( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED' ), 'isolamento apenas da próxima transacção preservado' );
+	$assert( false !== $db->query( 'SET @scope_marker=1' ) && false !== $db->query( 'SET SESSION wait_timeout=600' ), 'atribuições de utilizador e sessão preservadas' );
 	$assert( false !== $db->query( 'START TRANSACTION' ), 'início CASE' );
 	$assert( false !== $db->query( 'INSERT INTO `' . $table . '` VALUES (1,CASE WHEN 1=1 THEN 7 ELSE 0 END)' ), 'escrita CASE' );
 	$assert( 'THEN' === $db->get_var( "SELECT 'THEN'" ), 'literal THEN' );
