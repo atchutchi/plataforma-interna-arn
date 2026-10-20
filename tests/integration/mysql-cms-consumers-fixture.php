@@ -219,6 +219,7 @@ return static function ( IdentityWpdb $db, SettingsRepository $settings, Closure
 					$session['arn_authz_revision'] = 4;
 					$db->query( 'ROLLBACK' );
 			}
+			( require __DIR__ . '/mysql-cms-blob-lifecycle-fixture.php' )( $db, $assert, $settings, $current_news, $current_docs, $metadata, $scope );
 		} finally {
 			$db->query( 'ROLLBACK' );
 			$reader->close();

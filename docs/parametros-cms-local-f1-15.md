@@ -1,6 +1,6 @@
 # Próxima entrega: parâmetros autorizados do CMS
 
-Preparação técnica de 20 de outubro de 2026 para US-A05 e secção 6.2 do README. Não é código implementado nem aprovação institucional. O Painel ARN e os destinos de gestão já existem. A lacuna seguinte é configurar parâmetros expostos pela aplicação com competência própria, validação e histórico de alterações.
+Especificação técnica de 20 de outubro de 2026 para US-A05 e secção 6.2 do README. Implementação parcial na PR #59: domínio, persistência, admissão nos consumidores e ciclo de vida de cópias privadas. Instalador, interface e aceitação WordPress/Playwright ainda pendentes. Não constitui aprovação institucional. O Painel ARN e os destinos de gestão já existem. A lacuna seguinte é configurar parâmetros expostos pela aplicação com competência própria, validação e histórico de alterações.
 
 ## Escopo da primeira parcela
 
@@ -22,7 +22,15 @@ A página no Painel ARN usa campos tipados e associados a labels, unidades expl�
 
 O consumidor tem de revalidar a política corrente antes de confirmar a admissão do upload. Uma alteração concorrente não pode deixar referências ou auditoria parcial. O tratamento dos temporários da tentativa deve ser definido em conjunto com o protocolo de ficheiros privados. Não apagar blobs registados ou versões anteriores para limpar uma tentativa recusada. A configuração não substitui MIME efectivo, assinatura, protecção de caminhos ou autorização por objecto.
 
-## Critérios de aceitação, todos por executar
+## Protocolo implementado para cópias de tentativas recusadas
+
+ImportBatch acompanha apenas os descritores exactos devolvidos pelo PrivateBlobStore da tentativa. O lote regista cada importação ou duplicação antes das validações posteriores. Uma conclusão normal liberta essa propriedade em memória. Uma excepção conserva o erro original e tenta resolver cada cópia através de uma nova ligação SQL. Não há limpeza por idade, destrutor ou enumeração do armazenamento da aplicação.
+
+WpdbFileRegistry confirma a ausência tanto em files como em audit, numa transacção REPEATABLE READ com bloqueios mantidos durante o descarte. Só então PrivateBlobStore volta a verificar propriedade, raiz privada, caminhos, tamanho, hash e MIME antes de remover a cópia. Qualquer referência, falha de ligação, esquema incompatível ou alteração dos bytes conserva o ficheiro. A recusa de uma cópia não impede a avaliação das seguintes. Uma cópia conservada por incerteza não recebe uma URL pública nem uma referência nova.
+
+O ensaio SQL usa ficheiros físicos fictícios e os runtimes LocalNewsroom/LocalDocumentCatalog com autoridades reais, mas fornecedores de identidade e sessão sintéticos. Cobre rollback, commit concluído seguido de excepção que simula resposta perdida, indisponibilidade de registo, auditoria isolada, cópia alterada, recusa de limites e validação posterior à importação. Não simula corte físico da rede nem demonstra ainda o transporte WordPress. Os 92 controlos passaram em MariaDB e as 40 tabelas exteriores de negócio conservaram os hashes. A revisão independente não deixou achados.
+
+## Critérios de aceitação integral, ainda pendentes
 
 | ID | Resultado exigido |
 | --- | --- |

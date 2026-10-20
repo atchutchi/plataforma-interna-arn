@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace Arn\Intranet\Documents\PrivateFiles;
 
 use Arn\Intranet\Identity\IdentityWpdb;
+use Closure;
 use RuntimeException;
 use Throwable;
 
@@ -63,6 +64,41 @@ final class WpdbFileRegistry {
 			throw new RuntimeException( self::ERROR );
 		}
 		$this->writeRecord( $record );
+	}
+
+	/** Hold absence locks while discarding a newly created, unregistered copy.
+	 *
+	 * @param string  $id Opaque identifier owned by the current import attempt.
+	 * @param Closure $discard Verified physical deletion supplied by its store.
+	 * @return bool Whether absence was confirmed and the callback completed.
+	 * @throws RuntimeException When absence cannot be proved.
+	 */
+	public function discardIfUnregistered( string $id, Closure $discard ): bool {
+		if ( 1 !== preg_match( '/^[a-f0-9]{32}$/D', $id ) ) {
+			throw new RuntimeException( self::ERROR );
+		}
+		$this->schema->assertReady();
+		$this->assertNoTransaction();
+		$this->execute( 'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ' );
+		$this->execute( 'START TRANSACTION' );
+		try {
+			$absent = true;
+			foreach ( array( 'files', 'audit' ) as $table ) {
+				$rows = $this->database->get_results( $this->database->prepare( 'SELECT blob_id FROM %i WHERE blob_id=%s FOR UPDATE', $this->schema->table( $table ), $id ) );
+				if ( ! is_array( $rows ) || '' !== $this->database->last_error ) {
+					throw new RuntimeException( self::ERROR );
+				}
+				$absent = $absent && array() === $rows;
+			}
+			if ( $absent ) {
+				$discard();
+			}
+			$this->execute( 'COMMIT' );
+			return $absent;
+		} catch ( Throwable ) {
+			$this->database->query( 'ROLLBACK' );
+			throw new RuntimeException( self::ERROR );
+		}
 	}
 
 	/** Insert reference and audit without transaction control.

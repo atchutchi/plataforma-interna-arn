@@ -37,7 +37,7 @@ Criar instalador explícito, página de parâmetros com motivo e revisão, hist�
 - [ ] Implementar o circuito completo sem activar fixtures reais.
 - [ ] Aplicar Impeccable e UI UX Pro Max à interface existente.
 
-Progresso parcial: SettingsReader e UploadAdmission ligados a create/revise. O runtime envia proveniência, revalidada contra a versão bloqueada. As autoridades implementam assertUploadCurrent, sem repetir leituras de conta noutra ligação. Próximo trabalho obrigatório: ciclo de vida dos blobs após erro SQL, inclusive commit de resultado incerto. Só remover bytes próprios da tentativa e comprovadamente sem referências. Não limpar versões anteriores nem aplicar os limites novos ao leitor existente. Depois seguem instalador, página CMS e circuito HTTP/Playwright.
+Progresso parcial: SettingsReader e UploadAdmission ligados a create/revise. O runtime envia proveniência, revalidada contra a versão bloqueada. As autoridades implementam assertUploadCurrent, sem repetir leituras de conta noutra ligação. ImportBatch trata as cópias de tentativas recusadas, exigindo propriedade exacta e ausência bloqueada em files/audit antes do descarte. Resultado incerto conserva os bytes. MariaDB passou 92 controlos, incluindo runtimes reais com ficheiros físicos e identidade/sessão sintéticas. As 40 tabelas de negócio conservaram os hashes e a revisão independente não deixou achados. Próximo trabalho obrigatório: instalador, página CMS e circuito nativo HTTP/Playwright. Não activar esta parcela isolada.
 
 ## Tarefa 4: aceitação e entrega
 

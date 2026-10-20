@@ -10,6 +10,7 @@ namespace Arn\Intranet\Documents\Catalog;
 
 use Arn\Intranet\Authorization\Scope;
 use Arn\Intranet\Documents\PrivateFiles\LocalPrivateFiles;
+use Arn\Intranet\Documents\PrivateFiles\ImportBatch;
 use Arn\Intranet\Documents\PrivateFiles\PrivateBlobStore;
 use Arn\Intranet\Documents\PrivateFiles\WpdbFileRegistry;
 use Arn\Intranet\Identity\IdentityWpdb;
@@ -119,9 +120,14 @@ final class LocalDocumentCatalog {
 		if ( null === $actor || ! DocumentPolicy::canManageScope( $scope, $actor[0], $actor[2], time() ) ) {
 			throw new RuntimeException( 'Operação documental não autorizada.' );
 		}
-		$blob         = ( $this->store_factory )()->importFile( $source );
-		[$repository] = ( $this->repository_factory )();
-		return $repository->create( $scope, new Revision( 1, $metadata, $blob, $actor[1], time() ), $reason );
+		return ( new ImportBatch( ( $this->store_factory )() ) )->run(
+			function ( ImportBatch $batch ) use ( $source, $scope, $metadata, $actor, $reason ): Document {
+				$blob         = $batch->importFile( $source );
+				[$repository] = ( $this->repository_factory )();
+				return $repository->create( $scope, new Revision( 1, $metadata, $blob, $actor[1], time() ), $reason );
+			},
+			fn(): WpdbFileRegistry => ( $this->repository_factory )()[1]
+		);
 	}
 
 	/** Append a version, duplicating the verified original if no upload exists. */
@@ -136,9 +142,13 @@ final class LocalDocumentCatalog {
 		if ( null === $before || ! DocumentPolicy::canManage( $before, $actor[0], $actor[2], time() ) ) {
 			throw new RuntimeException( 'Operação documental não autorizada.' );
 		}
-		$store = ( $this->store_factory )();
-		$blob  = null === $source ? $store->duplicate( $before->version( count( $before->versions ) )->blob ) : $store->importFile( $source );
-		return $repository->revise( $id, new Revision( count( $before->versions ) + 1, $metadata, $blob, $actor[1], time() ), $expected, $reason, null === $source ? $before->version( count( $before->versions ) )->blob->id : null );
+		return ( new ImportBatch( ( $this->store_factory )() ) )->run(
+			function ( ImportBatch $batch ) use ( $source, $before, $repository, $id, $metadata, $actor, $expected, $reason ): Document {
+				$blob = null === $source ? $batch->duplicate( $before->version( count( $before->versions ) )->blob ) : $batch->importFile( $source );
+				return $repository->revise( $id, new Revision( count( $before->versions ) + 1, $metadata, $blob, $actor[1], time() ), $expected, $reason, null === $source ? $before->version( count( $before->versions ) )->blob->id : null );
+			},
+			fn(): WpdbFileRegistry => ( $this->repository_factory )()[1]
+		);
 	}
 
 	/** Repository revalidates publication authority and audience under locks. */
