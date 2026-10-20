@@ -47,10 +47,10 @@ Uma página, filtro, REST nonce válido, contagem ou resultado de pesquisa não 
 
 ## Tarefa 2: autoridade e persistência
 
-- [ ] Testar configuração booleana, elenco fechado, sessão nativa e esquema parcial antes da implementação.
-- [ ] Implementar autoridade e cinco tabelas, com versão e índices exactos, sem migração em leitura ou activação.
-- [ ] Implementar create idempotente, CAS e mutações com destinatários do estado resultante dentro da transacção.
-- [ ] Provar rollback de auditoria/último aviso, reenvio de create, recibo idempotente e concorrência real entre processos.
+- [x] Testar configuração booleana, elenco fechado, sessão nativa e esquema parcial antes da implementação.
+- [x] Implementar autoridade e cinco tabelas, com versão e índices exactos, sem migração em leitura ou activação.
+- [x] Implementar create idempotente, CAS e mutações com destinatários do estado resultante dentro da transacção.
+- [x] Provar rollback de auditoria/último aviso, reenvio de create, recibo idempotente e concorrência real entre processos. Preset de destinatário único, sem alegar entrega parcial de vários avisos.
 - [ ] Confirmar igualdade das tabelas anteriores e remover só os recursos exclusivos do ensaio.
 
 ## Tarefa 3: percursos completos WordPress
