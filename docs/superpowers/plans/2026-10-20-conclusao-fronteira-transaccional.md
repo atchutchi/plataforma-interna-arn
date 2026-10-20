@@ -42,5 +42,5 @@ Ficheiros: repositórios Authorization, Organization, Documents, News, Communica
 
 - [x] Agrupar a suite PHP, PHPCS, Node, lint, construção e integração WordPress no fecho. Executar Playwright da regressão local relevante.
 - [x] Obter revisão independente do conjunto final, corrigir bloqueadores e actualizar README/AGENTS com factos e pendências.
-- [ ] Fazer commit e push na branch própria e abrir PR com os checks do SHA final. A decisão de integração exige ausência de falhas conhecidas.
-- [ ] Prosseguir para o plano executável F1-13 depois de demonstrar a fronteira corrigida e rever as decisões da proposta recebida. Não marcar o site concluído por terminar esta parcela.
+- [x] Fazer commit e push na branch própria e abrir PR com os checks do SHA final. PR #51 integrada em e081efb depois de 21 checks aprovados em 00aef66. CI de main também aprovada.
+- [x] Prosseguir para o plano executável F1-13 depois de demonstrar a fronteira corrigida e rever as decisões da proposta recebida. Plano 2026-10-20-tarefas-locais-f1-13.md em execução. O site não fica concluído por terminar esta parcela.

@@ -2,6 +2,8 @@
 
 20 de outubro de 2026. Base origin/main 8641cfb. Branch própria fix/conclusao-fronteira-transaccional-local. O responsável pediu assumir a continuação sem novas tarefas para a colaboradora. Este registo acompanha uma correcção em desenvolvimento, sem declarar antecipadamente integração ou aceitação institucional.
 
+Fecho posterior: a PR #51 foi integrada em main e081efb, depois de 21 checks aprovados no head final 00aef66. A CI de main 39384783433 passou os sete grupos e a matriz 39384783311 passou os três motores. A preparação da F1-13 prossegue numa branch própria. A demonstração permanece separada. Os parágrafos seguintes conservam a sequência de evidência, incluindo a falha inicial e os limites.
+
 ## Entregas verificadas e composição
 
 A branch fix/albertina-pr41-review-findings termina em c087aaa e a branch docs/albertina-f1-13-conciliacao em 8634ce6. Não havia novos commits publicados na consulta. A segunda já chegou a main pela PR #50. As PRs #39 e #41 não são integradas como entregues.
