@@ -10,6 +10,7 @@ namespace Arn\Intranet\EditorialPreview;
 use Arn\Intranet\Calendar\AgendaSelection;
 use Arn\Intranet\Communications\NoticeSelection;
 use Arn\Intranet\F112\Portal;
+use Arn\Intranet\Tasks\{Portal as TaskPortal, TaskSelection, View as TaskView};
 use Closure;
 use Throwable;
 
@@ -17,7 +18,7 @@ use Throwable;
 final class HomeDashboard {
 	private readonly Closure $source;
 	public function __construct( ?Closure $source = null ) {
-		$this->source = $source ?? static fn( string $module ): ?array => ( new Portal( $module ) )->listing(
+		$this->source = $source ?? static fn( string $module ): ?array => 'tasks_own' === $module ? ( new TaskPortal() )->listing( TaskSelection::pending(), 'own' ) : ( new Portal( $module ) )->listing(
 			'communications' === $module ? NoticeSelection::parse( array() ) : AgendaSelection::parse( array() )
 		);
 	}
@@ -25,7 +26,7 @@ final class HomeDashboard {
 	/** The destinations come from ServiceDirectory, never request parameters. */
 	public function model( array $destinations ): array {
 		$result = array();
-		foreach ( array( 'communications', 'calendar' ) as $module ) {
+		foreach ( array( 'communications', 'calendar', 'tasks_own' ) as $module ) {
 			$result[ $module ] = array(
 				'available' => false,
 				'url'       => '',
@@ -42,6 +43,10 @@ final class HomeDashboard {
 					}
 					$items = array();
 					foreach ( array_slice( $list['items'], 0, 3 ) as $item ) {
+						if ( 'tasks_own' === $module ) {
+							$items[] = self::taskItem( $item, $destination['url'] );
+							continue;
+						}
 						if ( ! is_array( $item ) || ! is_int( $item['id'] ?? null ) || $item['id'] < 1 || ! is_string( $item['title'] ?? null ) || ! is_int( $item['published_at'] ?? null ) ) {
 							throw new \UnexpectedValueException( 'Projecção indisponível.' );
 						}
@@ -75,5 +80,19 @@ final class HomeDashboard {
 			}
 		}
 		return $result;
+	}
+
+	private static function taskItem( mixed $item, string $base ): array {
+		if ( ! is_array( $item ) || ! is_int( $item['id'] ?? null ) || $item['id'] < 1 || ! is_string( $item['title'] ?? null ) || ! in_array( $item['state'] ?? null, array( 'open', 'in_progress' ), true ) || ! is_string( $item['priority'] ?? null ) || ! isset( TaskView::PRIORITIES[ $item['priority'] ] ) || ! array_key_exists( 'due_at', $item ) || ( null !== $item['due_at'] && ! is_int( $item['due_at'] ) ) || ! is_bool( $item['overdue'] ?? null ) ) {
+			throw new \UnexpectedValueException( 'Projecção indisponível.' );
+		}
+		return array(
+			'title'    => $item['title'],
+			'url'      => $base . ( str_contains( $base, '?' ) ? '&' : '?' ) . 'entry=' . $item['id'],
+			'date'     => TaskView::date( $item['due_at'] ),
+			'state'    => TaskView::STATES[ $item['state'] ],
+			'priority' => TaskView::PRIORITIES[ $item['priority'] ],
+			'overdue'  => $item['overdue'],
+		);
 	}
 }

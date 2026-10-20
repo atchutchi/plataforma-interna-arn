@@ -59,5 +59,34 @@ final class HomeDashboardRenderingTest extends TestCase {
 		self::assertStringNotContainsString( '<h1', $html );
 		self::assertStringContainsString( 'aria-labelledby="arn-dashboard-1"', $html );
 		self::assertStringContainsString( 'id="arn-dashboard-2"', $html );
+		$args['dashboard']['tasks_own'] = array(
+			'available' => true,
+			'url'       => '/minhas-tarefas/',
+			'items'     => array(
+				array(
+					'title'    => 'Tarefa <script>',
+					'date'     => '20/10/2026 10:00 UTC',
+					'url'      => '/minhas-tarefas/?entry=3',
+					'state'    => 'Em curso',
+					'priority' => 'Alta',
+					'overdue'  => true,
+					'reason'   => 'private reason',
+				),
+			),
+		);
+		ob_start();
+		include dirname( __DIR__, 2 ) . '/wp-content/themes/arn-intranet/portal/home-dashboard.php';
+		$tasks = (string) ob_get_clean();
+		self::assertStringContainsString( 'Tarefas pendentes', $tasks );
+		self::assertStringContainsString( 'Todas as minhas tarefas', $tasks );
+		self::assertStringContainsString( 'Tarefa &lt;script&gt;', $tasks );
+		self::assertStringContainsString( 'Em curso · Prioridade alta', $tasks );
+		self::assertStringContainsString( 'Prazo ultrapassado', $tasks );
+		self::assertStringNotContainsString( 'private reason', $tasks );
+		self::assertStringNotContainsString( '<form', $tasks );
+		$args['dashboard']['tasks_own']['items'] = array();
+		ob_start();
+		include dirname( __DIR__, 2 ) . '/wp-content/themes/arn-intranet/portal/home-dashboard.php';
+		self::assertStringContainsString( 'Não tens tarefas pendentes neste momento.', (string) ob_get_clean() );
 	}
 }
