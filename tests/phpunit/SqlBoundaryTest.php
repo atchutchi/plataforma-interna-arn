@@ -16,6 +16,23 @@ use PHPUnit\Framework\TestCase;
  * Contratos do classificador por tokens e interpretações de comentários.
  */
 final class SqlBoundaryTest extends TestCase {
+
+	/** O prefixo de sistema separado não pode ocultar o âmbito global. */
+	public function testRefusesSeparatedSystemVariableGlobalScope(): void {
+		foreach ( array( '8.0.44', '8.4.0', '11.8.3-MariaDB' ) as $server ) {
+			foreach ( array( 'GLOBAL', 'PERSIST', 'PERSIST_ONLY' ) as $scope ) {
+				foreach ( array( '/*comment*/', ' ', "\n", "-- comment\n", "# comment\n", '/*one*//*two*/' ) as $separator ) {
+					$sql = 'SET @@' . $separator . $scope . '.`max_connections`=100';
+					self::assertFalse( SqlBoundary::classify( $sql, $server )['trusted'], $server . ': ' . $sql );
+					self::assertFalse( SqlBoundary::classify( 'SET @marker=1, ' . substr( $sql, 4 ), $server )['trusted'], $server . ': atribuição múltipla ' . $sql );
+				}
+			}
+			foreach ( array( 'SET @@/*comment*/SESSION.wait_timeout=60', 'SET @@ LOCAL.wait_timeout=60', 'SET @global=1, @persist_only=2', 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED' ) as $sql ) {
+				self::assertTrue( SqlBoundary::classify( $sql, $server )['trusted'], $server . ': ' . $sql );
+			}
+		}
+	}
+
 	/** NAMES não pode ocultar uma segunda opção de SET. */
 	public function testNamesRejectsTrailingAssignments(): void {
 		foreach ( array( '8.0.44', '8.4.0', '11.8.3-MariaDB' ) as $server ) {
