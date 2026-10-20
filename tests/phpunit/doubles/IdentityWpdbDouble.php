@@ -152,11 +152,12 @@ class wpdb {
 
 	/**
 	 * Regista SQL e simula uma falha restrita ao comando pretendido.
+	 * Mantém a assinatura sem tipos do wpdb real.
 	 *
 	 * @param string $query SQL preparado.
 	 * @return int|false
 	 */
-	public function query( string $query ): int|false {
+	public function query( $query ) {
 		$this->queries[]  = $query;
 		$this->last_error = '';
 		if ( '' !== $this->fail_prefix && str_starts_with( $query, $this->fail_prefix ) ) {

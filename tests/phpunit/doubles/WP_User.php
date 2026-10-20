@@ -35,6 +35,13 @@ class WP_User {
 	public string $user_email;
 
 	/**
+	 * Funções nativas da conta fictícia.
+	 *
+	 * @var string[]
+	 */
+	public array $roles = array();
+
+	/**
 	 * Cria uma conta em memória.
 	 *
 	 * @param int    $user_id Identificador.
