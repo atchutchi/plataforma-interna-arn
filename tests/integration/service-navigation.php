@@ -158,6 +158,11 @@ try {
 	$assert( array() === PeopleNavigation::destinations(), 'administrador nativo sem autoridade People' );
 	$assert( array() === Portal::model( 'home', array() )['services'], 'início não concede acessos ao administrador' );
 	$login( $ids['alfa'] );
+	$notice_connections = (int) $db->get_row( "SHOW STATUS LIKE 'Threads_connected'" )->Value;
+	foreach ( array( 'communications', 'calendar', 'tasks_own' ) as $notice_module ) {
+		\Arn\Intranet\EditorialPreview\HomeNotificationSources::read( $notice_module );
+	}
+	$assert( (int) $db->get_row( "SHOW STATUS LIKE 'Threads_connected'" )->Value <= $notice_connections, 'fontes de avisos indisponíveis não acumulam ligações People alheias aos módulos' );
 	$assert( array( 'directory', 'profile' ) === array_keys( PeopleNavigation::destinations() ), 'colaborador sem equipa' );
 	$saved_menu = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE post_type=%s ORDER BY ID', $wpdb->posts, 'wp_navigation' ), ARRAY_A );
 	$expected   = ( new ServiceDirectory() )->items();

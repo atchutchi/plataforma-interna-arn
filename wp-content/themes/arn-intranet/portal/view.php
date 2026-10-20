@@ -103,6 +103,7 @@ $intro        = array(
 		</div>
 		<?php
 		get_template_part( 'portal/home-dashboard', null, array( 'dashboard' => $portal['dashboard'] ?? array() ) );
+		get_template_part( 'portal/home-notifications', null, array( 'notifications' => $portal['notifications'] ?? array() ) );
 		if ( empty( $portal['published_news'] ) ) {
 			get_template_part( 'portal/notice', null, array( 'available' => $available ) ); }
 		?>
