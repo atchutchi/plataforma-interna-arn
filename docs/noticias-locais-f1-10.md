@@ -10,7 +10,11 @@ O catálogo acrescenta a categoria Notícia institucional para reportagens que n
 
 Esta extensão permite inserir os dez ficheiros de uma reportagem como uma capa e nove imagens ordenadas. O texto, os originais, os descritores de importação e as provas concretas ficam fora do Git. Não altera audiências, concessões ou o circuito de aprovação. O pedido do responsável autoriza a inserção da peça fornecida exclusivamente na demonstração local. Os 22 anexos anteriores conservam a revisão administrativa separada.
 
-Validação desta parcela: 897 testes PHP, 4000 asserções e quatro omissões Windows preexistentes. Os dois novos testes falharam antes da extensão. A revisão independente estática não identificou bloqueadores. Inserção, teste HTTP e verificação visual da reportagem concreta ainda pendentes nesta revisão.
+Validação desta parcela: 897 testes PHP, 4000 asserções e quatro omissões Windows preexistentes. Os dois novos testes falharam antes da extensão. PHPCS dos oito ficheiros afectados e revisão independente estática sem bloqueadores. Todos os checks da PR #52 aprovaram o código em 87808c2 antes da activação local.
+
+A reportagem fornecida foi inserida na demonstração, através das contas de autoria e edição fictícias existentes, com audiência local explícita e auditoria de criação, submissão e aprovação. Texto e dez fotografias ficam exclusivamente na base e no armazenamento privados. Não foram criadas contas, atribuídas concessões ou contactado o Google. O texto corresponde aos sete parágrafos da fonte, retirando apenas marcação Markdown. A repetição reutilizou o mesmo artigo. Os onze ficheiros de origem conservaram hashes. As 81 tabelas externas à demonstração ficaram iguais.
+
+Playwright passou 11 verificações: lista e categoria, texto, capa e nove imagens de galeria com texto alternativo, dez binários JPEG autenticados com private/no-store, apresentação a 1440 e 390 px sem imagens partidas ou transbordo, detalhe e fotografia anónimos com 404 vazio e recusa ao perfil fictício sem competência de notícias. Capturas de computador e telemóvel inspeccionadas. A reportagem ficou aberta no browser do Codex. Esta inserção concreta não é publicação externa nem aprovação de conteúdos institucionais futuros.
 
 ## Instalação e acesso
 
