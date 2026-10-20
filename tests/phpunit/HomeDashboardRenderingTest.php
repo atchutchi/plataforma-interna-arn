@@ -88,5 +88,49 @@ final class HomeDashboardRenderingTest extends TestCase {
 		ob_start();
 		include dirname( __DIR__, 2 ) . '/wp-content/themes/arn-intranet/portal/home-dashboard.php';
 		self::assertStringContainsString( 'Não tens tarefas pendentes neste momento.', (string) ob_get_clean() );
+		$args = array(
+			'notifications' => array(
+				'available' => true,
+				'links'     => array(
+					array(
+						'title' => 'Tarefas',
+						'url'   => '/tarefas/?notices=1',
+					),
+				),
+				'items'     => array(
+					array(
+						'title'  => 'Aviso <script>',
+						'url'    => '/tarefas/?entry=2',
+						'module' => 'Tarefas',
+						'event'  => 'Novo comentário',
+						'date'   => '20/10/2026 10:00 UTC',
+						'read'   => false,
+						'reason' => 'private-notice',
+					),
+				),
+			),
+		);
+		ob_start();
+		include dirname( __DIR__, 2 ) . '/wp-content/themes/arn-intranet/portal/home-notifications.php';
+		$notices = (string) ob_get_clean();
+		self::assertStringContainsString( 'Aviso &lt;script&gt;', $notices );
+		self::assertStringContainsString( 'Por ler', $notices );
+		self::assertStringContainsString( 'Consultar o Início não marca os avisos como lidos.', $notices );
+		self::assertStringContainsString( 'aria-label="Consultar avisos nos módulos"', $notices );
+		self::assertStringNotContainsString( '<form', $notices );
+		self::assertStringNotContainsString( 'private-notice', $notices );
+		$args['notifications']['items'][0]['read'] = true;
+		ob_start();
+		include dirname( __DIR__, 2 ) . '/wp-content/themes/arn-intranet/portal/home-notifications.php';
+		self::assertStringContainsString( '>Lida<', (string) ob_get_clean() );
+		$args['notifications']['items'] = array();
+		ob_start();
+		include dirname( __DIR__, 2 ) . '/wp-content/themes/arn-intranet/portal/home-notifications.php';
+		self::assertStringContainsString( 'Não tens notificações disponíveis neste momento.', (string) ob_get_clean() );
+		$args['notifications']['available'] = false;
+		$args['notifications']['links']     = array();
+		ob_start();
+		include dirname( __DIR__, 2 ) . '/wp-content/themes/arn-intranet/portal/home-notifications.php';
+		self::assertStringContainsString( 'Não há notificações disponíveis para a tua conta nesta secção.', (string) ob_get_clean() );
 	}
 }

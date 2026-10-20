@@ -172,6 +172,7 @@ final class Portal {
 			$model['published_news'] = true;
 			$model['services']       = ( new ServiceDirectory() )->items();
 			$model['dashboard']      = ( new HomeDashboard() )->model( $model['services'] );
+			$model['notifications']  = ( new HomeNotifications() )->model();
 			return $model;
 		}
 		return self::reviewModel( $view, $input );
