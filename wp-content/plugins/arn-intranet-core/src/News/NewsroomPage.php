@@ -570,7 +570,7 @@ endif;
 		</div><button class="button" type="button" data-add-media <?php echo is_array( $featured ) ? 'hidden' : ''; ?>>Adicionar destaque</button><?php self::error( $errors, 'featured', $operation ); ?></fieldset>
 		<?php
 		foreach ( array(
-			'gallery'     => array( 'Galeria', 8, $content?->gallery ?? array() ),
+			'gallery'     => array( 'Galeria', Content::GALLERY_LIMIT, $content?->gallery ?? array() ),
 			'attachments' => array( 'Anexos', 5, $content?->attachments ?? array() ),
 		) as $key => [$label, $limit, $assets] ) :
 			$rows = $post[ $key ] ?? array();
@@ -583,7 +583,7 @@ endif;
 					$assets
 				); }
 			?>
-			<fieldset class="arn-newsroom-media" data-media-group="<?php echo esc_attr( $key ); ?>" data-limit="<?php echo esc_attr( (string) $limit ); ?>"><legend><?php echo esc_html( $label ); ?></legend><p><?php echo esc_html( 'gallery' === $key ? 'Até 8 imagens PNG ou JPEG, cada uma com texto alternativo. Cada imagem pode ter até 1 MiB, 4096 píxeis por lado e 16 milhões de píxeis no total.' : 'Até 5 anexos PDF, PNG ou JPEG, cada um com designação. Cada ficheiro pode ter até 1 MiB.' ); ?></p><div data-media-rows>
+			<fieldset class="arn-newsroom-media" data-media-group="<?php echo esc_attr( $key ); ?>" data-limit="<?php echo esc_attr( (string) $limit ); ?>"><legend><?php echo esc_html( $label ); ?></legend><p><?php echo esc_html( 'gallery' === $key ? 'Até ' . Content::GALLERY_LIMIT . ' imagens PNG ou JPEG, cada uma com texto alternativo. Cada imagem pode ter até 1 MiB, 4096 píxeis por lado e 16 milhões de píxeis no total.' : 'Até 5 anexos PDF, PNG ou JPEG, cada um com designação. Cada ficheiro pode ter até 1 MiB.' ); ?></p><div data-media-rows>
 			<?php
 			if ( is_array( $rows ) ) :
 				foreach ( $rows as $index => $row ) :

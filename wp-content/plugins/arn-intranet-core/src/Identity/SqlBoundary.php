@@ -381,6 +381,13 @@ final class SqlBoundary {
 	 * @return array
 	 */
 	private static function classifySet( array $words, array $result ): array {
+		// O âmbito pertence à decisão, não apenas ao nome da variável.
+		$scope = $words[1]['value'] ?? '';
+		if ( in_array( $scope, array( 'GLOBAL', 'PERSIST', 'PERSIST_ONLY' ), true )
+			|| ( in_array( $scope, array( 'SESSION', 'LOCAL' ), true ) && 'TRANSACTION' === ( $words[2]['value'] ?? '' ) ) ) {
+			$result['trusted'] = false;
+			return $result;
+		}
 		if ( isset( $words[1] ) && 'PASSWORD' === $words[1]['value'] ) {
 			$result['trusted']         = false;
 			$result['implicit_commit'] = true;
@@ -402,7 +409,10 @@ final class SqlBoundary {
 			return $result;
 		}
 		if ( isset( $words[1] ) && in_array( $words[1]['value'], array( 'NAMES', 'CHARACTER', 'CHARSET' ), true ) ) {
-			if ( 'NAMES' !== $words[1]['value'] || ! isset( $words[2] ) || ! in_array( strtoupper( $words[2]['value'] ), array( 'UTF8', 'UTF8MB3', 'UTF8MB4' ), true ) ) {
+			// SET NAMES accepts only its isolated form, including WordPress COLLATE.
+			// A trailing SET option can otherwise alter session or global variables.
+			$isolated = 3 === count( $words ) || ( 5 === count( $words ) && 'word' === $words[3]['type'] && 'COLLATE' === $words[3]['value'] && in_array( $words[4]['type'], array( 'word', 'ident', 'string' ), true ) && 1 === preg_match( '/\A[A-Z0-9_]+\z/D', strtoupper( $words[4]['value'] ) ) );
+			if ( ! $isolated || 'NAMES' !== $words[1]['value'] || ! isset( $words[2] ) || ! in_array( $words[2]['type'], array( 'word', 'ident', 'string' ), true ) || ! in_array( strtoupper( $words[2]['value'] ), array( 'UTF8', 'UTF8MB3', 'UTF8MB4' ), true ) ) {
 				$result['trusted'] = false;
 			}
 			return $result;
@@ -424,7 +434,9 @@ final class SqlBoundary {
 			if ( 'COMPLETION_TYPE' === $name ) {
 				$result['completion_type'] = true;
 			}
-			if ( in_array( $name, array( 'SQL_MODE', 'CHARACTER_SET_CLIENT', 'CHARACTER_SET_CONNECTION', 'COLLATION_CONNECTION' ), true ) ) {
+			// Características transaccionais usam SET TRANSACTION sem âmbito;
+			// atribuições de variáveis (incluindo aliases MariaDB) não são admitidas.
+			if ( in_array( $name, array( 'SQL_MODE', 'CHARACTER_SET_CLIENT', 'CHARACTER_SET_CONNECTION', 'COLLATION_CONNECTION', 'TRANSACTION_ISOLATION', 'TX_ISOLATION', 'TRANSACTION_READ_ONLY', 'TX_READ_ONLY' ), true ) ) {
 				$result['trusted'] = false;
 			}
 		}
@@ -481,13 +493,15 @@ final class SqlBoundary {
 				return null;
 			}
 		}
-		$joined = implode( '.', $parts );
-		$joined = ltrim( $joined, '@' );
-		$joined = preg_replace( '/^(?:GLOBAL|SESSION|LOCAL|PERSIST|PERSIST_ONLY)\./', '', $joined ) ?? $joined;
-		$joined = preg_replace( '/^(?:GLOBAL|SESSION|LOCAL|PERSIST|PERSIST_ONLY)$/', '', $joined ) ?? $joined;
 		if ( str_starts_with( implode( '', $parts ), '@' ) && ! str_starts_with( implode( '', $parts ), '@@' ) ) {
 			return '';
 		}
+		$joined = ltrim( implode( '.', $parts ), '@' );
+		if ( 1 === preg_match( '/^(?:GLOBAL|PERSIST|PERSIST_ONLY)(?:\.|$)/', $joined ) ) {
+			return null;
+		}
+		$joined   = preg_replace( '/^(?:SESSION|LOCAL)\./', '', $joined ) ?? $joined;
+		$joined   = preg_replace( '/^(?:SESSION|LOCAL)$/', '', $joined ) ?? $joined;
 		$segments = explode( '.', $joined );
 		return (string) end( $segments );
 	}

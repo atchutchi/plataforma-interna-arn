@@ -4,6 +4,18 @@
 
 Actualização de 15 de outubro: a evolução [F1-11](publicacao-editorial-local-f1-11.md) implementa o circuito local de decisão/publicação e substitui a instalação antiga, as quatro flags e as duas contas descritas historicamente abaixo. O runtime corrente exige cinco flags, esquema 2 e o elenco completo de cinco fixtures. LocalNewsInstaller recusa a entrada antiga. A revisão independente antecede a activação normal pelo controlador, seguida da aceitação integrada. A homologação institucional continua pendente.
 
+## Extensão de notícias institucionais, 20 de outubro
+
+O catálogo acrescenta a categoria Notícia institucional para reportagens que não são circulares, notas internas, despachos ou comunicação sindical. A galeria passa a aceitar até 12 imagens além da capa, com o mesmo limite de 1 MiB por ficheiro, textos alternativos e acesso privado. O máximo de um envio completo passa de 14 para 18 ficheiros, incluindo cinco anexos. Para exercitar esse máximo, confirmar no PHP HTTP `max_file_uploads >= 18` e `post_max_size >= 24M`. As referências a oito imagens e 14 ficheiros abaixo descrevem a aceitação original.
+
+Esta extensão permite inserir os dez ficheiros de uma reportagem como uma capa e nove imagens ordenadas. O texto, os originais, os descritores de importação e as provas concretas ficam fora do Git. Não altera audiências, concessões ou o circuito de aprovação. O pedido do responsável autoriza a inserção da peça fornecida exclusivamente na demonstração local. Os 22 anexos anteriores conservam a revisão administrativa separada.
+
+Validação desta parcela: 897 testes PHP, 4000 asserções e quatro omissões Windows preexistentes. Os dois novos testes falharam antes da extensão. PHPCS dos oito ficheiros afectados e revisão independente estática sem bloqueadores. Todos os checks da PR #52 aprovaram o código em 87808c2 antes da activação local.
+
+A reportagem fornecida foi inserida na demonstração, através das contas de autoria e edição fictícias existentes, com audiência local explícita e auditoria de criação, submissão e aprovação. Texto e dez fotografias ficam exclusivamente na base e no armazenamento privados. Não foram criadas contas, atribuídas concessões ou contactado o Google. O texto corresponde aos sete parágrafos da fonte, retirando apenas marcação Markdown. A repetição reutilizou o mesmo artigo. Os onze ficheiros de origem conservaram hashes. As 81 tabelas externas à demonstração ficaram iguais.
+
+Playwright passou 11 verificações: lista e categoria, texto, capa e nove imagens de galeria com texto alternativo, dez binários JPEG autenticados com private/no-store, apresentação a 1440 e 390 px sem imagens partidas ou transbordo, detalhe e fotografia anónimos com 404 vazio e recusa ao perfil fictício sem competência de notícias. Capturas de computador e telemóvel inspeccionadas. A reportagem ficou aberta no browser do Codex. Esta inserção concreta não é publicação externa nem aprovação de conteúdos institucionais futuros.
+
 ## Instalação e acesso
 
 O código regista o CPT `arn_noticia` como âncora privada sem editor nativo, REST, pesquisa pública ou capacidades WordPress de edição. O acesso exige ambiente efectivo `local` e as quatro constantes booleanas verdadeiras `ARN_ALLOW_LOCAL_NEWSROOM`, `ARN_ALLOW_LOCAL_PRIVATE_FILES`, `ARN_ALLOW_FICTIONAL_LOCAL_ACCESS` e `ARN_ALLOW_LOCAL_AUTHORIZATION_STORAGE`. A instalação das tabelas e das duas contas fictícias é explícita por CLI administradora local com `(new \Arn\Intranet\News\LocalNewsInstaller())->install()`. A operação não imprime passwords. Estas ficam exclusivamente na raiz privada validada. A instalação não acontece em GET, na activação do plugin nem no primeiro acesso ao menu.

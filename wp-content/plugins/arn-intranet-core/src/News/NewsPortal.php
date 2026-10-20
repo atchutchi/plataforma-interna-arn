@@ -14,10 +14,11 @@ use WP_Post;
 final class NewsPortal {
 	public static function categories(): array {
 		return array(
-			'circular'             => 'Circular',
-			'nota-interna'         => 'Nota interna',
-			'despacho'             => 'Despacho',
-			'comunicacao-sindical' => 'Comunicação sindical',
+			'noticia-institucional' => 'Notícia institucional',
+			'circular'              => 'Circular',
+			'nota-interna'          => 'Nota interna',
+			'despacho'              => 'Despacho',
+			'comunicacao-sindical'  => 'Comunicação sindical',
 		);
 	}
 
