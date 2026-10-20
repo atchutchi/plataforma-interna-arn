@@ -12,7 +12,12 @@ use InvalidArgumentException;
 
 // phpcs:disable Squiz.Commenting -- Closed selection contracts are covered by transport and SQL tests.
 final readonly class TaskSelection {
-	private function __construct( public int $page, public string $q, public string $state, public ?int $assignee ) {}
+	private function __construct( public int $page, public string $q, public string $state, public ?int $assignee, private bool $pending_only = false ) {}
+
+	/** Server-owned home selection, never a new browser filter or authority. */
+	public static function pending(): self {
+		return new self( 1, '', '', null, true );
+	}
 
 	public static function parse( array $query ): ?self {
 		if ( array_diff( array_keys( $query ), array( 'page', 'q', 'state', 'assignee' ) ) ) {
@@ -41,7 +46,7 @@ final readonly class TaskSelection {
 	}
 
 	public function apply( array $authorised ): array {
-		$items = array_values( array_filter( $authorised, fn( Task $task ): bool => ( '' === $this->state || $task->state->value === $this->state ) && ( null === $this->assignee || $task->assignee_id === $this->assignee ) && ( '' === $this->q || false !== mb_stripos( $task->content->title . "\n" . $task->content->description, $this->q, 0, 'UTF-8' ) ) ) );
+		$items = array_values( array_filter( $authorised, fn( Task $task ): bool => ( ! $this->pending_only || in_array( $task->state, array( TaskState::Open, TaskState::InProgress ), true ) ) && ( '' === $this->state || $task->state->value === $this->state ) && ( null === $this->assignee || $task->assignee_id === $this->assignee ) && ( '' === $this->q || false !== mb_stripos( $task->content->title . "\n" . $task->content->description, $this->q, 0, 'UTF-8' ) ) ) );
 		usort( $items, static fn( Task $a, Task $b ): int => array( null === $a->content->due_at, $a->content->due_at ?? 0, $a->id ) <=> array( null === $b->content->due_at, $b->content->due_at ?? 0, $b->id ) );
 		$total = count( $items );
 		$pages = intdiv( $total, 20 ) + ( 0 !== $total % 20 ? 1 : 0 );

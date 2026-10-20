@@ -159,3 +159,4 @@ arn_tasks_concurrency( $db, $roster, $ids['a'], $_COOKIE[ LOGGED_IN_COOKIE ], $r
 $assert( 2 === $repo->find( $race->id )?->revision && TaskState::InProgress === $repo->find( $race->id )?->state, 'CAS concorrente produziu uma só revisão' );
 $assert( '2' === (string) $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM %i WHERE task_id=%d', $schema->table( 'audit' ), $race->id ) ), 'criação e uma transição, sem evento duplicado' );
 $assert( '2' === (string) $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM %i WHERE task_id=%d', $schema->table( 'notifications' ), $race->id ) ), 'avisos concorrentes únicos' );
+require __DIR__ . '/tasks-home-dashboard-cases.php';
