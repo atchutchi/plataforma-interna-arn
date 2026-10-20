@@ -1,6 +1,6 @@
 # Próxima entrega: parâmetros autorizados do CMS
 
-Especificação técnica de 20 de outubro de 2026 para US-A05 e secção 6.2 do README. Implementação parcial na PR #59: domínio, persistência, admissão nos consumidores e ciclo de vida de cópias privadas. Instalador, interface e aceitação WordPress/Playwright ainda pendentes. Não constitui aprovação institucional. O Painel ARN e os destinos de gestão já existem. A lacuna seguinte é configurar parâmetros expostos pela aplicação com competência própria, validação e histórico de alterações.
+Especificação técnica de 20 de outubro de 2026 para US-A05 e secção 6.2 do README. Implementação na PR #59: domínio, persistência, admissão nos consumidores, ciclo de vida de cópias privadas, instalador e interface. O ensaio nativo WordPress por CLI passou 31 controlos. Aceitação HTTP/Playwright ainda pendente, conforme docs/qa-parametros-cms-local-f1-15.md. Não constitui aprovação institucional. O Painel ARN e os destinos de gestão já existem. Esta parcela acrescenta parâmetros expostos pela aplicação com competência própria, validação e histórico de alterações.
 
 ## Escopo da primeira parcela
 

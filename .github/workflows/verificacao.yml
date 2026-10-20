@@ -146,7 +146,7 @@ jobs:
         run: npm run env:stop:tests
 
   tasks-integration:
-    name: Tarefas, autoridade e persistência SQL sintéticas
+    name: Tarefas e parâmetros CMS, WordPress e SQL
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -164,11 +164,13 @@ jobs:
           npm run test:tasks-foundation:integration
           npm run test:tasks-storage:integration
           npm run test:tasks-installer:integration
+          npm run test:cms-installer:integration
       - name: Activar local apenas no contentor efémero desta job
         run: node scripts/wp-env.mjs --tests run cli wp config set WP_ENVIRONMENT_TYPE local --type=constant
       - run: npm run test:tasks-foundation:integration
       - run: npm run test:tasks-storage:integration
       - run: npm run test:tasks-installer:integration
+      - run: npm run test:cms-installer:integration
       - if: always()
         run: npm run env:stop:tests
 

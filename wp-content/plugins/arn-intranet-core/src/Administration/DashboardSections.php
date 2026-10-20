@@ -44,6 +44,7 @@ final class DashboardSections {
 				array( 'documents', 'arn-document-catalog', 'Catálogo documental', 'Gerir documentos, versões e destinatários autorizados.', 'media-document' ),
 				array( 'communications', 'arn-communications', 'Comunicados', 'Gerir comunicados no teu âmbito de competência.', 'megaphone' ),
 				array( 'calendar', 'arn-calendar', 'Calendário', 'Gerir eventos no teu âmbito de competência.', 'calendar-alt' ),
+				array( 'settings', 'arn-cms-settings', 'Parâmetros do CMS', 'Definir limites de novos ficheiros e consultar alterações.', 'admin-settings' ),
 			) as [$id, $slug, $title, $description, $icon] ) {
 				if ( self::registered( $menu, $slug, 'read' ) ) {
 					$groups['management']['links'][] = compact( 'id', 'title', 'description', 'icon' ) + array( 'path' => 'admin.php?page=' . $slug );

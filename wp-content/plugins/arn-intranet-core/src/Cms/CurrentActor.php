@@ -38,7 +38,7 @@ final class CurrentActor implements SettingsAuthority {
 		( new AuthorizationSchema( $this->database ) )->validate();
 		$snapshot = ( new WpdbAuthorizationRepository( $this->database ) )->findInTransaction( $resolved[0] );
 		$user     = get_userdata( $resolved[0] );
-		if ( null === $snapshot || ! $user instanceof WP_User || ! in_array( $user->user_login, self::LOGINS, true ) || $user->user_login . '@example.invalid' !== $user->user_email || array( 'subscriber' ) !== array_values( $user->roles ) || '1' !== get_user_meta( $resolved[0], LocalFixtureUser::META_KEY, true ) || get_user_meta( $resolved[0], '_arn_cms_fixture', true ) !== $this->database->prefix ) {
+		if ( null === $snapshot || ! $user instanceof WP_User || ! in_array( $user->user_login, LocalInstaller::logins( $this->database->prefix ), true ) || $user->user_login . '@example.invalid' !== $user->user_email || array( 'subscriber' ) !== array_values( $user->roles ) || '1' !== get_user_meta( $resolved[0], LocalFixtureUser::META_KEY, true ) || get_user_meta( $resolved[0], '_arn_cms_fixture', true ) !== $this->database->prefix ) {
 			throw new DomainException( 'Conta de parâmetros indisponível.' );
 		}
 		$session = null === $this->resolver ? $this->nativeSession( $resolved[0], $resolved[1] ) : $resolved[1];
