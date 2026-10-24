@@ -17,6 +17,7 @@ Este README apresenta o estado actual e o trabalho necessário para concluir o s
 | F1-05: unidades fictícias e pré-validação de importações sintéticas sem escrita | [Unidades](docs/unidades-locais-f1-05.md) e [validador](docs/validacao-sintetica-f1-05.md). Não é um importador operacional de pessoas. |
 | F1-07: directório e perfil autorizados | Implementação integrada pelas PRs #25/#27. Validar os dados profissionais e permissões com RH antes da utilização institucional. |
 | F1-08: armazenamento imutável, registo/auditoria e entrega privada por objecto/versão | [Ficheiros privados](docs/ficheiros-privados-locais-f1-08.md). Ligado a notícias e documentos. Lacunas comuns na tabela seguinte. |
+| F1-08/09/10: quarentena, análise antimalware e derivados privados em notícias/documentos | [Aceitação de processamento](docs/processamento-media-privada-f1-08.md). ClamAV isolado, PNG thumbnail/preview, registo atómico e audiência por versão. 34 verificações Playwright e 24 SQL. Activação local explícita. O processamento síncrono e os limites conservadores ainda exigem evolução operacional. |
 | F1-08/09/10: reconciliação de ficheiros, apenas diagnóstico | [Aceitação e recuperação](docs/reconciliacao-ficheiros-local-f1-08.md). Compara bytes, registo, auditoria e referências de notícias/documentos. Detecta possíveis órfãos sem apagar ou reparar. 33 verificações Playwright e 23 integradas. |
 | F1-08/09/10: fronteira da media nativa pública | [Aceitação](docs/fronteira-media-nativa-f1-08.md), [PR #60](https://github.com/atchutchi/plataforma-interna-arn/pull/60). Uploads/derivados nativos, REST/AJAX, oEmbed, exportação e projecções de attachments fechados. 37 verificações Playwright e 48 verificações integradas. Os uploads privados continuam funcionais. |
 | F1-09: catálogo de documentos e regulamentos, versões, publicação e download | [Catálogo documental](docs/catalogo-documental-local-f1-09.md). Competência de gestão distinta de administração técnica. |
@@ -33,7 +34,7 @@ O pré-cadastro Workspace tem documentação própria em docs e dados privados e
 
 | Ordem | Entrega | Estado | Critério de fecho |
 | --- | --- | --- | --- |
-| 1 | F1-08/09/10: processamento privado e admissão completa | Por implementar | Derivados privados ligados à versão e audiência, limites por envio e análise antimalware/quarentena. Validar ficheiros maiores, falhas e concorrência. Completar anexos privados de tarefas conforme US-ARN-08. A fronteira nativa não substitui estas funções. |
+| 1 | F1-08/13: anexos de tarefas e fecho operacional de media | Parcial | Implementar anexos privados de tarefas conforme US-ARN-08, com versão, auditoria e autorização. Preparar fila e capacidade de lotes para produção, previews PDF quando aplicáveis, manutenção de assinaturas e gestão auditada da quarentena. Notícias/documentos já têm admissão e derivados no laboratório, não os reconstruir. |
 | 2 | F1-03/05: lacunas de cadastro e delegações | Parcial | Importador operacional auditado, manutenção do cadastro e delegações persistentes. Ensaiar com dados fictícios. RH valida a origem, hierarquia e atribuições reais. |
 | 3 | F2-01/02: pedidos internos e decisões | Por implementar | Tipos configuráveis, estados, referência, anexos privados, decisão autorizada, substituição, histórico e notificações consistentes. |
 | 4 | F2-03: férias e ausências | Por implementar | 22 dias úteis anuais repartíveis, pedido prévio, decisão final RH, saldo/reservas/reposições auditados e calendário colectivo sem motivos privados. PEN-14 continua a definir os parâmetros institucionais. |
@@ -89,6 +90,7 @@ npm run test:php
 npm run lint:php
 npm run test:native-media:integration
 npm run test:file-reconciliation:integration
+npm run test:media-processing:integration
 npm run env:stop:tests
 ~~~
 

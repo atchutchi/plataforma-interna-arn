@@ -57,6 +57,7 @@ final class WpdbFileRegistry {
 	/** Register in an already active transaction on the same dedicated connection.
 	 *
 	 * @param FileRecord $record Private reference.
+	 * @throws RuntimeException Invalid derivative ownership or database failure.
 	 * @throws RuntimeException When no transaction exists or a write fails.
 	 */
 	public function registerInTransaction( FileRecord $record ): void {
@@ -104,11 +105,18 @@ final class WpdbFileRegistry {
 	/** Insert reference and audit without transaction control.
 	 *
 	 * @param FileRecord $record Private reference.
+	 * @throws RuntimeException Invalid derivative ownership or database failure.
 	 */
 	private function writeRecord( FileRecord $record ): void {
 		$b = $record->blob;
+		if ( array() !== $b->derivatives && 'original' !== $record->variant ) {
+			throw new RuntimeException( self::ERROR );
+		}
 		$this->execute( $this->database->prepare( 'INSERT INTO %i (blob_id,sha256,size_bytes,mime,object_type,object_id,version,variant,actor_id,created_at) VALUES (%s,%s,%d,%s,%s,%d,%d,%s,%d,%d)', $this->schema->table( 'files' ), $b->id, $b->sha256, $b->size, $b->mime, $record->object_type, $record->object_id, $record->version, $record->variant, $record->actor_id, $record->created_at ) );
 		$this->execute( $this->database->prepare( 'INSERT INTO %i (blob_id,event,actor_id,occurred_at) VALUES (%s,%s,%d,%d)', $this->schema->table( 'audit' ), $b->id, 'file_registered', $record->actor_id, $record->created_at ) );
+		foreach ( $b->derivatives as $variant => $derived ) {
+			$this->writeRecord( new FileRecord( $derived, $record->object_type, $record->object_id, $record->version, $variant, $record->actor_id, $record->created_at ) );
+		}
 	}
 
 	/**

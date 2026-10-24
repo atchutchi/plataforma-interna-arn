@@ -20,7 +20,7 @@ if ( ! is_array( $news ) ) {
 	<?php
 	if ( is_array( $news['featured'] ) ) :
 		?>
-		<figure class="arn-news-preview-featured"><img src="<?php echo esc_url( $news['featured']['url'] ); ?>" alt="<?php echo esc_attr( $news['featured']['description'] ); ?>"><figcaption><?php echo esc_html( $news['featured']['description'] ); ?></figcaption></figure><?php endif; ?>
+		<figure class="arn-news-preview-featured"><img src="<?php echo esc_url( \Arn\Intranet\Media\VariantUrl::image( $news['featured']['url'], 'preview' ) ); ?>" alt="<?php echo esc_attr( $news['featured']['description'] ); ?>"><figcaption><?php echo esc_html( $news['featured']['description'] ); ?></figcaption></figure><?php endif; ?>
 	<div class="arn-portal-reading arn-news-preview-body">
 	<?php
 	foreach ( preg_split( '/\n\s*\n/u', trim( $news['body'] ) ) as $paragraph ) :
@@ -39,7 +39,7 @@ endforeach;
 		<?php
 		foreach ( $news['gallery'] as $image ) :
 			?>
-		<figure><img src="<?php echo esc_url( $image['url'] ); ?>" alt="<?php echo esc_attr( $image['description'] ); ?>"><figcaption><?php echo esc_html( $image['description'] ); ?></figcaption></figure><?php endforeach; ?></div></section><?php endif; ?>
+		<figure><img src="<?php echo esc_url( \Arn\Intranet\Media\VariantUrl::image( $image['url'], 'preview' ) ); ?>" alt="<?php echo esc_attr( $image['description'] ); ?>"><figcaption><?php echo esc_html( $image['description'] ); ?></figcaption></figure><?php endforeach; ?></div></section><?php endif; ?>
 	<?php
 	if ( array() !== $news['attachments'] ) :
 		?>

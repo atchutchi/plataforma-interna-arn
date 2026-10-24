@@ -81,6 +81,11 @@ final class LocalPrivateFiles {
 	 * @param string|null $root Raiz privada alternativa de integração.
 	 */
 	public static function store( ?string $root = null ): PrivateBlobStore {
+		return new PrivateBlobStore( $root ?? ( defined( 'ARN_LOCAL_PRIVATE_FILES_DIR' ) ? ARN_LOCAL_PRIVATE_FILES_DIR : '' ), self::publicRoots(), array( 'application/pdf', 'image/png', 'image/jpeg' ), 1048576 );
+	}
+
+	/** Known physical public roots shared with the quarantine boundary. */
+	public static function publicRoots(): array {
 		$public = array( realpath( ABSPATH ), realpath( WP_CONTENT_DIR ), realpath( dirname( __DIR__, 3 ) ) );
 		if ( ! empty( $_SERVER['DOCUMENT_ROOT'] ) && is_dir( (string) $_SERVER['DOCUMENT_ROOT'] ) ) {
 			$public[] = realpath( (string) $_SERVER['DOCUMENT_ROOT'] );
@@ -89,7 +94,7 @@ final class LocalPrivateFiles {
 		foreach ( false === $themes ? array() : $themes as $theme ) {
 			$public[] = realpath( $theme );
 		}
-		return new PrivateBlobStore( $root ?? ( defined( 'ARN_LOCAL_PRIVATE_FILES_DIR' ) ? ARN_LOCAL_PRIVATE_FILES_DIR : '' ), array_values( array_unique( array_filter( $public, 'is_string' ) ) ), array( 'application/pdf', 'image/png', 'image/jpeg' ), 1048576 );
+		return array_values( array_unique( array_filter( $public, 'is_string' ) ) );
 	}
 
 	/**

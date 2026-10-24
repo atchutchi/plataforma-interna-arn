@@ -519,6 +519,9 @@ else :
 		$value   = static fn( string $key, string $fallback ): string => is_string( $post[ $key ] ?? null ) ? $post[ $key ] : $fallback;
 		?>
 		<form class="arn-newsroom-form" method="post" enctype="multipart/form-data" action="<?php echo esc_url( self::url( $id ) ); ?>" data-news-form><input type="hidden" name="action" value="arn_newsroom"><input type="hidden" name="operation" value="<?php echo esc_attr( $operation ); ?>"><?php wp_nonce_field( self::nonceAction( $operation, $id ) ); ?>
+		<?php if ( in_array( $operation, array( 'create', 'revise' ), true ) && defined( 'ARN_ALLOW_LOCAL_MEDIA_PROCESSING' ) && true === ARN_ALLOW_LOCAL_MEDIA_PROCESSING ) : ?>
+		<p>Admissão privada activa: até oito ficheiros e 8 MiB por envio, incluindo ficheiros conservados. Aguarda a análise antes de repetir o envio. Se a análise não concluir, a operação é recusada e a cópia fica em quarentena.</p>
+		<?php endif; ?>
 		<?php
 		if ( $id > 0 ) :
 			?>

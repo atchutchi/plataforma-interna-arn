@@ -21,8 +21,9 @@ final class DocumentFileController {
 		if ( ! array_key_exists( 'arn_document_file', $_GET ) ) {
 			return;
 		}
-		$id     = $_GET['arn_document_file'];
-		$result = 'GET' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) && is_string( $id ) ? ( new LocalDocumentCatalog() )->file( $id ) : null;
+		$id      = $_GET['arn_document_file'];
+		$variant = $_GET['arn_media_variant'] ?? 'original';
+		$result  = 'GET' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) && is_string( $id ) && is_string( $variant ) ? ( new LocalDocumentCatalog() )->file( $id, $variant ) : null;
 		if ( null === $result || ! is_resource( $result['handle'] ?? null ) ) {
 			self::notFound();
 		}

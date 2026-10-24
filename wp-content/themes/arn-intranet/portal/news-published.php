@@ -16,7 +16,7 @@ $categories = \Arn\Intranet\News\NewsPortal::categories();
 		<div class="arn-portal-meta"><span>Por <?php echo esc_html( $news['author'] ); ?></span><time datetime="<?php echo esc_attr( gmdate( 'c', $news['published_at'] ) ); ?>">Publicado em <?php echo esc_html( wp_date( 'd/m/Y', $news['published_at'], new DateTimeZone( 'UTC' ) ) ); ?></time><span>Audiência: <?php echo esc_html( $news['audience'] ); ?></span></div>
 	</header>
 	<?php if ( is_array( $news['featured'] ) ) : ?>
-		<figure class="arn-news-preview-featured"><img src="<?php echo esc_url( $news['featured']['url'] ); ?>" alt="<?php echo esc_attr( $news['featured']['description'] ); ?>"><figcaption><?php echo esc_html( $news['featured']['description'] ); ?></figcaption></figure>
+		<figure class="arn-news-preview-featured"><img src="<?php echo esc_url( \Arn\Intranet\Media\VariantUrl::image( $news['featured']['url'], 'preview' ) ); ?>" alt="<?php echo esc_attr( $news['featured']['description'] ); ?>"><figcaption><?php echo esc_html( $news['featured']['description'] ); ?></figcaption></figure>
 	<?php endif; ?>
 	<div class="arn-portal-reading arn-news-preview-body">
 		<?php foreach ( preg_split( '/\n\s*\n/u', trim( $news['body'] ) ) as $paragraph ) : ?>
@@ -29,7 +29,7 @@ $categories = \Arn\Intranet\News\NewsPortal::categories();
 	<?php if ( array() !== $news['gallery'] ) : ?>
 		<section aria-labelledby="arn-news-gallery"><h2 id="arn-news-gallery">Galeria</h2><div class="arn-news-preview-gallery">
 			<?php foreach ( $news['gallery'] as $image ) : ?>
-				<figure><img src="<?php echo esc_url( $image['url'] ); ?>" alt="<?php echo esc_attr( $image['description'] ); ?>" loading="lazy" decoding="async"><figcaption><?php echo esc_html( $image['description'] ); ?></figcaption></figure>
+				<figure><img src="<?php echo esc_url( \Arn\Intranet\Media\VariantUrl::image( $image['url'], 'preview' ) ); ?>" alt="<?php echo esc_attr( $image['description'] ); ?>" loading="lazy" decoding="async"><figcaption><?php echo esc_html( $image['description'] ); ?></figcaption></figure>
 			<?php endforeach; ?>
 		</div></section>
 	<?php endif; ?>
