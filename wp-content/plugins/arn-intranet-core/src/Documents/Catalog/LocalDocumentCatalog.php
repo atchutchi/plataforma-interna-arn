@@ -15,6 +15,7 @@ use Arn\Intranet\Documents\PrivateFiles\PrivateBlobStore;
 use Arn\Intranet\Documents\PrivateFiles\WpdbFileRegistry;
 use Arn\Intranet\Identity\IdentityWpdb;
 use Closure;
+use Arn\Intranet\Media\LocalMediaProcessing;
 use RuntimeException;
 use Throwable;
 
@@ -120,7 +121,7 @@ final class LocalDocumentCatalog {
 		if ( null === $actor || ! DocumentPolicy::canManageScope( $scope, $actor[0], $actor[2], time() ) ) {
 			throw new RuntimeException( 'Operação documental não autorizada.' );
 		}
-		return ( new ImportBatch( ( $this->store_factory )() ) )->run(
+		return ( new ImportBatch( ( $this->store_factory )(), LocalMediaProcessing::pipeline( $actor[1] ) ) )->run(
 			function ( ImportBatch $batch ) use ( $source, $scope, $metadata, $actor, $reason ): Document {
 				$blob         = $batch->importFile( $source );
 				[$repository] = ( $this->repository_factory )();
@@ -142,7 +143,7 @@ final class LocalDocumentCatalog {
 		if ( null === $before || ! DocumentPolicy::canManage( $before, $actor[0], $actor[2], time() ) ) {
 			throw new RuntimeException( 'Operação documental não autorizada.' );
 		}
-		return ( new ImportBatch( ( $this->store_factory )() ) )->run(
+		return ( new ImportBatch( ( $this->store_factory )(), LocalMediaProcessing::pipeline( $actor[1] ) ) )->run(
 			function ( ImportBatch $batch ) use ( $source, $before, $repository, $id, $metadata, $actor, $expected, $reason ): Document {
 				$blob = null === $source ? $batch->duplicate( $before->version( count( $before->versions ) )->blob ) : $batch->importFile( $source );
 				return $repository->revise( $id, new Revision( count( $before->versions ) + 1, $metadata, $blob, $actor[1], time() ), $expected, $reason, null === $source ? $before->version( count( $before->versions ) )->blob->id : null );
@@ -166,8 +167,8 @@ final class LocalDocumentCatalog {
 	}
 
 	/** Resolve and verify a private original by opaque ID after access checks. */
-	public function file( string $blob_id ): ?array {
-		if ( true !== ( $this->gate )() || 1 !== preg_match( '/^[a-f0-9]{32}$/D', $blob_id ) ) {
+	public function file( string $blob_id, string $variant = 'original' ): ?array {
+		if ( ! in_array( $variant, array( 'original', 'thumbnail', 'preview' ), true ) || true !== ( $this->gate )() || 1 !== preg_match( '/^[a-f0-9]{32}$/D', $blob_id ) ) {
 			return null;
 		}
 		$actor = $this->current->read();
@@ -186,12 +187,16 @@ final class LocalDocumentCatalog {
 				return null;
 			}
 			$tuple = $registry->findForObject( 'document', $record->object_id, $record->version, 'original' );
-			if ( $tuple?->blob->id !== $blob_id ) {
+			if ( $tuple?->blob->id !== $blob_id || $record->blob->sha256 !== $version->blob->sha256 || $record->blob->size !== $version->blob->size || $record->blob->mime !== $version->blob->mime ) {
+				return null;
+			}
+			$selected = \Arn\Intranet\Documents\PrivateFiles\VariantSelection::select( $registry, $record, $variant );
+			if ( null === $selected ) {
 				return null;
 			}
 			return array(
-				'handle'   => ( $this->store_factory )()->open( $version->blob ),
-				'blob'     => $version->blob,
+				'handle'   => ( $this->store_factory )()->open( $selected ),
+				'blob'     => $selected,
 				'document' => $document,
 				'version'  => $version,
 			);

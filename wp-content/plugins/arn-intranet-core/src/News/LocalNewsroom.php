@@ -14,6 +14,7 @@ use Arn\Intranet\Documents\PrivateFiles\PrivateBlobStore;
 use Arn\Intranet\Documents\PrivateFiles\WpdbFileRegistry;
 use Arn\Intranet\Identity\IdentityWpdb;
 use Closure;
+use Arn\Intranet\Media\LocalMediaProcessing;
 use RuntimeException;
 use Throwable;
 
@@ -63,7 +64,7 @@ final class LocalNewsroom {
 		if ( $this->hasExisting( $input ) ) {
 			throw new RuntimeException( self::ERROR );
 		}
-		return ( new ImportBatch( ( $this->store_factory )() ) )->run(
+		return ( new ImportBatch( ( $this->store_factory )(), LocalMediaProcessing::pipeline( $actor[1] ) ) )->run(
 			function ( ImportBatch $batch ) use ( $input, $actor, $reason ): Article {
 				$content      = $this->content( $input, null, $batch );
 				[$repository] = ( $this->repository_factory )();
@@ -82,7 +83,7 @@ final class LocalNewsroom {
 			throw new RuntimeException( self::ERROR );
 		}
 		$this->validateText( $input );
-		return ( new ImportBatch( ( $this->store_factory )() ) )->run(
+		return ( new ImportBatch( ( $this->store_factory )(), LocalMediaProcessing::pipeline( $actor[1] ) ) )->run(
 			function ( ImportBatch $batch ) use ( $input, $before, $repository, $id, $actor, $expected, $reason ): Article {
 				$retained = array();
 				$content  = $this->content( $input, $before, $batch, $retained );
@@ -240,8 +241,8 @@ final class LocalNewsroom {
 	}
 
 	/** Validate registry tuple and exact version before opening the private handle. */
-	public function file( string $blob_id ): ?array {
-		if ( 1 !== preg_match( '/^[a-f0-9]{32}$/D', $blob_id ) ) {
+	public function file( string $blob_id, string $variant = 'original' ): ?array {
+		if ( ! in_array( $variant, array( 'original', 'thumbnail', 'preview' ), true ) || 1 !== preg_match( '/^[a-f0-9]{32}$/D', $blob_id ) ) {
 			return null;
 		}
 		try {
@@ -264,12 +265,16 @@ final class LocalNewsroom {
 			$asset   = $row['asset'];
 			$slot    = 'featured' === $asset->kind ? $version->content->featured : ( 'gallery' === $asset->kind ? ( $version->content->gallery[ $row['position'] ] ?? null ) : ( $version->content->attachments[ $row['position'] ] ?? null ) );
 			$tuple   = $registry->findForObject( 'news_asset', $row['asset_id'], 1, 'original' );
-			if ( $slot?->blob->id !== $blob_id || $tuple?->blob->id !== $blob_id ) {
+			if ( $slot?->blob->id !== $blob_id || $tuple?->blob->id !== $blob_id || $record->blob->sha256 !== $asset->blob->sha256 || $record->blob->size !== $asset->blob->size || $record->blob->mime !== $asset->blob->mime ) {
+				return null;
+			}
+			$selected = \Arn\Intranet\Documents\PrivateFiles\VariantSelection::select( $registry, $record, $variant );
+			if ( null === $selected ) {
 				return null;
 			}
 			return array(
-				'handle'  => ( $this->store_factory )()->open( $asset->blob ),
-				'blob'    => $asset->blob,
+				'handle'  => ( $this->store_factory )()->open( $selected ),
+				'blob'    => $selected,
 				'asset'   => $asset,
 				'article' => $article,
 				'version' => $version,

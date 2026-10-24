@@ -10,6 +10,7 @@ namespace Arn\Intranet\Documents\PrivateFiles;
 use Closure;
 use RuntimeException;
 use Throwable;
+use Arn\Intranet\Media\MediaPipeline;
 
 // phpcs:disable Squiz.Commenting.FunctionComment, Squiz.Commenting.VariableComment, Squiz.Commenting.FunctionCommentThrowTag
 
@@ -19,11 +20,14 @@ final class ImportBatch {
 	private bool $started  = false;
 	private bool $running  = false;
 
-	public function __construct( public readonly PrivateBlobStore $store ) {}
+	public function __construct( public readonly PrivateBlobStore $store, private readonly ?MediaPipeline $pipeline = null ) {}
 
 	/** Register ownership before any subsequent content validation can fail. */
 	public function importFile( string $source ): BlobDescriptor {
 		$this->assertRunning();
+		if ( null !== $this->pipeline ) {
+			return $this->processed( $source );
+		}
 		$blob            = $this->store->importFile( $source );
 		$this->created[] = $blob;
 		return $blob;
@@ -31,9 +35,39 @@ final class ImportBatch {
 
 	public function duplicate( BlobDescriptor $source ): BlobDescriptor {
 		$this->assertRunning();
+		if ( null !== $this->pipeline ) {
+			$handle = $this->store->open( $source );
+			try {
+				$blob = $this->processed( $handle );
+				if ( $blob->sha256 !== $source->sha256 || $blob->size !== $source->size || $blob->mime !== $source->mime ) {
+					throw new RuntimeException( 'Cópia anterior alterada.' );
+				}
+				return $blob;
+			} finally {
+				fclose( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+			}
+		}
 		$blob            = $this->store->duplicate( $source );
 		$this->created[] = $blob;
 		return $blob;
+	}
+
+	private function processed( mixed $source ): BlobDescriptor {
+		$prepared = $this->pipeline->prepare( $source );
+		$blobs    = array();
+		foreach ( $prepared['paths'] as $variant => $path ) {
+			$blob            = $this->store->importFile( $path );
+			$this->created[] = $blob;
+			if ( $blob->sha256 !== $prepared['hashes'][ $variant ] || ( 'original' !== $variant && 'image/png' !== $blob->mime ) ) {
+				throw new RuntimeException( 'Cópia processada alterada.' );
+			}
+			$blobs[ $variant ] = $blob;
+		}
+		$this->pipeline->prepared( $prepared, array_map( static fn( BlobDescriptor $blob ): string => $blob->id, $blobs ) );
+		$original = $blobs['original'];
+		unset( $blobs['original'] );
+		// Ownership remains with the exact descriptors tracked above for safe rollback.
+		return new BlobDescriptor( $original->id, $original->sha256, $original->size, $original->mime, $blobs );
 	}
 
 	/** Fresh registry connection resolves even a commit with a lost response. */

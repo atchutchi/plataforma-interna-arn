@@ -19,8 +19,9 @@ final class NewsFileController {
 		if ( ! array_key_exists( 'arn_news_media', $_GET ) ) {
 			return;
 		}
-		$id     = $_GET['arn_news_media'];
-		$result = 'GET' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) && is_string( $id ) ? ( new LocalNewsroom() )->file( $id ) : null;
+		$id      = $_GET['arn_news_media'];
+		$variant = $_GET['arn_media_variant'] ?? 'original';
+		$result  = 'GET' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) && is_string( $id ) && is_string( $variant ) ? ( new LocalNewsroom() )->file( $id, $variant ) : null;
 		if ( null === $result || ! is_resource( $result['handle'] ?? null ) ) {
 			self::notFound();
 		}
