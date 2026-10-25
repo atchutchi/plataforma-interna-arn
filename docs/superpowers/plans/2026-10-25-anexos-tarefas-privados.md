@@ -26,4 +26,4 @@ Não manter locks SQL durante ClamAV. Não abrir bytes antes da autorização. N
 
 ## Estado
 
-Implementação e aceitação local concluídas. PHP 1027/5198/cinco omissões Windows, Node 55, SQL 135, Playwright 42, PHPCS 24 e lint/build. Revisão independente final sem achados. Ver docs/anexos-tarefas-privados-local-f1-08-13.md. Integração sujeita à CI do SHA final. A fila operacional, lotes, preview PDF e retenção continuam no backlog separado.
+Implementação e aceitação local concluídas. PHP 1027/5198/cinco omissões Windows, Node 55, SQL 135, Playwright 42, PHPCS 25 e lint/build. Revisão independente final sem achados. Ver docs/anexos-tarefas-privados-local-f1-08-13.md. Integração sujeita à CI do SHA final. A fila operacional, lotes, preview PDF e retenção continuam no backlog separado.

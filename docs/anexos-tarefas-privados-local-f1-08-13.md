@@ -28,9 +28,9 @@ Não há alteração do schema SQL. Há evolução do payload e histórico de ta
 
 PHP: 1027 testes, 5198 asserções e cinco omissões Windows. A execução final não teve falhas ou avisos. O primeiro arranque não tinha GD activado e foi repetido com a extensão explícita, como na CI. Os dois testes focados no template e revalidação após falha passaram depois da revisão final da apresentação.
 
-Node: 55 testes, lint e build aprovados. O runtime usa as dependências já instaladas na máquina. PHPCS: 24 ficheiros PHP alterados aprovados.
+Node: 55 testes, lint e build aprovados. O runtime usa as dependências já instaladas na máquina. PHPCS: 25 ficheiros PHP alterados aprovados.
 
-MariaDB/WordPress: 135 verificações no ensaio exclusivo de tarefas. Inclui registo de variantes, replay, rollback injectado, CAS, administrador técnico sem acesso, outra unidade, reatribuição, terminal, suspensão e expiração da concessão antes/depois da escrita e abertura. As tabelas e contas temporárias do ensaio foram removidas pelo seu próprio harness.
+MariaDB/WordPress: 135 verificações no ensaio exclusivo de tarefas e 23 no ensaio de reconciliação de documentos/notícias. Inclui registo de variantes, replay, rollback injectado, CAS, administrador técnico sem acesso, outra unidade, reatribuição, terminal, suspensão e expiração da concessão antes/depois da escrita e abertura. As tabelas e contas temporárias do ensaio foram removidas pelo seu próprio harness.
 
 Playwright: 42 verificações distintas aprovadas no laboratório 8892. Criação pelo formulário, envio de PNG/PDF com scanner real, original e variantes privados, hashes dos originais, transporte inválido, nonce, limite, CAS, MIME real, recusa de outra unidade/administrador técnico/anónimo, reatribuição, quatro larguras de ecrã, rótulos e foco por teclado. Capturas desktop e mobile inspeccionadas. O tema existente foi conservado e a descrição obsoleta que negava anexos foi corrigida.
 
@@ -39,6 +39,8 @@ Conservação: 133 tabelas exteriores, linhas anteriores de 21 tabelas de negóc
 Credenciais e artefactos de QA ficaram fora do Git. Os 18 ficheiros de aplicação alterados correspondem à cópia ensaiada. A demonstração 8888 e a produção não receberam alterações. O estado de CI e integração deve ser consultado na PR desta branch, sem confundir aceitação local com implantação.
 
 A revisão independente identificou duas falhas antes do fecho: variantes esperadas omitidas na reconciliação e expiração temporal das concessões depois da verificação inicial. Ambas foram corrigidas e cobertas na integração. Uma segunda revisão não encontrou problemas concretos nos deltas. O Controller foi também corrigido para reler acesso e detalhe depois de uma falha de processamento, sem devolver uma projecção antiga após revogação.
+
+A primeira CI detectou uma expectativa desactualizada no ensaio de reconciliação. O contrato passou a indicar também a cobertura de tarefas. O teste foi corrigido para exigir tarefas=false quando esse módulo não está instalado, mantendo a comparação exacta e a recusa de esquemas parciais. As 23 verificações passaram localmente depois da correcção. Não foi necessário alterar o código da aplicação.
 
 ## Limites que permanecem
 
