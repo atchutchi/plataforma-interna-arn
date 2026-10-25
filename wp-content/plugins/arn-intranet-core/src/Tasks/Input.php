@@ -65,6 +65,7 @@ final class Input {
 			'reassign' => array( 'id', 'expected_revision', 'assignee_id', 'reason' ),
 			'change_due' => array( 'id', 'expected_revision', 'due', 'reason' ),
 			'comment' => array( 'id', 'expected_revision', 'body' ),
+			'attach' => array( 'id', 'expected_revision', 'label' ),
 			'mark-read' => array( 'id' ),
 			default => null,
 		};
@@ -106,6 +107,7 @@ final class Input {
 	public static function validation( array $post ): array {
 		$errors = array();
 		foreach ( array(
+			'label'       => array( 160, false, true ),
 			'title'       => array( 160, false, true ),
 			'description' => array( 8000, true, false ),
 			'reason'      => array( 1000, true, 'cancel' === $post['operation'] ),

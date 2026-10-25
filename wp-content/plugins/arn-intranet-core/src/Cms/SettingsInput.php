@@ -14,7 +14,7 @@ final class SettingsInput {
 	public const LABELS = array(
 		'news_image'      => 'Imagens de notícias',
 		'news_attachment' => 'Anexos de notícias',
-		'document'        => 'Documentos',
+		'document'        => 'Documentos e anexos de tarefas',
 	);
 	public static function nonce( int $actor ): string {
 		return 'arn-cms-settings-change-' . $actor;

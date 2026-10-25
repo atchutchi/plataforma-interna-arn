@@ -53,13 +53,23 @@ final class TaskProjection {
 			}
 			$history[] = $item;
 		}
-		$operations = array_values( array_filter( array( 'start', 'complete', 'cancel', 'reassign', 'change_due', 'comment' ), static fn( string $operation ): bool => TaskPolicy::manage( $task, $operation, $actor, $now ) ) );
+		$operations = array_values( array_filter( array( 'start', 'complete', 'cancel', 'reassign', 'change_due', 'comment', 'attach' ), static fn( string $operation ): bool => TaskPolicy::manage( $task, $operation, $actor, $now ) ) );
 		return array_merge(
 			$row,
 			array(
 				'description' => $task->content->description,
 				'history'     => $history,
 				'comments'    => $task->comments,
+				'attachments' => array_map(
+					static fn( Attachment $item ): array => array(
+						'id'       => $item->blob->id,
+						'label'    => $item->label,
+						'size'     => $item->blob->size,
+						'mime'     => $item->blob->mime,
+						'revision' => $item->revision,
+					),
+					$task->attachments
+				),
 				'operations'  => $operations,
 			)
 		);

@@ -28,6 +28,7 @@ final readonly class Task {
 		public string $create_request_id,
 		public array $history,
 		public array $comments,
+		public array $attachments = array(),
 	) {}
 
 	public static function create( int $id, int $author, int $assignee, string $unit, TaskContent $content, int $now, string $request ): self {
@@ -91,12 +92,29 @@ final readonly class Task {
 		return $this->next( 'commented', $actor, $now, '', $this->state, null, null, $comments );
 	}
 
+	public function attach( Attachment $attachment, int $actor, int $expected, int $now ): self {
+		$this->guard( $actor, $expected, $now, '' );
+		if ( $this->state->terminal() || count( $this->attachments ) >= 8 || $attachment->revision !== $this->revision + 1 ) {
+			self::denied();
+		}
+		$ids = array();
+		foreach ( array_merge( $this->attachments, array( $attachment ) ) as $item ) {
+			foreach ( array_merge( array( $item->blob ), array_values( $item->blob->derivatives ) ) as $blob ) {
+				if ( isset( $ids[ $blob->id ] ) ) {
+					self::invalid();
+				}
+				$ids[ $blob->id ] = true;
+			}
+		}
+		return $this->next( 'attached', $actor, $now, '', $this->state, null, null, null, array_merge( $this->attachments, array( $attachment ) ) );
+	}
+
 	public function overdue( int $now ): bool {
 		return $now >= 0 && ! $this->state->terminal() && null !== $this->content->due_at && $now > $this->content->due_at;
 	}
 
 	public function toArray(): array {
-		return array(
+		$record = array(
 			'id'                => $this->id,
 			'author_id'         => $this->author_id,
 			'unit_id'           => $this->unit_id,
@@ -107,12 +125,18 @@ final readonly class Task {
 			'updated_at'        => $this->updated_at,
 			'create_request_id' => $this->create_request_id,
 		);
+		if ( $this->attachments ) {
+			$record['attachments'] = array_map( static fn( Attachment $item ): array => $item->toArray(), $this->attachments );
+		}
+		return $record;
 	}
 
 	/** Every stored field must be explained by the complete ordered history. */
 	public static function restore( array $record, array $history, array $comments ): self {
 		$keys = array( 'id', 'author_id', 'unit_id', 'assignee_id', 'revision', 'state', 'content', 'updated_at', 'create_request_id' );
-		if ( 9 !== count( $record ) || array_diff( array_keys( $record ), $keys ) || ! array_is_list( $history ) || ! $history || ! array_is_list( $comments ) ) {
+		if ( array_key_exists( 'attachments', $record ) ) {
+			$keys[] = 'attachments'; }
+		if ( count( $record ) !== count( $keys ) || array_diff( array_keys( $record ), $keys ) || ! array_is_list( $history ) || ! $history || ! array_is_list( $comments ) ) {
 			self::invalid();
 		}
 		foreach ( array( 'id', 'author_id', 'assignee_id', 'revision', 'updated_at' ) as $key ) {
@@ -145,6 +169,7 @@ final readonly class Task {
 				$now    = $event['occurred_at'];
 				$reason = $event['reason'];
 				$task   = match ( $event['operation'] ) {
+					'attached' => $task->attach( Attachment::fromArray( $after['attachments'][ array_key_last( $after['attachments'] ) ] ), $actor, $task->revision, $now ),
 					'started' => $task->start( $actor, $task->revision, $now, $reason ),
 					'completed' => $task->complete( $actor, $task->revision, $now, $reason ),
 					'cancelled' => $task->cancel( $actor, $task->revision, $now, $reason ),
@@ -176,7 +201,13 @@ final readonly class Task {
 			self::invalid();
 		}
 		$after = $event['after'];
-		if ( 5 !== count( $after ) || array_diff( array_keys( $after ), array( 'state', 'assignee_id', 'content', 'unit_id', 'create_request_id' ) ) || ! is_string( $after['state'] ) || null === TaskState::tryFrom( $after['state'] ) || ! is_int( $after['assignee_id'] ) || $after['assignee_id'] < 1 || ! is_array( $after['content'] ) || ! is_string( $after['unit_id'] ) || ! in_array( $after['unit_id'], array( 'LAB-A', 'LAB-B' ), true ) || ! is_string( $after['create_request_id'] ) || 1 !== preg_match( '/\A[a-f0-9]{32}\z/D', $after['create_request_id'] ) ) {
+		if ( array_key_exists( 'attachments', $after ) && ( ! is_array( $after['attachments'] ) || ! array_is_list( $after['attachments'] ) || ! $after['attachments'] || count( $after['attachments'] ) > 8 ) ) {
+			self::invalid();
+		}
+		if ( 'attached' === $event['operation'] && ( empty( $after['attachments'] ) || ! is_array( $after['attachments'][ array_key_last( $after['attachments'] ) ] ) ) ) {
+			self::invalid();
+		}
+		if ( ! in_array( count( $after ), array( 5, 6 ), true ) || array_diff( array_keys( $after ), array( 'state', 'assignee_id', 'content', 'unit_id', 'create_request_id', 'attachments' ) ) || ! is_string( $after['state'] ) || null === TaskState::tryFrom( $after['state'] ) || ! is_int( $after['assignee_id'] ) || $after['assignee_id'] < 1 || ! is_array( $after['content'] ) || ! is_string( $after['unit_id'] ) || ! in_array( $after['unit_id'], array( 'LAB-A', 'LAB-B' ), true ) || ! is_string( $after['create_request_id'] ) || 1 !== preg_match( '/\A[a-f0-9]{32}\z/D', $after['create_request_id'] ) ) {
 			self::invalid();
 		}
 	}
@@ -188,17 +219,18 @@ final readonly class Task {
 		self::text( $reason, 1000, false );
 	}
 
-	private function next( string $operation, int $actor, int $now, string $reason, TaskState $state, ?int $assignee = null, ?TaskContent $content = null, ?array $comments = null ): self {
-		$assignee   ??= $this->assignee_id;
-		$content    ??= $this->content;
-		$history      = $this->history;
-		$comment_hash = 'commented' === $operation ? hash( 'sha256', $comments[ array_key_last( $comments ) ]['body'] ) : null;
-		$history[]    = self::event( $this->revision + 1, $operation, $actor, $now, self::text( $reason, 1000, false ), $state, $assignee, $content, $this->unit_id, $this->create_request_id, $comment_hash );
-		return new self( $this->id, $this->author_id, $this->unit_id, $assignee, $this->revision + 1, $state, $content, $now, $this->create_request_id, $history, $comments ?? $this->comments );
+	private function next( string $operation, int $actor, int $now, string $reason, TaskState $state, ?int $assignee = null, ?TaskContent $content = null, ?array $comments = null, ?array $attachments = null ): self {
+		$attachments ??= $this->attachments;
+		$assignee    ??= $this->assignee_id;
+		$content     ??= $this->content;
+		$history       = $this->history;
+		$comment_hash  = 'commented' === $operation ? hash( 'sha256', $comments[ array_key_last( $comments ) ]['body'] ) : null;
+		$history[]     = self::event( $this->revision + 1, $operation, $actor, $now, self::text( $reason, 1000, false ), $state, $assignee, $content, $this->unit_id, $this->create_request_id, $comment_hash, $attachments );
+		return new self( $this->id, $this->author_id, $this->unit_id, $assignee, $this->revision + 1, $state, $content, $now, $this->create_request_id, $history, $comments ?? $this->comments, $attachments );
 	}
 
-	private static function event( int $revision, string $operation, int $actor, int $now, string $reason, TaskState $state, int $assignee, TaskContent $content, string $unit, string $request, ?string $comment_hash = null ): array {
-		return array(
+	private static function event( int $revision, string $operation, int $actor, int $now, string $reason, TaskState $state, int $assignee, TaskContent $content, string $unit, string $request, ?string $comment_hash = null, array $attachments = array() ): array {
+		$event = array(
 			'revision'       => $revision,
 			'operation'      => $operation,
 			'actor_id'       => $actor,
@@ -213,6 +245,10 @@ final readonly class Task {
 				'create_request_id' => $request,
 			),
 		);
+		if ( $attachments ) {
+			$event['after']['attachments'] = array_map( static fn( Attachment $item ): array => $item->toArray(), $attachments );
+		}
+		return $event;
 	}
 
 	private static function text( string $value, int $maximum, bool $required ): string {

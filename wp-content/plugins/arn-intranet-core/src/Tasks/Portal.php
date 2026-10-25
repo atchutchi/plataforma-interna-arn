@@ -9,6 +9,8 @@ namespace Arn\Intranet\Tasks;
 
 use Arn\Intranet\Identity\IdentityWpdb;
 use Throwable;
+use Arn\Intranet\Documents\PrivateFiles\{ImportBatch, LocalPrivateFiles, WpdbFileRegistry};
+use Arn\Intranet\Media\LocalMediaProcessing;
 
 // phpcs:disable Squiz.Commenting -- No factory installs, creates accounts or grants access.
 final class Portal {
@@ -97,8 +99,10 @@ final class Portal {
 			unset( $row );
 		}
 		if ( 'own' === $view ) {
-			$result['operations'] = array_values( array_intersect( $result['operations'], array( 'start', 'complete', 'comment' ) ) );
+			$result['operations'] = array_values( array_intersect( $result['operations'], array( 'start', 'complete', 'comment', 'attach' ) ) );
 		}
+		if ( ! AttachmentConfiguration::enabled() ) {
+			$result['operations'] = array_values( array_diff( $result['operations'], array( 'attach' ) ) ); }
 		return $result;
 	}
 
@@ -129,6 +133,39 @@ final class Portal {
 			throw new \DomainException( 'Tarefas indisponíveis.' ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Static error.
 		}
 		return $this->repository->change( Input::id( $post['id'] ), $post['operation'], Input::id( $post['expected_revision'] ), Input::fields( $post ) )->id;
+	}
+
+	public function attach( array $post, string $source, string $view ): int {
+		if ( ! AttachmentConfiguration::enabled() || ! $this->prepare() ) {
+			throw new \DomainException( 'Anexos indisponíveis.' ); }
+		$before = $this->detail( Input::id( $post['id'] ), $view );
+		$actor  = get_current_user_id();
+		if ( null === $before || ! in_array( 'attach', $before['operations'], true ) || Input::id( $post['expected_revision'] ) !== $before['revision'] ) {
+			throw new \DomainException( 'Tarefa alterada ou operação indisponível.' ); }
+		$pipeline = LocalMediaProcessing::pipeline( $actor );
+		if ( null === $pipeline ) {
+			throw new \DomainException( 'Análise de anexos indisponível.' ); }
+		return ( new ImportBatch( LocalPrivateFiles::store(), $pipeline ) )->run(
+			function ( ImportBatch $batch ) use ( $post, $source, $actor ): int {
+				$blob = $batch->importFile( $source );
+				return $this->repository->attach( Input::id( $post['id'] ), $blob, $post['label'], Input::id( $post['expected_revision'] ), $actor )->id;
+			},
+			static function (): WpdbFileRegistry {
+				global $wpdb;
+				$db = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+				$db->set_prefix( $wpdb->prefix );
+				return new WpdbFileRegistry( $db );
+			}
+		);
+	}
+
+	public function file( int $id, string $blob, string $variant ): ?array {
+		try {
+			if ( ! AttachmentConfiguration::readable() || ! $this->prepare() ) {
+				return null; }
+			return $this->repository->file( $id, $blob, $variant, LocalPrivateFiles::store() );
+		} catch ( Throwable ) {
+			return null; }
 	}
 
 	public function markRead( int $id ): void {

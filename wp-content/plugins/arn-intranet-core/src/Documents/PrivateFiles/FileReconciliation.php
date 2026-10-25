@@ -63,6 +63,7 @@ final class FileReconciliation {
 			$report['coverage'] = array(
 				'documents' => null !== $data['documents'],
 				'news'      => null !== $data['news'],
+				'tasks'     => null !== ( $data['tasks'] ?? null ),
 			);
 			$files              = array_column( $data['files'], null, 'blob_id' );
 			$audit              = array();
@@ -74,10 +75,11 @@ final class FileReconciliation {
 			}
 			$consumers = array();
 			foreach ( array(
-				'document'   => 'documents',
-				'news_asset' => 'news',
+				'document'        => 'documents',
+				'news_asset'      => 'news',
+				'task_attachment' => 'tasks',
 			) as $type => $source ) {
-				$consumers[ $type ] = null === $data[ $source ] ? null : array_column( $data[ $source ], null, 'blob_id' );
+				$consumers[ $type ] = null === ( $data[ $source ] ?? null ) ? null : array_column( $data[ $source ], null, 'blob_id' );
 				foreach ( $data[ $source ] ?? array() as $row ) {
 					$id = $row['blob_id'];
 					if ( null === $row['parent_id'] || ( 'news' === $source && null === $row['parent_version'] ) ) {
@@ -110,6 +112,8 @@ final class FileReconciliation {
 					if ( null === $consumers[ $type ] ) {
 						$report['complete'] = false;
 						$add( 'consumer_unavailable', $id );
+					} elseif ( 'task_attachment' === $type && ! isset( $consumers[ $type ][ $id ] ) ) {
+						$add( 'consumer_missing', $id );
 					} elseif ( 'original' !== $record->variant ) {
 						$originals = array_filter( $files, static fn( array $original ): bool => $original['object_type'] === $type && 'original' === $original['variant'] && (string) $original['object_id'] === (string) $record->object_id && (string) $original['version'] === (string) $record->version );
 						$original  = 1 === count( $originals ) ? reset( $originals ) : null;
@@ -170,7 +174,7 @@ final class FileReconciliation {
 	}
 
 	private static function matches( array $file, array $consumer, string $type ): bool {
-		if ( $file['object_type'] !== $type || 'original' !== $file['variant'] ) {
+		if ( $file['object_type'] !== $type || ( $consumer['variant'] ?? 'original' ) !== $file['variant'] ) {
 			return false;
 		}
 		foreach ( array( 'object_id', 'version', 'sha256', 'size_bytes', 'mime', 'actor_id', 'created_at' ) as $key ) {

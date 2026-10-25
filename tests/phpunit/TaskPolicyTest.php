@@ -107,6 +107,16 @@ final class TaskPolicyTest extends TestCase {
 		self::assertArrayNotHasKey( 'create_request_id', $view['history'][1] );
 	}
 
+	/** Attachments require current writing authority and relationship. */
+	public function testAttachmentRequiresWritingCompetenceAndCurrentRelationship(): void {
+		$task = $this->task();
+		self::assertTrue( TaskPolicy::manage( $task, 'attach', $this->actor( 7, array( Role::Employee ) ), 101 ) );
+		self::assertTrue( TaskPolicy::manage( $task, 'attach', $this->actor( 9, array( Role::UnitManager ) ), 101 ) );
+		self::assertFalse( TaskPolicy::manage( $task, 'attach', $this->actor( 8, array( Role::UnitManager ) ), 101 ) );
+		self::assertFalse( TaskPolicy::manage( $task, 'attach', $this->actor( 7, array(), 'LAB-A' ), 101 ) );
+		self::assertFalse( TaskPolicy::manage( $task->cancel( 9, 1, 101, 'Fim' ), 'attach', $this->actor( 9, array( Role::UnitManager ) ), 102 ) );
+	}
+
 	/** One fixture with separate author and current assignee. */
 	private function task(): Task {
 		return Task::create( 1, 9, 7, 'LAB-A', new TaskContent( 'Tarefa fictícia', '', 'normal', null ), 100, str_repeat( 'a', 32 ) );
