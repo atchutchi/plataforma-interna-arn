@@ -211,6 +211,11 @@ final class NewsroomPage {
 			return;
 		}
 		try {
+			if ( null !== $draft && \Arn\Intranet\Media\ConsumerJobs::enabled() ) {
+				$job = \Arn\Intranet\Media\ConsumerJobs::news( $draft, $id, 'create' === $operation ? 0 : (int) $expected, $reason, $post['_wpnonce'] );
+				if ( null !== $job ) {
+					\Arn\Intranet\Media\ConsumerPage::redirect( $job ); }
+			}
 			$result = match ( $operation ) {
 				'create' => $news->create( $draft, $reason ),
 				'revise' => $news->revise( $id, $draft, (int) $expected, $reason ),
@@ -306,7 +311,7 @@ final class NewsroomPage {
 			self::deny();
 		}
 		?>
-		<div class="wrap arn-newsroom-admin"><div class="arn-newsroom-heading"><div><h1>Notícias locais</h1><p>Redacção e revisão em ambiente fictício. A publicação é interna e depende da audiência autorizada.</p></div>
+		<?php \Arn\Intranet\Media\ConsumerPage::link(); ?><div class="wrap arn-newsroom-admin"><div class="arn-newsroom-heading"><div><h1>Notícias locais</h1><p>Redacção e revisão em ambiente fictício. A publicação é interna e depende da audiência autorizada.</p></div>
 		<?php
 		if ( $access[1] ) :
 			?>

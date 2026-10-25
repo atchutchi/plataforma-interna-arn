@@ -129,15 +129,15 @@ final class QueuePage {
 					'processing' => array( 'recover' ),
 					default => array(),
 				};
-				if ( ! $row['archived'] && array() !== $actions ) {
+				if ( ! $row['archived'] && 'open' === $row['consumption'] && array() !== $actions ) {
 					self::decision( $url, $id, $row['revision'], $i, $actions ); }
 			}
-			if ( ! $row['archived'] && ! array_intersect( array( 'queued', 'processing' ), array_column( $row['items'], 'status' ) ) ) {
+			if ( ! $row['archived'] && 'applying' !== $row['consumption'] && ! array_intersect( array( 'queued', 'processing' ), array_column( $row['items'], 'status' ) ) ) {
 				self::decision( $url, $id, $row['revision'], -1, array( 'archive' ) ); }
 			echo '<details><summary>Histórico de decisões e processamento</summary><ol>';
 			foreach ( $row['history'] as $event ) {
 				$label = self::ACTIONS[ $event['type'] ] ?? match ( $event['type'] ) {
-					'queued' => 'Lote recebido', 'claim' => 'Análise iniciada', 'processed' => 'Análise concluída', default => 'Análise não aprovada' };
+					'queued' => 'Lote recebido', 'submitted' => 'Envio de formulário recebido', 'applying' => 'Conclusão iniciada pelo autor', 'applied' => 'Registo confirmado pelo módulo', 'claim' => 'Análise iniciada', 'processed' => 'Análise concluída', default => 'Análise não aprovada' };
 				echo '<li>' . esc_html( gmdate( 'Y-m-d H:i:s', $event['at'] ) . ' UTC · ' . $label . ' · Conta fictícia ' . $event['actor'] . ( $event['item'] >= 0 ? ' · Ficheiro ' . ( $event['item'] + 1 ) : '' ) . ( '' !== $event['reason'] ? ' · ' . $event['reason'] : '' ) ) . '</li>';
 			}
 			echo '</ol></details><hr></section>';

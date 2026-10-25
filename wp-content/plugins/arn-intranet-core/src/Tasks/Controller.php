@@ -49,6 +49,8 @@ final class Controller {
 		if ( null === $model ) {
 			self::refuse();
 		}
+		if ( isset( $model['queued_batch'] ) ) {
+			\Arn\Intranet\Media\ConsumerPage::redirect( $model['queued_batch'] ); }
 		if ( array_key_exists( 'saved_id', $model ) ) {
 			$filters = array_intersect_key( $get, array_flip( array( 'q', 'state', 'assignee', 'arn_tasks_page' ) ) );
 			$target  = $filters + ( ! empty( $model['saved_notice'] ) ? array( 'notices' => '1' ) : array( 'entry' => (string) $model['saved_id'] ) ) + array( 'saved' => '1' );
@@ -137,6 +139,8 @@ final class Controller {
 						$model['errors']['form'] = 'Selecciona um ficheiro PDF, PNG ou JPEG válido até 1 MiB. O envio não foi guardado.';
 						return $model;
 					}
+					if ( $source instanceof Portal && \Arn\Intranet\Media\ConsumerJobs::enabled() ) {
+						return array( 'queued_batch' => \Arn\Intranet\Media\ConsumerJobs::task( $post, $upload, $view ) ); }
 					return array( 'saved_id' => $source->attach( $post, $upload, $view ) );
 				}
 				$id = 'create' === $operation ? $source->create( $post ) : $source->change( $post );

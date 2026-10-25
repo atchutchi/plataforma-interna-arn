@@ -15,7 +15,7 @@ use Throwable;
 // phpcs:disable Squiz.Commenting, WordPress.WP.AlternativeFunctions, WordPress.PHP.NoSilencedErrors, WordPress.Security.EscapeOutput.ExceptionNotEscaped
 final class MediaQueue {
 	private readonly string $root;
-	public function __construct( string $root, private readonly array $excluded, private readonly Closure $authority, private readonly Closure $clock ) {
+	public function __construct( string $root, private readonly array $excluded, private readonly Closure $authority, private readonly Closure $clock, private readonly bool $owner_only = false ) {
 		new PrivateBlobStore( $root, $excluded, array( 'application/pdf' ), 1048576 );
 		$this->root = str_replace( '\\', '/', realpath( $root ) );
 	}
@@ -47,8 +47,10 @@ final class MediaQueue {
 		return $handle;
 	}
 
-	public function enqueue( array $sources, int $actor, ?string $request_id = null ): string {
+	public function enqueue( array $sources, int $actor, ?string $request_id = null, ?array $context = null ): string {
 		$this->authorize( $actor );
+		if ( null !== $context ) {
+			ConsumerIntent::validate( $context, count( $sources ) ); }
 		if ( ! array_is_list( $sources ) || count( $sources ) < 1 || count( $sources ) > 8 ) {
 			throw new RuntimeException( 'Escolhe entre um e oito ficheiros.' ); }
 		$lock = $this->lock( $this->root . '/capacity.lock' );
@@ -82,7 +84,20 @@ final class MediaQueue {
 					'mime'   => $blob->mime,
 				);
 			}
-			$this->append( $id, 0, $this->event( 'queued', $actor, -1, '', $items ) );
+			$this->append(
+				$id,
+				0,
+				$this->event(
+					null === $context ? 'queued' : 'submitted',
+					$actor,
+					-1,
+					'',
+					null === $context ? $items : array(
+						'items'   => $items,
+						'context' => $context,
+					)
+				)
+			);
 			return $id;
 		} finally {
 			fclose( $lock );
@@ -119,7 +134,7 @@ final class MediaQueue {
 			if ( 1 !== $stat['nlink'] || 0100000 !== ( $stat['mode'] & 0170000 ) ) {
 				throw new RuntimeException( 'Diário inválido.' ); }
 			while ( ! feof( $handle ) ) {
-				$line = fgets( $handle, 16385 );
+				$line = fgets( $handle, 262145 );
 				if ( false === $line && feof( $handle ) ) {
 					break; }
 				if ( ! is_string( $line ) || ! str_ends_with( $line, "\n" ) ) {
@@ -148,6 +163,8 @@ final class MediaQueue {
 		$lock = $this->lock( $path . '/journal.lock' );
 		try {
 			[$state, $previous] = $this->readJournal( $path . '/journal.jsonl' );
+			if ( null !== $state && $this->owner_only && $state['owner'] !== $event['actor'] ) {
+				throw new RuntimeException( 'Envio indisponível.' ); }
 			if ( ( $state['revision'] ?? 0 ) !== $revision ) {
 				throw new RuntimeException( 'O lote foi alterado. Actualiza a página.' ); }
 			$next = QueueState::apply( $state, $event );
@@ -191,6 +208,8 @@ final class MediaQueue {
 			if ( null === $state ) {
 				throw new RuntimeException( 'Lote incompleto. Preserva as cópias.' ); }
 			$this->authorize( $actor );
+			if ( $this->owner_only && $state['owner'] !== $actor ) {
+				throw new RuntimeException( 'Envio indisponível.' ); }
 			return $state;
 		} finally {
 			fclose( $lock );
@@ -208,7 +227,8 @@ final class MediaQueue {
 				try {
 					$rows[ $id ] = $this->read( $id, $actor );
 				} catch ( Throwable ) {
-					$rows[ $id ] = array( 'unavailable' => true );
+					if ( ! $this->owner_only ) {
+						$rows[ $id ] = array( 'unavailable' => true ); }
 				}
 			}
 		}
@@ -227,6 +247,26 @@ final class MediaQueue {
 		} finally {
 			fclose( $lock );
 		}
+	}
+
+
+	/** The durable intent precedes business writes. Unknown outcomes are never replayed. */
+	public function complete( string $id, int $revision, int $actor, Closure $preflight, Closure $apply ): int {
+		$this->authorize( $actor );
+		$lock = $this->lock( $this->root . '/worker.lock' );
+		try {
+			$state = $this->read( $id, $actor );
+			if ( $state['owner'] !== $actor || null === $state['context'] ) {
+				throw new RuntimeException( 'Envio indisponível.' ); }
+			$preflight( $state );
+			if ( 'applied' === $state['consumption'] ) {
+				return $state['receipt']; }
+			$state   = $this->append( $id, $revision, $this->event( 'applying', $actor ) );
+			$receipt = $apply( $state, $this->directory( $id ) );
+			$this->append( $id, $state['revision'], $this->event( 'applied', $actor, -1, '', array( 'receipt' => $receipt ) ) );
+			return $receipt;
+		} finally {
+			fclose( $lock ); }
 	}
 
 	public function work( int $actor, int $limit, Closure $pipeline ): int {

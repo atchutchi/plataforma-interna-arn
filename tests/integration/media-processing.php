@@ -94,7 +94,82 @@ try {
 	$db->query( $db->prepare( 'UPDATE %i SET actor_id=2 WHERE variant=%s', $schema->table( 'files' ), 'thumbnail' ) );
 	$record = $registry->findForObject( 'document', 10, 1, 'original' );
 	$assert( null === VariantSelection::select( $registry, $record, 'thumbnail' ), 'actor divergente recusado' );
-	echo esc_html( 'Media privada SQL: ' . $checks . " verificações.\n" );
+
+	// Queue completion uses the same SQL lifecycle and cleanup, with scanned copies.
+	mkdir( $base . '/queue', 0700 );
+	$queue    = new \Arn\Intranet\Media\MediaQueue( $base . '/queue', array( $base . '/public', $base . '/quarantine', $base . '/private' ), static fn( int $actor ): bool => in_array( $actor, array( 1, 42 ), true ), static fn(): int => time(), false );
+	$intent   = \Arn\Intranet\Media\ConsumerJobs::intent(
+		'tasks',
+		10,
+		1,
+		'Anexo fictício da fila SQL',
+		array(
+			'label' => 'Imagem fictícia',
+			'view'  => 'own',
+		)
+	);
+	$queued   = static function () use ( $queue, $base, $intent, $pipeline, $assert, $count ): string {
+		$before   = $count( 'files' );
+		$batch_id = $queue->enqueue( array( $base . '/public/input.png' ), 42, null, $intent );
+		$queue->work( 1, 1, $pipeline );
+		$assert( 'ready' === $queue->read( $batch_id, 42 )['items'][0]['status'], 'resultado técnico pronto' );
+		$assert( $before === $count( 'files' ), 'worker não regista ficheiros de negócio' );
+		return $batch_id;
+	};
+	$complete = static function ( string $batch_id, int $version, bool $lost = false ) use ( $queue, $base, $store, $registry ): int {
+		$state = $queue->read( $batch_id, 42 );
+		return $queue->complete(
+			$batch_id,
+			$state['revision'],
+			42,
+			static function (): void {},
+			static function ( array $state, string $directory ) use ( $base, $store, $registry, $version, $lost ): int {
+				$prepared = new \Arn\Intranet\Media\PreparedBatch( $state, $base . '/quarantine', array( $base . '/public', $base . '/queue', $base . '/private' ), time() );
+				return ( new ImportBatch( $store, $prepared ) )->run(
+					static function ( ImportBatch $batch ) use ( $state, $directory, $registry, $version, $lost ): int {
+						$blob = $batch->importFile( $directory . '/' . $state['items'][0]['blob']['id'] );
+						$registry->register( new FileRecord( $blob, 'task_attachment', 10, $version, 'original', 42, 101 ) );
+						if ( $lost ) {
+							throw new RuntimeException( 'Resposta perdida após commit confirmado.' ); }
+						return 10;
+					},
+					static fn(): WpdbFileRegistry => $registry
+				);
+			}
+		);
+	};
+	$batch_id = $queued();
+	$assert( 10 === $complete( $batch_id, 1 ), 'conclusão da fila com registo SQL' );
+	$assert( 9 === $count( 'files' ) && 9 === $count( 'audit' ), 'original e derivados auditados' );
+	$assert( 42 === $registry->findForObject( 'task_attachment', 10, 1, 'original' )->actor_id, 'registo pertence ao autor, não ao worker' );
+	$assert( 10 === $complete( $batch_id, 1 ) && 9 === $count( 'files' ), 'recibo repetido sem inserções' );
+	$inventory = $store->inventory();
+	$batch_id  = $queued();
+	try {
+		$complete( $batch_id, 1 );
+		throw new LogicException( 'Tuple duplicado aceite.' );
+	} catch ( RuntimeException ) {
+		$assert( 'applying' === $queue->read( $batch_id, 42 )['consumption'], 'excepção conserva intenção durável' );
+	}
+		$assert( 'applying' === $queue->read( $batch_id, 42 )['consumption'], 'falha SQL conserva intenção sem repetição' );
+		$assert( array_keys( $inventory ) === array_keys( $store->inventory() ) && 9 === $count( 'files' ), 'rollback elimina apenas cópias próprias sem registo' );
+		$batch_id = $queued();
+	try {
+		$complete( $batch_id, 2, true );
+		throw new LogicException( 'Resposta perdida não simulada.' );
+	} catch ( RuntimeException ) {
+		$assert( 'applying' === $queue->read( $batch_id, 42 )['consumption'], 'excepção conserva intenção durável' );
+	}
+			$assert( 12 === $count( 'files' ) && 12 === $count( 'audit' ), 'resposta perdida conserva referências confirmadas' );
+			$assert( count( $inventory ) + 3 === count( $store->inventory() ), 'resposta perdida conserva originais e derivados registados' );
+	try {
+		$complete( $batch_id, 2 );
+		throw new LogicException( 'Conclusão incerta repetida.' );
+	} catch ( RuntimeException ) {
+		$assert( 'applying' === $queue->read( $batch_id, 42 )['consumption'], 'excepção conserva intenção durável' );
+	}
+				$assert( 'applying' === $queue->read( $batch_id, 42 )['consumption'] && 12 === $count( 'files' ), 'resultado incerto permanece bloqueado' );
+				echo esc_html( 'Media privada SQL: ' . $checks . " verificações.\n" );
 } finally {
 	if ( null !== $filter ) {
 		remove_filter( 'query', $filter );

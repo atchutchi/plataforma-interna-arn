@@ -55,7 +55,7 @@ final class LocalNewsroom {
 	}
 
 	/** Create a draft for the current fixture. The queue is fixed on the server. */
-	public function create( DraftInput $input, string $reason ): Article {
+	public function create( DraftInput $input, string $reason, ?\Arn\Intranet\Media\PreparedBatch $prepared = null ): Article {
 		$actor = $this->actor();
 		if ( ! NewsPolicy::canCreate( $actor[0], $actor[2], time() ) ) {
 			throw new RuntimeException( self::ERROR );
@@ -64,7 +64,7 @@ final class LocalNewsroom {
 		if ( $this->hasExisting( $input ) ) {
 			throw new RuntimeException( self::ERROR );
 		}
-		return ( new ImportBatch( ( $this->store_factory )(), LocalMediaProcessing::pipeline( $actor[1] ) ) )->run(
+		return ( new ImportBatch( ( $this->store_factory )(), $prepared ?? LocalMediaProcessing::pipeline( $actor[1] ) ) )->run(
 			function ( ImportBatch $batch ) use ( $input, $actor, $reason ): Article {
 				$content      = $this->content( $input, null, $batch );
 				[$repository] = ( $this->repository_factory )();
@@ -75,7 +75,7 @@ final class LocalNewsroom {
 	}
 
 	/** Append only from the latest authorised draft version. */
-	public function revise( int $id, DraftInput $input, int $expected, string $reason ): Article {
+	public function revise( int $id, DraftInput $input, int $expected, string $reason, ?\Arn\Intranet\Media\PreparedBatch $prepared = null ): Article {
 		$actor        = $this->actor();
 		[$repository] = ( $this->repository_factory )();
 		$before       = $repository->find( $id );
@@ -83,7 +83,7 @@ final class LocalNewsroom {
 			throw new RuntimeException( self::ERROR );
 		}
 		$this->validateText( $input );
-		return ( new ImportBatch( ( $this->store_factory )(), LocalMediaProcessing::pipeline( $actor[1] ) ) )->run(
+		return ( new ImportBatch( ( $this->store_factory )(), $prepared ?? LocalMediaProcessing::pipeline( $actor[1] ) ) )->run(
 			function ( ImportBatch $batch ) use ( $input, $before, $repository, $id, $actor, $expected, $reason ): Article {
 				$retained = array();
 				$content  = $this->content( $input, $before, $batch, $retained );

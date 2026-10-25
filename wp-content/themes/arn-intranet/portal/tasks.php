@@ -36,6 +36,7 @@ if ( 'list' !== $screen ) :
 	);
 	?>
 	</span><?php endif; ?></nav>
+<?php \Arn\Intranet\Media\ConsumerPage::link(); ?>
 <header class="arn-task-heading"><h1>
 <?php
 echo esc_html(
