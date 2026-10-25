@@ -150,6 +150,25 @@ final class FileReconciliationTest extends TestCase {
 		self::assertContains( 'consumer_mismatch', $this->codes() );
 	}
 
+	public function testAuditedTaskDerivativeSurvivesTotalRegistryAndBinaryLoss(): void {
+		$this->data['files'][0]['object_type'] = 'task_attachment';
+		$this->data['tasks']                   = array( $this->data['files'][0] + array( 'parent_id' => 10 ) );
+		$this->data['documents']               = array();
+		self::assertSame( array(), $this->codes() );
+		$missing               = array_replace(
+			$this->data['tasks'][0],
+			array(
+				'blob_id' => str_repeat( 'd', 32 ),
+				'variant' => 'thumbnail',
+				'mime'    => 'image/png',
+			)
+		);
+		$this->data['tasks'][] = $missing;
+		self::assertContains( 'consumer_unregistered', $this->codes() );
+		$this->data['files'][] = array_replace( $missing, array( 'sha256' => str_repeat( 'e', 64 ) ) );
+		self::assertContains( 'consumer_mismatch', $this->codes() );
+	}
+
 	public function testAbsentModuleAndUnknownTypeAreIncomplete(): void {
 		$this->data['documents'] = null;
 		self::assertFalse( $this->report()['complete'] );

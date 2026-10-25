@@ -21,6 +21,7 @@ final class View {
 		'high'   => 'Alta',
 	);
 	public const EVENTS     = array(
+		'attached'    => 'Anexo acrescentado',
 		'created'     => 'Tarefa atribuída',
 		'started'     => 'Trabalho iniciado',
 		'completed'   => 'Tarefa concluída',
@@ -30,6 +31,7 @@ final class View {
 		'commented'   => 'Comentário acrescentado',
 	);
 	public const NOTICES    = array(
+		'task_attached'      => 'Novo anexo',
 		'task_assigned'      => 'Nova atribuição',
 		'task_reassigned'    => 'Atribuição alterada',
 		'task_due_changed'   => 'Prazo actualizado',

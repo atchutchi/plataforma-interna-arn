@@ -35,7 +35,7 @@ final class Controller {
 			return;
 		}
 		self::privateHeaders();
-		if ( ! Configuration::current() || array() !== $_FILES ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Refuse uploads before source or nonce processing.
+		if ( ! Configuration::current() ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Refuse uploads before source or nonce processing.
 			self::refuse();
 		}
 		$get   = wp_unslash( $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Strict read allowlist.
@@ -44,7 +44,8 @@ final class Controller {
 			self::refuse();
 		}
 		$portal = new Portal();
-		$model  = self::decide( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ), $view, $get, $input, $portal, get_current_user_id(), static fn( string $nonce, int $actor, string $surface, string $operation, int $id, string $request ): bool => false !== wp_verify_nonce( $nonce, Input::nonce( $actor, $surface, $operation, $id, $request ) ) );
+		$files  = $_FILES; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified in decide before inspecting the upload.
+		$model  = self::decide( (string) ( $_SERVER['REQUEST_METHOD'] ?? '' ), $view, $get, $input, $portal, get_current_user_id(), static fn( string $nonce, int $actor, string $surface, string $operation, int $id, string $request ): bool => false !== wp_verify_nonce( $nonce, Input::nonce( $actor, $surface, $operation, $id, $request ) ), $files );
 		if ( null === $model ) {
 			self::refuse();
 		}
@@ -75,12 +76,14 @@ final class Controller {
 		header( 'Content-Length: 0' );
 		exit;
 	}
-	public static function decide( string $method, string $view, array $get, array $post, object $source, int $actor, callable $verify_nonce ): ?array {
+	public static function decide( string $method, string $view, array $get, array $post, object $source, int $actor, callable $verify_nonce, array $files = array(), ?callable $is_uploaded = null ): ?array {
 		$query = Input::query( $view, $get );
 		if ( $actor < 1 || ! in_array( $method, array( 'GET', 'HEAD', 'POST' ), true ) || null === $query || ( 'POST' !== $method && array() !== $post ) ) {
 			return null;
 		}
 		$operation = $post['operation'] ?? '';
+		if ( ( $files && ( 'POST' !== $method || 'attach' !== $operation ) ) || ( 'attach' === $operation && ! AttachmentConfiguration::enabled() ) ) {
+			return null; }
 		if ( 'POST' === $method ) {
 			if ( ! Input::shape( $post ) || ( 'create' === $query['screen'] ? 'create' !== $operation : ( 'notices' === $query['screen'] ? 'mark-read' !== $operation : ( 'detail' !== $query['screen'] || in_array( $operation, array( 'create', 'mark-read' ), true ) || (int) $post['id'] !== $query['id'] ) ) ) ) {
 				return null;
@@ -128,9 +131,17 @@ final class Controller {
 						'saved_notice' => true,
 					);
 				}
+				if ( 'attach' === $operation ) {
+					$upload = AttachmentUpload::source( $files, $is_uploaded ?? is_uploaded_file( ... ) );
+					if ( null === $upload || ! in_array( 'attach', $data['operations'] ?? array(), true ) ) {
+						$model['errors']['form'] = 'Selecciona um ficheiro PDF, PNG ou JPEG válido até 1 MiB. O envio não foi guardado.';
+						return $model;
+					}
+					return array( 'saved_id' => $source->attach( $post, $upload, $view ) );
+				}
 				$id = 'create' === $operation ? $source->create( $post ) : $source->change( $post );
 				return array( 'saved_id' => $id );
-			} catch ( DomainException | InvalidArgumentException ) {
+			} catch ( DomainException | \RuntimeException | InvalidArgumentException ) {
 				if ( 'mark-read' === $operation ) {
 					return null;
 				}
@@ -145,7 +156,7 @@ final class Controller {
 					}
 				}
 				$model['access']         = $current;
-				$model['errors']['form'] = 'A tarefa foi alterada ou esta operação já não está disponível. Actualiza a página antes de tentar novamente.';
+				$model['errors']['form'] = 'attach' === $operation ? 'Não foi possível analisar ou guardar o anexo. Actualiza a página e selecciona o ficheiro novamente.' : 'A tarefa foi alterada ou esta operação já não está disponível. Actualiza a página antes de tentar novamente.';
 				return $model;
 			}
 		} catch ( Throwable ) {

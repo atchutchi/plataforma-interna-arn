@@ -11,6 +11,7 @@ namespace Arn\Intranet\Tasks;
 final class Bootstrap {
 	public static function register(): void {
 		Controller::register();
+		AttachmentController::register();
 		Navigation::register();
 		add_action( 'init', array( self::class, 'block' ) );
 		add_action( 'wp_enqueue_scripts', array( self::class, 'assets' ) );

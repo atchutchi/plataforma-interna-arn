@@ -10,6 +10,8 @@ namespace Arn\Intranet\Tasks;
 use Arn\Intranet\Authorization\{Action, Scope};
 use Arn\Intranet\F112\ActorContext;
 use Arn\Intranet\Identity\IdentityWpdb;
+use Arn\Intranet\Documents\PrivateFiles\{BlobDescriptor, FileRecord, FileSchema, PrivateBlobStore, WpdbFileRegistry};
+use Arn\Intranet\Cms\UploadAdmission;
 use Closure;
 use DomainException;
 use InvalidArgumentException;
@@ -71,6 +73,77 @@ final class TaskRepository {
 				return $task;
 			}
 		);
+	}
+
+	/** Registration and task revision share the authority transaction after processing. */
+	public function attach( int $id, BlobDescriptor $blob, string $label, int $expected, int $expected_actor ): Task {
+		( new FileSchema( $this->database ) )->assertReady();
+		return $this->transaction(
+			function ( ActorContext $actor, array $people, int $now ) use ( $id, $blob, $label, $expected, $expected_actor ): Task {
+				$before = $this->load( $id, 'either', $actor, $now );
+				if ( $actor->id() !== $expected_actor || null === $before || ! TaskPolicy::manage( $before, 'attach', $actor, $now ) ) {
+					self::denied(); }
+				$policy = ( new UploadAdmission( $this->database ) )->policy();
+				UploadAdmission::assertAllowed( $policy, 'document', $blob );
+				$after = $before->attach( new Attachment( $blob, $label, $expected + 1 ), $actor->id(), $expected, $now );
+				( new WpdbFileRegistry( $this->database ) )->registerInTransaction( new FileRecord( $blob, 'task_attachment', $id, $after->revision, 'original', $actor->id(), $now ) );
+				if ( ! TaskPolicy::manage( $before, 'attach', $actor, ( $this->clock )() ) ) {
+					self::denied(); }
+				$this->persist( $before, $after, $people, $now );
+				if ( ! TaskPolicy::manage( $before, 'attach', $actor, ( $this->clock )() ) ) {
+					self::denied(); }
+				return $after;
+			}
+		);
+	}
+
+	/** Open bytes only while the current task and its authority remain locked. */
+	public function file( int $id, string $blob_id, string $variant, PrivateBlobStore $store ): ?array {
+		if ( $id < 1 || 1 !== preg_match( '/\A[a-f0-9]{32}\z/D', $blob_id ) || ! in_array( $variant, array( 'original', 'thumbnail', 'preview' ), true ) ) {
+			return null; }
+		( new FileSchema( $this->database ) )->assertReady();
+		$opened = null;
+		try {
+			return $this->transaction(
+				function ( ActorContext $actor, array $people, int $now ) use ( $id, $blob_id, $variant, $store, &$opened ): ?array {
+					$task = $this->load( $id, 'either', $actor, $now );
+					if ( null === $task ) {
+						return null; }
+					foreach ( $task->attachments as $item ) {
+						if ( $item->blob->id !== $blob_id ) {
+							continue; }
+						$blob = 'original' === $variant ? $item->blob : ( $item->blob->derivatives[ $variant ] ?? null );
+						if ( null === $blob ) {
+							return null; }
+						$schema = new FileSchema( $this->database );
+						$rows   = $this->rows( $this->database->prepare( 'SELECT * FROM %i WHERE blob_id=%s FOR UPDATE', $schema->table( 'files' ), $blob->id ) );
+						$event  = $task->history[ $item->revision - 1 ];
+						if ( 1 !== count( $rows ) ) {
+							return null; }
+						$r = $rows[0];
+						if ( 'task_attachment' !== $r->object_type || self::number( $r->object_id ) !== $id || self::number( $r->version ) !== $item->revision || $r->variant !== $variant || $r->sha256 !== $blob->sha256 || self::number( $r->size_bytes ) !== $blob->size || $r->mime !== $blob->mime || self::number( $r->actor_id ) !== $event['actor_id'] || self::number( $r->created_at ) !== $event['occurred_at'] ) {
+							return null; }
+						if ( ! TaskPolicy::read( $task, $actor, ( $this->clock )() ) ) {
+							self::denied(); }
+						$opened = $store->open( $blob );
+						if ( ! TaskPolicy::read( $task, $actor, ( $this->clock )() ) ) {
+							self::denied(); }
+						return array(
+							'handle'   => $opened,
+							'blob'     => $blob,
+							'revision' => $item->revision,
+						);
+					}
+					return null;
+				}
+			);
+		} catch ( Throwable $error ) {
+			if ( is_resource( $opened ) ) {
+				fclose( $opened ); } // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Verified private stream, never a public WordPress file.
+			if ( $error instanceof DomainException ) {
+				return null; }
+			throw $error;
+		}
 	}
 
 	public function find( int $id, string $mode = 'own' ): ?Task {
@@ -320,8 +393,11 @@ final class TaskRepository {
 			$record['state']       = $event['after']['state'];
 			$record['content']     = $event['after']['content'];
 			$record['updated_at']  = $event['occurred_at'];
-			$hash                  = hash( 'sha256', self::json( $record ) );
-			$entry                 = $audit[ $index ];
+			unset( $record['attachments'] );
+			if ( isset( $event['after']['attachments'] ) ) {
+				$record['attachments'] = $event['after']['attachments']; }
+			$hash  = hash( 'sha256', self::json( $record ) );
+			$entry = $audit[ $index ];
 			if ( self::number( $entry->revision ) !== $event['revision'] || self::number( $entry->actor_id ) !== $event['actor_id'] || self::number( $entry->occurred_at, true ) !== $event['occurred_at'] || $entry->event !== $event['operation'] || $entry->reason !== $event['reason'] || $entry->before_hash !== $previous || $entry->after_hash !== $hash ) {
 				throw new RuntimeException( 'Auditoria de tarefa incompatível.' ); }
 			$previous = $hash;
@@ -432,7 +508,7 @@ final class TaskRepository {
 
 	private static function kind( string $operation ): string {
 		return match ( $operation ) {
-			'created' => 'task_assigned', 'reassigned' => 'task_reassigned', 'due_changed' => 'task_due_changed', 'commented' => 'task_commented', 'started', 'completed', 'cancelled' => 'task_state_changed', default => throw new RuntimeException( 'Evento de tarefa incompatível.' ) };
+			'attached' => 'task_attached', 'created' => 'task_assigned', 'reassigned' => 'task_reassigned', 'due_changed' => 'task_due_changed', 'commented' => 'task_commented', 'started', 'completed', 'cancelled' => 'task_state_changed', default => throw new RuntimeException( 'Evento de tarefa incompatível.' ) };
 	}
 
 	private static function validateFields( string $operation, array $fields ): void {

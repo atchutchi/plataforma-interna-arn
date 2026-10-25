@@ -125,6 +125,38 @@ elseif ( isset( $tasks['query']['get']['saved'] ) ) :
 			?>
 <button type="submit"><?php echo esc_html( $label ); ?></button></form><?php endif; ?><?php endforeach; ?>
 
+<section class="arn-task-attachments" aria-labelledby="arn-task-attachments-title"><h2 id="arn-task-attachments-title">Anexos</h2>
+	<?php if ( empty( $data['attachments'] ) ) : ?>
+<p>Ainda não existem anexos nesta tarefa.</p>
+	<?php else : ?>
+<ul>
+		<?php
+		foreach ( $data['attachments'] as $task_attachment ) :
+			$attachment_url  = add_query_arg(
+				array(
+					'arn_task'      => (string) $data['id'],
+					'arn_task_file' => $task_attachment['id'],
+				),
+				home_url( '/' )
+			);
+			$attachment_type = match ( $task_attachment['mime'] ) {
+				'application/pdf' => 'PDF', 'image/png' => 'PNG', 'image/jpeg' => 'JPEG' };
+			?>
+<li><a href="<?php echo esc_url( $attachment_url ); ?>"><?php echo esc_html( $task_attachment['label'] ); ?></a> <small><?php echo esc_html( $attachment_type . ' · ' . size_format( $task_attachment['size'] ) . ' · revisão ' . $task_attachment['revision'] ); ?></small></li>
+	<?php endforeach; ?>
+</ul>
+	<?php endif; ?>
+	<?php if ( in_array( 'attach', $data['operations'], true ) ) : ?>
+<form class="arn-task-form" data-task-form method="post" enctype="multipart/form-data" action="<?php echo esc_url( $detail_url( $data['id'] ) ); ?>"><fieldset><legend>Acrescentar anexo</legend>
+		<?php
+		View::hidden( $tasks, 'attach', $data['id'] );
+		View::field( $tasks, 'attach', 'label', 'Descrição do anexo', '', 160, true );
+		?>
+<div class="arn-task-field"><label for="arn-task-attachment">Ficheiro</label><input id="arn-task-attachment" name="attachment" type="file" accept="application/pdf,image/png,image/jpeg" required aria-describedby="arn-task-attachment-help"><small id="arn-task-attachment-help">Um PDF, PNG ou JPEG até 1 MiB, sujeito aos limites de documentos configurados. Máximo de oito anexos por tarefa. A análise pode demorar até dois minutos. O ficheiro só fica disponível depois de aprovado pela análise.</small></div>
+<button type="submit">Enviar anexo</button></fieldset></form>
+	<?php endif; ?>
+</section>
+
 <section class="arn-task-comments" aria-labelledby="arn-task-comments-title"><h2 id="arn-task-comments-title">Comentários</h2>
 	<?php
 	if ( ! $data['comments'] ) :
@@ -144,7 +176,7 @@ else :
 		<form class="arn-task-form" data-task-form method="post" action="<?php echo esc_url( $detail_url( $data['id'] ) ); ?>">
 		<?php
 		View::hidden( $tasks, 'comment', $data['id'] );
-		View::field( $tasks, 'comment', 'body', 'O teu comentário', '', 2000, true, true, 'Os comentários ficam no histórico. Não é possível anexar ficheiros nesta versão.' );
+		View::field( $tasks, 'comment', 'body', 'O teu comentário', '', 2000, true, true, 'Os comentários ficam no histórico. Os ficheiros da tarefa são apresentados na secção Anexos.' );
 		?>
 <button type="submit">Acrescentar comentário</button></form><?php endif; ?></section>
 

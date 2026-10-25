@@ -40,6 +40,7 @@ final class TaskPolicy {
 			'complete' => TaskState::InProgress === $task->state && self::ownUpdate( $task, $actor, $now ),
 			'cancel', 'reassign', 'change_due' => ! $task->state->terminal() && $actor->id() === $task->author_id && self::team( $task, $actor, $now )
 				&& $actor->allows( Action::AssignUnitTask, Scope::units( array( $task->unit_id ) ), $task->assignee_id, $now ),
+			'attach' => ! $task->state->terminal() && count( $task->attachments ) < 8 && ( self::ownUpdate( $task, $actor, $now ) || ( $actor->id() === $task->author_id && self::team( $task, $actor, $now ) && $actor->allows( Action::AssignUnitTask, Scope::units( array( $task->unit_id ) ), $task->assignee_id, $now ) ) ),
 			'comment' => self::read( $task, $actor, $now ),
 			default => false,
 		};
