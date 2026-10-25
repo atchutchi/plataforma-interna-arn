@@ -135,14 +135,14 @@ final class Portal {
 		return $this->repository->change( Input::id( $post['id'] ), $post['operation'], Input::id( $post['expected_revision'] ), Input::fields( $post ) )->id;
 	}
 
-	public function attach( array $post, string $source, string $view ): int {
+	public function attach( array $post, string $source, string $view, ?\Arn\Intranet\Media\PreparedBatch $prepared = null ): int {
 		if ( ! AttachmentConfiguration::enabled() || ! $this->prepare() ) {
 			throw new \DomainException( 'Anexos indisponíveis.' ); }
 		$before = $this->detail( Input::id( $post['id'] ), $view );
 		$actor  = get_current_user_id();
 		if ( null === $before || ! in_array( 'attach', $before['operations'], true ) || Input::id( $post['expected_revision'] ) !== $before['revision'] ) {
 			throw new \DomainException( 'Tarefa alterada ou operação indisponível.' ); }
-		$pipeline = LocalMediaProcessing::pipeline( $actor );
+		$pipeline = $prepared ?? LocalMediaProcessing::pipeline( $actor );
 		if ( null === $pipeline ) {
 			throw new \DomainException( 'Análise de anexos indisponível.' ); }
 		return ( new ImportBatch( LocalPrivateFiles::store(), $pipeline ) )->run(

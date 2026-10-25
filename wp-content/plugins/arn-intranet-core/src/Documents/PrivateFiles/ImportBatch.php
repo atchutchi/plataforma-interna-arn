@@ -20,7 +20,7 @@ final class ImportBatch {
 	private bool $started  = false;
 	private bool $running  = false;
 
-	public function __construct( public readonly PrivateBlobStore $store, private readonly ?MediaPipeline $pipeline = null ) {}
+	public function __construct( public readonly PrivateBlobStore $store, private readonly MediaPipeline|\Arn\Intranet\Media\PreparedBatch|null $pipeline = null ) {}
 
 	/** Register ownership before any subsequent content validation can fail. */
 	public function importFile( string $source ): BlobDescriptor {

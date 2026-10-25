@@ -293,8 +293,12 @@ final class DocumentCatalogPage {
 			return;
 		}
 		try {
-			$catalog  = new LocalDocumentCatalog();
-			$reason   = self::field( $input, 'reason' );
+			$catalog = new LocalDocumentCatalog();
+			$reason  = self::field( $input, 'reason' );
+			if ( in_array( $operation, array( 'create', 'revise' ), true ) && \Arn\Intranet\Media\ConsumerJobs::enabled() ) {
+				$job = \Arn\Intranet\Media\ConsumerJobs::document( self::metadata( $input ), $source, 'create' === $operation ? 0 : self::positive( $input, 'document_id' ), 'create' === $operation ? 0 : self::positive( $input, 'expected_revision' ), $reason, $input['_wpnonce'] );
+				\Arn\Intranet\Media\ConsumerPage::redirect( $job );
+			}
 			$document = match ( $operation ) {
 				'create' => $catalog->create( Scope::units( array( self::SCOPE ) ), self::metadata( $input ), $source, $reason ),
 				'revise' => $catalog->revise( self::positive( $input, 'document_id' ), self::metadata( $input ), $source, self::positive( $input, 'expected_revision' ), $reason ),
@@ -335,7 +339,7 @@ final class DocumentCatalogPage {
 		$history = null === $chosen ? null : $catalog->historyVisible( $chosen->id );
 		$roster  = self::roster();
 		?>
-		<div class="wrap arn-document-admin"><h1>Catálogo documental local</h1>
+		<?php \Arn\Intranet\Media\ConsumerPage::link(); ?><div class="wrap arn-document-admin"><h1>Catálogo documental local</h1>
 		<p>Ambiente fictício. Os originais são privados e a publicação exige uma decisão explícita.</p>
 		<?php
 		if ( 'saved' === ( $_GET['notice'] ?? '' ) ) :

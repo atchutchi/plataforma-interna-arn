@@ -18,11 +18,17 @@ final class QueueState {
 		}
 		$type = $event['type'];
 		if ( null === $state ) {
-			if ( 'queued' !== $type || -1 !== $event['item'] || '' !== $event['reason'] || ! array_is_list( $event['data'] ) || count( $event['data'] ) < 1 || count( $event['data'] ) > 8 ) {
+			if ( 'submitted' === $type ) {
+				if ( array_keys( $event['data'] ) !== array( 'items', 'context' ) || ! is_array( $event['data']['items'] ) || ! is_array( $event['data']['context'] ) ) {
+					throw new RuntimeException( 'Contexto inválido.' ); }
+				ConsumerIntent::validate( $event['data']['context'], count( $event['data']['items'] ) );
+			}
+			$originals = 'submitted' === $type ? $event['data']['items'] : $event['data'];
+			if ( ! in_array( $type, array( 'queued', 'submitted' ), true ) || -1 !== $event['item'] || '' !== $event['reason'] || ! array_is_list( $originals ) || count( $originals ) < 1 || count( $originals ) > 8 ) {
 				throw new RuntimeException( 'Lote inválido.' );
 			}
 			$items = array();
-			foreach ( $event['data'] as $row ) {
+			foreach ( $originals as $row ) {
 				if ( ! is_array( $row ) || array_keys( $row ) !== array( 'id', 'sha256', 'size', 'mime' ) ) {
 					throw new RuntimeException( 'Original inválido.' ); }
 				$blob = new BlobDescriptor( ...$row );
@@ -37,13 +43,16 @@ final class QueueState {
 				);
 			}
 			return array(
-				'revision'   => 1,
-				'created_at' => $event['at'],
-				'updated_at' => $event['at'],
-				'owner'      => $event['actor'],
-				'archived'   => false,
-				'items'      => $items,
-				'history'    => array( $event ),
+				'context'     => 'submitted' === $type ? $event['data']['context'] : null,
+				'consumption' => 'open',
+				'receipt'     => null,
+				'revision'    => 1,
+				'created_at'  => $event['at'],
+				'updated_at'  => $event['at'],
+				'owner'       => $event['actor'],
+				'archived'    => false,
+				'items'       => $items,
+				'history'     => array( $event ),
 			);
 		}
 		if ( $state['archived'] || $event['at'] < $state['updated_at'] || $state['revision'] >= 200 ) {
@@ -54,7 +63,19 @@ final class QueueState {
 		} elseif ( '' !== $event['reason'] ) {
 			throw new RuntimeException( 'Evento inválido.' );
 		}
-		if ( 'archive' === $type ) {
+		if ( 'open' !== $state['consumption'] && ! ( 'applying' === $state['consumption'] && 'applied' === $type ) && ! ( 'applied' === $state['consumption'] && 'archive' === $type ) ) {
+			throw new RuntimeException( 'Conclusão já iniciada. Consulta a auditoria.' ); }
+		if ( in_array( $type, array( 'applying', 'applied' ), true ) ) {
+			if ( null === $state['context'] || $state['owner'] !== $event['actor'] || -1 !== $event['item'] || array_filter( $state['items'], static fn( array $item ): bool => 'ready' !== $item['status'] ) ) {
+				throw new RuntimeException( 'Envio não está pronto.' ); }
+			if ( 'applying' === $type ) {
+				if ( array() !== $event['data'] ) {
+					throw new RuntimeException( 'Conclusão inválida.' ); }
+			} elseif ( 'applying' !== $state['consumption'] || array_keys( $event['data'] ) !== array( 'receipt' ) || ! is_int( $event['data']['receipt'] ) || $event['data']['receipt'] < 1 ) {
+				throw new RuntimeException( 'Recibo inválido.' ); }
+			$state['consumption'] = $type;
+			$state['receipt']     = $event['data']['receipt'] ?? null;
+		} elseif ( 'archive' === $type ) {
 			if ( -1 !== $event['item'] || array_intersect( array( 'queued', 'processing' ), array_column( $state['items'], 'status' ) ) ) {
 				throw new RuntimeException( 'O lote ainda tem trabalho pendente.' ); }
 			$state['archived'] = true;

@@ -115,13 +115,13 @@ final class LocalDocumentCatalog {
 	}
 
 	/** Import a server-selected upload and create a draft. */
-	public function create( Scope $scope, Metadata $metadata, string $source, string $reason ): Document {
+	public function create( Scope $scope, Metadata $metadata, string $source, string $reason, ?\Arn\Intranet\Media\PreparedBatch $prepared = null ): Document {
 		$this->requireConfigured();
 		$actor = $this->current->read();
 		if ( null === $actor || ! DocumentPolicy::canManageScope( $scope, $actor[0], $actor[2], time() ) ) {
 			throw new RuntimeException( 'Operação documental não autorizada.' );
 		}
-		return ( new ImportBatch( ( $this->store_factory )(), LocalMediaProcessing::pipeline( $actor[1] ) ) )->run(
+		return ( new ImportBatch( ( $this->store_factory )(), $prepared ?? LocalMediaProcessing::pipeline( $actor[1] ) ) )->run(
 			function ( ImportBatch $batch ) use ( $source, $scope, $metadata, $actor, $reason ): Document {
 				$blob         = $batch->importFile( $source );
 				[$repository] = ( $this->repository_factory )();
@@ -132,7 +132,7 @@ final class LocalDocumentCatalog {
 	}
 
 	/** Append a version, duplicating the verified original if no upload exists. */
-	public function revise( int $id, Metadata $metadata, ?string $source, int $expected, string $reason ): Document {
+	public function revise( int $id, Metadata $metadata, ?string $source, int $expected, string $reason, ?\Arn\Intranet\Media\PreparedBatch $prepared = null ): Document {
 		$this->requireConfigured();
 		$actor = $this->current->read();
 		if ( null === $actor ) {
@@ -143,7 +143,7 @@ final class LocalDocumentCatalog {
 		if ( null === $before || ! DocumentPolicy::canManage( $before, $actor[0], $actor[2], time() ) ) {
 			throw new RuntimeException( 'Operação documental não autorizada.' );
 		}
-		return ( new ImportBatch( ( $this->store_factory )(), LocalMediaProcessing::pipeline( $actor[1] ) ) )->run(
+		return ( new ImportBatch( ( $this->store_factory )(), $prepared ?? LocalMediaProcessing::pipeline( $actor[1] ) ) )->run(
 			function ( ImportBatch $batch ) use ( $source, $before, $repository, $id, $metadata, $actor, $expected, $reason ): Document {
 				$blob = null === $source ? $batch->duplicate( $before->version( count( $before->versions ) )->blob ) : $batch->importFile( $source );
 				return $repository->revise( $id, new Revision( count( $before->versions ) + 1, $metadata, $blob, $actor[1], time() ), $expected, $reason, null === $source ? $before->version( count( $before->versions ) )->blob->id : null );
