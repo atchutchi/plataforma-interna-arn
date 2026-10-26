@@ -37,4 +37,6 @@ enum Action {
 	case ManageCmsSettings;
 	case ManageOwnRequest;
 	case ManageInternalRequest;
+	case ManageOwnTicket;
+	case ManageSupportTicket;
 }

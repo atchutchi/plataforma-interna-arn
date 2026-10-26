@@ -1,0 +1,69 @@
+.arn-tickets { color: var(--wp--preset--color--text, #1b242c); padding-block: 1rem 3rem; overflow-wrap: anywhere; }
+.arn-ticket-heading { margin-block: 1.5rem 2rem; max-width: 65ch; }
+.arn-tickets h1 { font-family: Manrope, sans-serif; font-size: 2.25rem; line-height: 1.2; letter-spacing: -.02em; text-wrap: balance; }
+.arn-tickets h2 { font-size: 1.5rem; text-wrap: balance; }
+.arn-tickets h3 { font-size: 1.25rem; margin: 0 0 .5rem; }
+.arn-ticket-breadcrumb, .arn-ticket-actions, .arn-ticket-meta, .arn-ticket-pagination { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; }
+.arn-ticket-meta { color: #526373; font-size: 1rem; }
+.arn-ticket-local { padding: .75rem 1rem; background: #fff; border: 1px solid #d8e1e7; font-size: 1rem; }
+.arn-tickets :is(a, summary) { color: #0b3a5b; text-underline-offset: .2em; min-height: 44px; align-items: center; }
+.arn-tickets a { display: inline-flex; max-width: 100%; }
+.arn-tickets a:hover { color: #1f6b4a; }
+.arn-tickets :is(a, button, input, select, textarea, summary):focus-visible { outline: 3px solid #1f6b4a; outline-offset: 3px; scroll-margin-block: 1rem; }
+.arn-tickets :is(button, input, select, textarea) { box-sizing: border-box; font: inherit; font-size: max(1rem, 16px); min-height: 44px; max-width: 100%; min-width: 0; padding: .5rem .75rem; border: 1px solid #526373; border-radius: 4px; }
+.arn-tickets :is(input, select, textarea) { color: #1b242c; background: #fff; width: 100%; }
+.arn-tickets textarea { resize: vertical; min-height: 7rem; }
+.arn-tickets button, .arn-tickets a.arn-ticket-primary-link { color: #fff; background: #0b3a5b; border-color: #0b3a5b; cursor: pointer; transition: background-color 180ms ease-out; }
+.arn-tickets a.arn-ticket-primary-link { padding: .25rem 1rem; border-radius: 4px; }
+.arn-tickets button:hover, .arn-tickets a.arn-ticket-primary-link:hover { background: #1f6b4a; }
+.arn-tickets button:active { background: #1b242c; }
+.arn-tickets button:disabled { background: #526373; cursor: wait; }
+.arn-tickets button.arn-ticket-secondary { background: #fff; color: #0b3a5b; border-color: #0b3a5b; }
+.arn-tickets button.arn-ticket-secondary:hover { background: #edf3f6; }
+.arn-tickets button.arn-ticket-danger { background: #792b25; border-color: #792b25; }
+.arn-tickets button.arn-ticket-danger:hover { background: #5b201c; }
+.arn-ticket-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; padding-block: 1.5rem; margin-block: 2rem; border-block: 1px solid #d8e1e7; }
+.arn-ticket-filters > div { flex: 1 1 11rem; display: grid; gap: .5rem; }
+.arn-tickets label { font-weight: 600; }
+.arn-ticket-form { max-width: 65ch; margin-block: 1.5rem; }
+.arn-ticket-form fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.arn-ticket-form legend { font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem; }
+.arn-ticket-field { display: grid; gap: .5rem; margin-block: 1.25rem; }
+.arn-ticket-field small { font-size: 1rem; color: #526373; }
+.arn-ticket-field-error { color: #792b25; margin: 0; }
+.arn-ticket-errors, .arn-ticket-saved { border: 1px solid #792b25; color: #792b25; background: #fff; padding: 1rem 1.5rem; margin-block: 2rem; max-width: 65ch; }
+.arn-ticket-errors h2 { margin-top: 0; }
+.arn-ticket-saved { border-color: #1f6b4a; color: #174c32; }
+.arn-ticket-errors:focus { outline: 3px solid #1f6b4a; outline-offset: 3px; }
+.arn-ticket-list, .arn-ticket-comments ol, .arn-ticket-history ol { list-style: none; padding: 0; }
+.arn-ticket-list > li { display: flex; align-items: start; gap: 1.5rem; border-bottom: 1px solid #d8e1e7; padding-block: 1.5rem; }
+.arn-ticket-list-copy { min-width: 0; flex: 1; }
+.arn-ticket-list p { margin-block: .5rem; }
+.arn-ticket-list form { margin: .25rem 0; }
+.arn-ticket-state { border: 1px solid #d8e1e7; padding: .125rem .5rem; background: #fff; color: #0b3a5b; }
+.arn-ticket-overdue { color: #792b25; }
+.arn-ticket-empty { max-width: 65ch; padding-block: 2rem; }
+.arn-ticket-unsaved { max-width: 65ch; margin-block: 2rem; padding: 1rem 1.5rem; background: #fff; border: 1px solid #526373; }
+.arn-ticket-unsaved dt { font-weight: 600; }
+.arn-ticket-unsaved dd { margin: .5rem 0 1rem; overflow-wrap: anywhere; }
+.arn-ticket-unsaved dd:focus { outline: 3px solid #1f6b4a; outline-offset: 3px; }
+.arn-ticket-pagination { justify-content: space-between; margin-top: 2rem; }
+.arn-ticket-detail-grid { display: grid; gap: 2rem 3rem; min-width: 0; }
+.arn-ticket-detail { max-width: 65ch; min-width: 0; }
+.arn-ticket-facts { display: grid; grid-template-columns: minmax(7rem, auto) minmax(0, 1fr); gap: .5rem 1.5rem; margin-block: 1.5rem 2rem; }
+.arn-ticket-facts dt { font-weight: 600; }
+.arn-ticket-facts dd { margin: 0; }
+.arn-ticket-prose { white-space: normal; text-wrap: pretty; margin-block: 2rem; }
+.arn-ticket-comments { margin-block: 3rem 2rem; }
+.arn-ticket-comments li, .arn-ticket-history li { border-bottom: 1px solid #d8e1e7; padding-block: 1rem; }
+.arn-ticket-history, .arn-ticket-management details { border-block: 1px solid #d8e1e7; margin-block: 1rem; padding-block: .5rem; }
+.arn-tickets summary { cursor: pointer; padding-block: .5rem; font-weight: 600; }
+.arn-ticket-management { min-width: 0; align-self: start; background: #fff; padding: 1rem 1.5rem; border: 1px solid #d8e1e7; }
+.arn-ticket-management h2 { margin-top: 0; }
+@media (min-width: 960px) { .arn-ticket-detail-grid:has(> .arn-ticket-management) { grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr); } }
+@media (max-width: 600px) { .arn-tickets h1 { font-size: 1.875rem; } .arn-ticket-filters > div { flex-basis: 100%; } .arn-ticket-list > li { flex-direction: column; gap: .5rem; } .arn-ticket-facts { grid-template-columns: 1fr; } .arn-ticket-facts dd { margin-bottom: .75rem; } .arn-ticket-management { padding: 1rem; } }
+@media (prefers-reduced-motion: reduce) { .arn-tickets button, .arn-tickets a.arn-ticket-primary-link { transition: none; } }
+
+.arn-ticket-prose { white-space: pre-wrap; }
+.arn-ticket-preview { display:block; width: min(100%, 50rem); height: auto; margin-block: 1rem; }
+.arn-ticket-form details { margin-block: 1rem; }

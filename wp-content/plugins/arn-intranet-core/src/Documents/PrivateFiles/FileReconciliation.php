@@ -65,6 +65,7 @@ final class FileReconciliation {
 				'news'      => null !== $data['news'],
 				'tasks'     => null !== ( $data['tasks'] ?? null ),
 				'requests'  => null !== ( $data['requests'] ?? null ),
+				'tickets'   => null !== ( $data['tickets'] ?? null ),
 			);
 			$files              = array_column( $data['files'], null, 'blob_id' );
 			$audit              = array();
@@ -80,6 +81,7 @@ final class FileReconciliation {
 				'news_asset'         => 'news',
 				'task_attachment'    => 'tasks',
 				'request_attachment' => 'requests',
+				'ticket_attachment'  => 'tickets',
 			) as $type => $source ) {
 				$consumers[ $type ] = null === ( $data[ $source ] ?? null ) ? null : array_column( $data[ $source ], null, 'blob_id' );
 				foreach ( $data[ $source ] ?? array() as $row ) {
@@ -114,7 +116,7 @@ final class FileReconciliation {
 					if ( null === $consumers[ $type ] ) {
 						$report['complete'] = false;
 						$add( 'consumer_unavailable', $id );
-					} elseif ( in_array( $type, array( 'task_attachment', 'request_attachment' ), true ) && ! isset( $consumers[ $type ][ $id ] ) ) {
+					} elseif ( in_array( $type, array( 'task_attachment', 'request_attachment', 'ticket_attachment' ), true ) && ! isset( $consumers[ $type ][ $id ] ) ) {
 						$add( 'consumer_missing', $id );
 					} elseif ( 'original' !== $record->variant ) {
 						$originals = array_filter( $files, static fn( array $original ): bool => $original['object_type'] === $type && 'original' === $original['variant'] && (string) $original['object_id'] === (string) $record->object_id && (string) $original['version'] === (string) $record->version );

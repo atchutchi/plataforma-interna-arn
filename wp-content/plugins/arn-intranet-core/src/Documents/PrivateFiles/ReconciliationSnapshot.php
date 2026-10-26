@@ -32,6 +32,8 @@ final class ReconciliationSnapshot {
 		$has_tasks     = $this->installed( $tasks, array( 'tasks', 'comments', 'audit', 'notifications', 'schema' ) );
 		$requests      = new \Arn\Intranet\Requests\Schema( $db );
 		$has_requests  = $this->installed( $requests, array( 'requests', 'types', 'audit', 'notifications', 'schema' ) );
+		$tickets       = new \Arn\Intranet\Support\Schema( $db );
+		$has_tickets   = $this->installed( $tickets, array( 'tickets', 'audit', 'notifications', 'schema' ) );
 		$has_documents = $this->installed( $catalog, array( 'documents', 'versions', 'audit', 'schema' ) );
 		$has_news      = $this->installed( $news, array( 'news', 'versions', 'assets', 'audit', 'notifications', 'schema', 'schema_history' ) );
 		$this->execute( 'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ' );
@@ -44,6 +46,7 @@ final class ReconciliationSnapshot {
 				'news'      => null,
 				'tasks'     => null,
 				'requests'  => null,
+				'tickets'   => null,
 			);
 			if ( $has_documents ) {
 				$result['documents'] = $this->rows( $db->prepare( 'SELECT v.blob_id,v.sha256,v.size_bytes,v.mime,v.document_id AS object_id,v.number AS version,v.actor_id,v.created_at,d.id AS parent_id FROM %i v LEFT JOIN %i d ON d.id=v.document_id ORDER BY v.document_id,v.number LIMIT 1001', $catalog->table( 'versions' ), $catalog->table( 'documents' ) ) );
@@ -115,6 +118,36 @@ final class ReconciliationSnapshot {
 								'actor_id'   => $event['actor'],
 								'created_at' => $event['at'],
 								'parent_id'  => $request->id,
+							);
+						}
+					}
+				}
+			}           if ( $has_tickets ) {
+				$result['tickets'] = array();
+				$events            = array();
+				foreach ( $this->rows( $db->prepare( 'SELECT object_id,payload FROM %i WHERE kind=%s ORDER BY object_id,revision LIMIT 1001', $tickets->table( 'audit' ), 'tickets' ) ) as $event ) {
+					$events[ $event['object_id'] ][] = json_decode( $event['payload'], true, 32, JSON_THROW_ON_ERROR );
+				}
+				foreach ( $this->rows( $db->prepare( 'SELECT id,payload FROM %i ORDER BY id LIMIT 1001', $tickets->table( 'tickets' ) ) ) as $row ) {
+					$ticket = \Arn\Intranet\Support\Ticket::restore( $events[ $row['id'] ] ?? array() );
+					if ( $ticket->id !== (int) $row['id'] || $ticket->snapshot() !== json_decode( $row['payload'], true, 32, JSON_THROW_ON_ERROR ) ) {
+						throw new RuntimeException( 'Ticket incompatível.' );
+					}
+					foreach ( $ticket->attachments as $data ) {
+						$item  = \Arn\Intranet\Tasks\Attachment::fromArray( $data );
+						$event = $ticket->history[ $item->revision - 1 ];
+						foreach ( array( 'original' => $item->blob ) + $item->blob->derivatives as $variant => $blob ) {
+							$result['tickets'][] = array(
+								'variant'    => $variant,
+								'blob_id'    => $blob->id,
+								'sha256'     => $blob->sha256,
+								'size_bytes' => $blob->size,
+								'mime'       => $blob->mime,
+								'object_id'  => $ticket->id,
+								'version'    => $item->revision,
+								'actor_id'   => $event['actor'],
+								'created_at' => $event['at'],
+								'parent_id'  => $ticket->id,
 							);
 						}
 					}

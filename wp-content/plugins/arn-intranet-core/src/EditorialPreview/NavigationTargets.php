@@ -20,6 +20,8 @@ final class NavigationTargets {
 		'tasks_team'     => 'tarefas-da-equipa',
 		'requests_own'   => 'meus-pedidos',
 		'requests_team'  => 'tratar-pedidos',
+		'tickets_own'    => 'meus-tickets',
+		'tickets_team'   => 'suporte-ti',
 	);
 	private readonly array $site;
 	public function __construct( string $site, private readonly array $page_ids ) {
