@@ -127,7 +127,8 @@ try {
 	$session['arn_authz_revision'] = $auth->find( $task_id )->revision;
 	$manager->update( $token, $session );
 	$_COOKIE[ LOGGED_IN_COOKIE ] = wp_generate_auth_cookie( $task_id, $expiry, 'logged_in', $token );
-	$clock                       = static fn(): int => time();
+	$test_now                    = time();
+	$clock                       = static fn(): int => $test_now;
 	$repo                        = new Repository( $db, new CurrentActor( $db, $roster, $clock ), $clock );
 	require __DIR__ . '/requests-cases.php';
 	wp_set_current_user( $admin );

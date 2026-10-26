@@ -125,6 +125,36 @@ final class Repository {
 		);
 	}
 
+	/** Minimal read-only union. Native policy is applied before selection or totals. */
+	public function projection( string $purpose, string $query = '', int $page = 1 ): ?array {
+		if ( ! \Arn\Intranet\EditorialPreview\ServiceSelection::valid( $purpose, $query, $page ) ) {
+			return null; }
+		return $this->transaction(
+			function ( ActorContext $actor, array $people, int $now ) use ( $purpose, $query, $page ): ?array {
+				$own  = $this->accessFor( 'own', $actor, $people, $now );
+				$team = 'search' === $purpose ? $this->accessFor( 'team', $actor, $people, $now ) : null;
+				if ( null === $own && null === $team ) {
+					return null; }
+				$rows = array();
+				foreach ( $this->ids( 'requests' ) as $id ) {
+					$r    = $this->loadRequest( $id );
+					$view = null !== $own && RequestPolicy::own( $r, $actor, $now ) ? 'own' : ( null !== $team && RequestPolicy::team( $r, $actor, $now ) ? 'team' : null );
+					if ( null === $view ) {
+						continue; }
+					$rows[] = array(
+						'id'         => $r->id,
+						'title'      => $r->title,
+						'reference'  => $r->reference(),
+						'state'      => $r->state->label(),
+						'updated_at' => $r->updated_at,
+						'view'       => $view,
+						'pending'    => $r->state->editable() || $r->state->pending(),
+					);
+				}
+				return \Arn\Intranet\EditorialPreview\ServiceSelection::select( $rows, $purpose, $query, $page );
+			}
+		);
+	}
 	public function detail( int $id, string $view ): ?array {
 		return $this->transaction(
 			function ( ActorContext $actor, array $people, int $now ) use ( $id, $view ): ?array {
@@ -419,10 +449,13 @@ final class Repository {
 					}
 					if ( RequestPolicy::read( $r, $actor, $now ) ) {
 						$result[] = array(
-							'id'      => self::number( $row->id ),
-							'request' => $r,
-							'kind'    => $row->kind,
-							'read'    => null !== $row->read_at,
+							'id'         => self::number( $row->id ),
+							'request'    => $r,
+							'kind'       => $row->kind,
+							'read'       => null !== $row->read_at,
+							'created_at' => (int) $row->created_at,
+							'read_at'    => null === $row->read_at ? null : (int) $row->read_at,
+							'view'       => RequestPolicy::own( $r, $actor, $now ) ? 'own' : 'team',
 						);
 					}
 				}

@@ -135,3 +135,17 @@ try {
 } finally {
 	remove_filter( 'query', $filter ); }
 $assert( $expired && $before === $digest(), 'expiração antes do commit reverte tudo' );
+$login( $ids['a'] );
+$before = $digest();
+$assert( array() === $repo->projection( 'home' )['items'], 'ticket resolvido não ocupa resumo pendente' );
+$projection_result = $repo->projection( 'search', 'Alfa' );
+$assert( array( $t->id ) === array_column( $projection_result['items'], 'id' ) && 'own' === $projection_result['items'][0]['view'], 'pesquisa própria sem duplicados ou outra conta' );
+$assert( $before === $digest(), 'projecções não escrevem recibos ou negócio' );
+$login( $ids['manager'] );
+$before            = $digest();
+$projection_result = $repo->projection( 'search' );
+$assert( 3 === $projection_result['total'] && 3 === count( array_unique( array_column( $projection_result['items'], 'id' ) ) ), 'união TI e próprios sem duplicação' );
+$assert( array( $own_ticket->id ) === array_column( $repo->projection( 'home' )['items'], 'id' ), 'painel técnico só resume próprios' );
+$assert( $before === $digest(), 'composição técnica só de leitura' );
+$login( $ids['b'] );
+$assert( array( $b->id ) === array_column( $repo->projection( 'search' )['items'], 'id' ), 'contagem não revela outra unidade' );

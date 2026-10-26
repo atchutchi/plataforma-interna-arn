@@ -53,6 +53,16 @@ final class FederatedSearch {
 			'label' => 'Tarefa',
 			'size'  => 20,
 		),
+		'requests'           => array(
+			'type'  => 'requests',
+			'label' => 'Pedido interno',
+			'size'  => 20,
+		),
+		'tickets'            => array(
+			'type'  => 'tickets',
+			'label' => 'Ticket de suporte',
+			'size'  => 20,
+		),
 	);
 
 	public function __construct( private readonly Closure $fetch ) {}

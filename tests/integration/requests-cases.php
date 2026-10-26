@@ -122,8 +122,8 @@ $r = $repo->change(
 	'substitute',
 	array(
 		'user'   => $ids['deputy'],
-		'starts' => time(),
-		'ends'   => time() + 3600,
+		'starts' => $clock(),
+		'ends'   => $clock() + 3600,
 		'reason' => 'Substituição fictícia',
 	),
 	$key()
@@ -226,3 +226,15 @@ try {
 	remove_filter( 'query', $filter );
 }
 $assert( $expired_during_write && $before === $digest(), 'sessão expirada antes de commit reverte pedido e auditoria' );
+$login( $ids['a'] );
+$before = $digest();
+$assert( array() === $repo->projection( 'home' )['items'], 'cancelado e retirado não ocupam resumo' );
+$projection_result = $repo->projection( 'search', 'corrigido' );
+$assert( array( $r->id ) === array_column( $projection_result['items'], 'id' ) && 'own' === $projection_result['items'][0]['view'], 'pesquisa própria mínima' );
+$assert( $before === $digest(), 'resumo e pesquisa não gravam' );
+$login( $ids['manager'] );
+$before            = $digest();
+$projection_result = $repo->projection( 'search' );
+$assert( 3 === $projection_result['total'] && ! in_array( $withdrawn->id, array_column( $projection_result['items'], 'id' ), true ), 'união própria e RH não revela rascunho privado retirado' );
+$assert( array( $self_request->id ) === array_column( $repo->projection( 'home' )['items'], 'id' ), 'RH conserva o próprio rascunho no painel' );
+$assert( $before === $digest(), 'projecção RH não altera recibos' );

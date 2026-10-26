@@ -41,6 +41,9 @@ final class WordPressSources {
 	}
 
 	private function read( string $key, Query $query, int $page, ReadConnections $connections ): ?array {
+		if ( in_array( $key, array( 'requests', 'tickets' ), true ) ) {
+			return \Arn\Intranet\EditorialPreview\ServiceSources::search( $key, $query->q, $page );
+		}
 		if ( 'news' === $key || 'documents' === $key ) {
 			$url = self::collectionUrl( 'news' === $key ? 'noticias' : 'documentos', $key );
 			if ( null === $url ) {
