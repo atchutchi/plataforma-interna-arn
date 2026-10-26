@@ -98,7 +98,7 @@ final class QueueState {
 				throw new RuntimeException( 'Transição indisponível.' ); }
 			if ( 'processed' === $type ) {
 				$data     = $event['data'];
-				$variants = 'application/pdf' === $item['blob']['mime'] ? array( 'original' ) : array( 'original', 'thumbnail', 'preview' );
+				$variants = 'application/pdf' === $item['blob']['mime'] && array( 'original' ) === array_keys( is_array( $data['hashes'] ?? null ) ? $data['hashes'] : array() ) ? array( 'original' ) : array( 'original', 'thumbnail', 'preview' );
 				if ( array_keys( $data ) !== array( 'attempt', 'hashes' ) || ! is_string( $data['attempt'] ) || 1 !== preg_match( '/^[a-f0-9]{32}$/D', $data['attempt'] ) || ! is_array( $data['hashes'] ) || array_keys( $data['hashes'] ) !== $variants || $data['hashes']['original'] !== $item['blob']['sha256'] ) {
 					throw new RuntimeException( 'Resultado inválido.' ); }
 				foreach ( $data['hashes'] as $hash ) {

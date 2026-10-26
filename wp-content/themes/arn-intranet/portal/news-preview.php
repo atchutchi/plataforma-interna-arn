@@ -57,5 +57,17 @@ endforeach;
 					default => '' }
 			);
 			?>
-		</span></li><?php endforeach; ?></ol></section><?php endif; ?>
+		</span>
+			<?php
+			get_template_part(
+				'portal/pdf-preview',
+				null,
+				array(
+					'url'   => $attachment['url'],
+					'mime'  => $attachment['mime'],
+					'label' => $attachment['description'],
+				)
+			);
+			?>
+				</li><?php endforeach; ?></ol></section><?php endif; ?>
 </article>

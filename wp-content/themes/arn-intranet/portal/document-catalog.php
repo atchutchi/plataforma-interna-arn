@@ -36,7 +36,19 @@ $format_date   = static fn( string $date ): string => substr( $date, 8, 2 ) . '/
 		$item = $portal['selected'];
 		?>
 		<article class="arn-portal-detail"><header class="arn-portal-page-heading"><p class="arn-portal-kicker"><?php echo esc_html( $portal['categories'][ $item['category'] ] ); ?></p><h1><?php echo esc_html( $item['title'] ); ?></h1></header>
-		<div class="arn-portal-columns"><div class="arn-portal-reading"><p class="arn-portal-summary"><?php echo esc_html( $item['summary'] ); ?></p><a class="arn-portal-text-link" href="<?php echo esc_url( $back ); ?>">Voltar à colecção</a></div>
+		<div class="arn-portal-columns"><div class="arn-portal-reading"><p class="arn-portal-summary"><?php echo esc_html( $item['summary'] ); ?></p>
+		<?php
+		get_template_part(
+			'portal/pdf-preview',
+			null,
+			array(
+				'url'   => $item['download_url'],
+				'mime'  => $item['mime'],
+				'label' => $item['title'],
+			)
+		);
+		?>
+																										<a class="arn-portal-text-link" href="<?php echo esc_url( $back ); ?>">Voltar à colecção</a></div>
 		<aside class="arn-portal-source" aria-labelledby="arn-source-title"><p class="arn-portal-kicker">Ficha documental</p><h2 id="arn-source-title">Original privado</h2>
 		<dl><dt>Proprietário</dt><dd><?php echo esc_html( $item['owner'] ); ?></dd><dt>Referência de origem</dt><dd><?php echo esc_html( $item['reference'] ); ?></dd><dt>Versão publicada</dt><dd><?php echo esc_html( (string) $item['version'] ); ?></dd><dt>Revisão prevista</dt><dd><?php echo esc_html( $format_date( $item['review_on'] ) ); ?></dd>
 		<?php

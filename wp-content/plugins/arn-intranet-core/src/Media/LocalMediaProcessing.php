@@ -40,7 +40,8 @@ final class LocalMediaProcessing {
 					throw new RuntimeException( 'Processamento de imagem indisponível.' );
 				}
 			},
-			$actor
+			$actor,
+			PdfRenderer::configured()
 		);
 	}
 }

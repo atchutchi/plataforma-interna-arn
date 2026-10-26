@@ -27,7 +27,7 @@ final readonly class BlobDescriptor {
 			throw new RuntimeException( 'Ficheiro privado indisponível.' );
 		}
 		foreach ( $derivatives as $variant => $derived ) {
-			if ( ! in_array( $variant, array( 'thumbnail', 'preview' ), true ) || ! $derived instanceof self || array() !== $derived->derivatives || 'image/png' !== $derived->mime || $derived->id === $id || 'application/pdf' === $mime ) {
+			if ( ! in_array( $variant, array( 'thumbnail', 'preview' ), true ) || ! $derived instanceof self || array() !== $derived->derivatives || 'image/png' !== $derived->mime || $derived->id === $id ) {
 				throw new RuntimeException( 'Derivado privado inválido.' );
 			}
 		}
