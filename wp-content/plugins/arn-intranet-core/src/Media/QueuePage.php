@@ -31,6 +31,7 @@ final class QueuePage {
 	);
 
 	public static function register(): void {
+		HealthAccess::register();
 		SupervisorAccess::register();
 		add_action( 'init', array( self::class, 'guard' ), -29 );
 		add_action(
