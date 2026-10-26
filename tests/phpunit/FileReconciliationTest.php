@@ -94,6 +94,46 @@ final class FileReconciliationTest extends TestCase {
 		self::assertContains( 'orphan_candidate', $this->codes() );
 		self::assertSame( $this->blob->sha256, hash_file( 'sha256', $this->base . '/private/' . $id ) );
 	}
+	public function testPdfDerivativesMatchAllConsumersWithoutWeakeningActorChecks(): void {
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- One-pixel synthetic PNG, no executable code.
+		$png = base64_decode( 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYGAAAAAEAAH2FzhVAAAAAElFTkSuQmCC', true );
+		file_put_contents( $this->base . '/public/preview.png', $png );
+		$this->store = new PrivateBlobStore( $this->base . '/private', array( $this->base . '/public' ), array( 'application/pdf', 'image/png' ), 1024 );
+		$preview     = $this->store->importFile( $this->base . '/public/preview.png' );
+		$base        = $this->data;
+		foreach ( array(
+			'document'        => 'documents',
+			'news_asset'      => 'news',
+			'task_attachment' => 'tasks',
+		) as $type => $consumer ) {
+			$this->data                            = $base;
+			$this->data['files'][0]['object_type'] = $type;
+			$this->data['files'][]                 = array_replace(
+				$this->data['files'][0],
+				array(
+					'blob_id'    => $preview->id,
+					'sha256'     => $preview->sha256,
+					'size_bytes' => $preview->size,
+					'mime'       => 'image/png',
+					'variant'    => 'preview',
+				)
+			);
+			$this->data['audit'][]                 = array_replace( $this->data['audit'][0], array( 'blob_id' => $preview->id ) );
+			$this->data['documents']               = array();
+			$this->data[ $consumer ]               = array(
+				$this->data['files'][0] + array(
+					'parent_id'      => 10,
+					'parent_version' => 1,
+				),
+			);
+			if ( 'tasks' === $consumer ) {
+				$this->data['tasks'][] = $this->data['files'][1] + array( 'parent_id' => 10 );
+			}
+			self::assertSame( array(), $this->codes(), $type );
+			$this->data['files'][1]['actor_id'] = 99;
+			self::assertContains( 'consumer_mismatch', $this->codes(), $type );
+		}
+	}
 
 	public function testChangedHashAndMimeAreReportedWithoutRepair(): void {
 		foreach ( array(

@@ -29,6 +29,8 @@ auth.json
 /.playwright-cli/
 /.superpowers/
 *.log
+__pycache__/
+*.pyc
 
 # Sistema.
 .DS_Store

@@ -20,7 +20,7 @@ final class MediaPipeline {
 	private readonly string $root;
 	private readonly float $deadline;
 
-	public function __construct( string $root, private readonly array $excluded, private readonly Closure $scanner, private readonly Closure $images, private readonly int $actor ) {
+	public function __construct( string $root, private readonly array $excluded, private readonly Closure $scanner, private readonly Closure $images, private readonly int $actor, private readonly ?Closure $pdfs = null ) {
 		new PrivateBlobStore( $root, $excluded, array( 'application/pdf' ), 1048576 );
 		$this->root     = str_replace( '\\', '/', realpath( $root ) );
 		$this->deadline = microtime( true ) + 120;
@@ -82,9 +82,10 @@ final class MediaPipeline {
 			if ( ! in_array( $mime, array( 'application/pdf', 'image/png', 'image/jpeg' ), true ) ) {
 				throw new RuntimeException( 'Tipo de ficheiro recusado.' );
 			}
-			$paths = array( 'original' => $path );
-			if ( 'application/pdf' !== $mime ) {
-				( $this->images )( $path, $job, $this->deadline );
+			$paths    = array( 'original' => $path );
+			$renderer = 'application/pdf' === $mime ? $this->pdfs : $this->images;
+			if ( null !== $renderer ) {
+				$renderer( $path, $job, $this->deadline );
 				foreach ( array( 'thumbnail', 'preview' ) as $variant ) {
 					$derived = $job . '/' . $variant . '.png';
 					if ( ! is_file( $derived ) || is_link( $derived ) || filesize( $derived ) < 1 || filesize( $derived ) > 1048576 ) {

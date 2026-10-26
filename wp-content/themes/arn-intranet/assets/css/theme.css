@@ -250,3 +250,12 @@ a:hover { text-decoration-thickness: 0.12em; }
 .arn-news-published .arn-news-preview-attachments a { display: inline-flex; align-items: center; min-height: 2.75rem; }
 .arn-news-source-review { border-top: 1px solid var(--wp--preset--color--border); padding-top: var(--arn-space-4); margin-top: var(--arn-space-6); }
 .arn-news-list .arn-portal-filters :where(input, select, button) { font-size: 1rem; }
+
+
+/* Static authorised PDF page, sharing the portal typography. */
+.arn-pdf-preview { margin-block: 1rem; max-width: 42rem; }
+.arn-pdf-preview summary { cursor: pointer; min-height: 44px; padding-block: .75rem; }
+.arn-pdf-preview summary:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
+.arn-pdf-preview figure { margin: 1rem 0; }
+.arn-pdf-preview img { display: block; width: 100%; height: auto; border: 1px solid #c9d2ce; }
+.arn-pdf-preview figcaption { margin-top: .75rem; font-size: .9375rem; line-height: 1.6; }

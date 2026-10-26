@@ -143,7 +143,19 @@ elseif ( isset( $tasks['query']['get']['saved'] ) ) :
 			$attachment_type = match ( $task_attachment['mime'] ) {
 				'application/pdf' => 'PDF', 'image/png' => 'PNG', 'image/jpeg' => 'JPEG' };
 			?>
-<li><a href="<?php echo esc_url( $attachment_url ); ?>"><?php echo esc_html( $task_attachment['label'] ); ?></a> <small><?php echo esc_html( $attachment_type . ' · ' . size_format( $task_attachment['size'] ) . ' · revisão ' . $task_attachment['revision'] ); ?></small></li>
+<li><a href="<?php echo esc_url( $attachment_url ); ?>"><?php echo esc_html( $task_attachment['label'] ); ?></a> <small><?php echo esc_html( $attachment_type . ' · ' . size_format( $task_attachment['size'] ) . ' · revisão ' . $task_attachment['revision'] ); ?></small>
+			<?php
+			get_template_part(
+				'portal/pdf-preview',
+				null,
+				array(
+					'url'   => $attachment_url,
+					'mime'  => $task_attachment['mime'],
+					'label' => $task_attachment['label'],
+				)
+			);
+			?>
+				</li>
 	<?php endforeach; ?>
 </ul>
 	<?php endif; ?>

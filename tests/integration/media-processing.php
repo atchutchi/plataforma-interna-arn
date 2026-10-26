@@ -169,7 +169,48 @@ try {
 		$assert( 'applying' === $queue->read( $batch_id, 42 )['consumption'], 'excepção conserva intenção durável' );
 	}
 				$assert( 'applying' === $queue->read( $batch_id, 42 )['consumption'] && 12 === $count( 'files' ), 'resultado incerto permanece bloqueado' );
-				echo esc_html( 'Media privada SQL: ' . $checks . " verificações.\n" );
+	// PDF variants use the same atomic registry, never an independent audience.
+	file_put_contents( $base . '/public/input.pdf', "%PDF-1.4\n%%EOF\n" );
+	$pdf_store    = new PrivateBlobStore( $base . '/private', array( $base . '/public' ), array( 'application/pdf', 'image/png' ), 1048576 );
+	$pdf_pipeline = new MediaPipeline(
+		$base . '/quarantine',
+		array( $base . '/public', $base . '/private' ),
+		static fn(): string => 'clean',
+		static function (): void {},
+		42,
+		static function ( string $source, string $job ) use ( $png ): void {
+			file_put_contents( $job . '/thumbnail.png', $png );
+			file_put_contents( $job . '/preview.png', $png );
+		}
+	);
+	foreach ( array( 'document', 'news_asset', 'task_attachment' ) as $pdf_type ) {
+		$pdf    = ( new ImportBatch( $pdf_store, $pdf_pipeline ) )->run(
+			static function ( ImportBatch $batch ) use ( $base, $registry, $pdf_type ): BlobDescriptor {
+				$blob = $batch->importFile( $base . '/public/input.pdf' );
+				$registry->register( new FileRecord( $blob, $pdf_type, 90, 1, 'original', 42, 200 ) );
+				return $blob;
+			},
+			static fn(): WpdbFileRegistry => $registry
+		);
+		$record = $registry->find( $pdf->id );
+		$assert( 'application/pdf' === $record->blob->mime, 'original PDF ' . $pdf_type );
+		foreach ( array( 'thumbnail', 'preview' ) as $variant ) {
+			$derived = VariantSelection::select( $registry, $record, $variant );
+			$assert( $pdf->derivatives[ $variant ]->id === $derived?->id, 'derivado PDF exacto ' . $pdf_type . $variant );
+			$assert( 'image/png' === $derived->mime, 'derivado PDF estático' );
+			$handle = $pdf_store->open( $derived );
+			$assert( stream_get_contents( $handle ) === $png, 'bytes PDF derivados verificados' );
+			fclose( $handle );
+		}
+	}
+	$assert( 21 === $count( 'files' ) && 21 === $count( 'audit' ), 'três PDFs e seis derivados registados e auditados' );
+	$legacy = $pdf_store->importFile( $base . '/public/input.pdf' );
+	$registry->register( new FileRecord( $legacy, 'document', 91, 1, 'original', 42, 201 ) );
+	$legacy_record = $registry->find( $legacy->id );
+	$assert( null === VariantSelection::select( $registry, $legacy_record, 'preview' ), 'PDF legado não devolve original como imagem' );
+	$selected_legacy = VariantSelection::select( $registry, $legacy_record, 'original' );
+	$assert( $selected_legacy?->id === $legacy->id, 'download legado conservado' );
+	echo esc_html( 'Media privada SQL: ' . $checks . " verificações.\n" );
 } finally {
 	if ( null !== $filter ) {
 		remove_filter( 'query', $filter );

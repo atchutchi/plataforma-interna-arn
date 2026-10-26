@@ -117,7 +117,7 @@ final class FileReconciliation {
 					} elseif ( 'original' !== $record->variant ) {
 						$originals = array_filter( $files, static fn( array $original ): bool => $original['object_type'] === $type && 'original' === $original['variant'] && (string) $original['object_id'] === (string) $record->object_id && (string) $original['version'] === (string) $record->version );
 						$original  = 1 === count( $originals ) ? reset( $originals ) : null;
-						if ( null === $original || ! isset( $consumers[ $type ][ $original['blob_id'] ] ) || ! in_array( $original['mime'], array( 'image/png', 'image/jpeg' ), true ) || 'image/png' !== $record->blob->mime || (string) $original['actor_id'] !== (string) $record->actor_id || (string) $original['created_at'] !== (string) $record->created_at ) {
+						if ( null === $original || ! isset( $consumers[ $type ][ $original['blob_id'] ] ) || ! in_array( $original['mime'], array( 'image/png', 'image/jpeg', 'application/pdf' ), true ) || 'image/png' !== $record->blob->mime || (string) $original['actor_id'] !== (string) $record->actor_id || (string) $original['created_at'] !== (string) $record->created_at ) {
 							$add( 'consumer_mismatch', $id );
 						}
 					} elseif ( ! isset( $consumers[ $type ][ $id ] ) ) {

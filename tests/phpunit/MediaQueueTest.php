@@ -70,6 +70,26 @@ final class MediaQueueTest extends TestCase {
 		self::assertSame( 4, $calls );
 		self::assertSame( 9, $this->queue()->read( $id, 42 )['revision'] );
 	}
+	public function testPdfWithDerivativesSurvivesDurableQueueReplay(): void {
+		$id      = $this->enqueue();
+		$factory = fn( int $actor ): MediaPipeline => new MediaPipeline(
+			$this->base . '/quarantine',
+			array( $this->base . '/public', $this->base . '/queue' ),
+			static fn(): string => 'clean',
+			static function (): void {},
+			$actor,
+			static function ( string $source, string $job ): void {
+				foreach ( array( 'thumbnail', 'preview' ) as $variant ) {
+					file_put_contents( $job . '/' . $variant . '.png', base64_decode( 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYGAAAAAEAAH2FzhVAAAAAElFTkSuQmCC', true ) );
+				}
+			}
+		);
+		self::assertSame( 1, $this->queue()->work( 42, 1, $factory ) );
+		$item    = $this->queue()->read( $id, 42 )['items'][0];
+		self::assertSame( 'ready', $item['status'] );
+		self::assertSame( array( 'original', 'thumbnail', 'preview' ), array_keys( $item['result']['hashes'] ) );
+		self::assertSame( 0, $this->queue()->work( 42, 1, $factory ) );
+	}
 	public function testWorkerSerializesAndRejectsConcurrentRecovery(): void {
 		$id   = $this->enqueue();
 		$scan = function () use ( $id ): string {

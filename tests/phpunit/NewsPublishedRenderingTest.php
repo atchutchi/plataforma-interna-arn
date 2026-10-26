@@ -68,6 +68,11 @@ final class NewsPublishedRenderingTest extends TestCase {
 			return '/' . $slug . '/'; }
 		function wp_date( string $format, int $at, ?DateTimeZone $zone = null ): string {
 			return gmdate( $format, $at ); }
+		function get_template_part( string $slug, ?string $name, array $args ): void {
+			if ( 'portal/pdf-preview' === $slug ) {
+				include dirname( __DIR__, 2 ) . '/wp-content/themes/arn-intranet/portal/pdf-preview.php';
+			}
+		}
 		$args = array(
 			'news' => array(
 				'id'           => 7,
