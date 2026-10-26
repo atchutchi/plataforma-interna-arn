@@ -31,6 +31,7 @@ final class QueuePage {
 	);
 
 	public static function register(): void {
+		SupervisorAccess::register();
 		add_action( 'init', array( self::class, 'guard' ), -29 );
 		add_action(
 			'admin_menu',
@@ -71,7 +72,15 @@ final class QueuePage {
 		}
 		try {
 			$queue = QueueAccess::queue();
-			if ( 'enqueue' === $input['action'] ) {
+			if ( in_array( $input['action'], array( 'supervisor_stop', 'supervisor_ack' ), true ) ) {
+				$supervisor = SupervisorAccess::service();
+				if ( 'supervisor_stop' === $input['action'] ) {
+					$supervisor->stop( get_current_user_id(), (int) $input['revision'], $input['reason'] );
+				} else {
+					$supervisor->acknowledge( get_current_user_id(), (int) $input['revision'], $input['reason'] );
+				}
+				self::$message = 'Decisão de supervisão registada. As entradas e os originais foram conservados.';
+			} elseif ( 'enqueue' === $input['action'] ) {
 				$queue->enqueue( $input['sources'], get_current_user_id(), $input['request_id'] );
 				self::$message = 'Lote recebido. A análise será executada pelo worker local.';
 			} elseif ( 'list' !== $input['action'] ) {
@@ -101,6 +110,7 @@ final class QueuePage {
 		echo '<div class="wrap arn-media-queue"><h1>Fila de media</h1><p>Preparação técnica de ficheiros fictícios. Um resultado analisado não publica conteúdo nem concede acesso.</p><p><a class="button" href="' . esc_url( $url ) . '">Actualizar estados</a></p>';
 		if ( '' !== self::$message ) {
 			echo '<div class="notice ' . esc_attr( self::$failed ? 'notice-error' : 'notice-success' ) . '"><p role="status">' . esc_html( self::$message ) . '</p></div>'; }
+		SupervisorAccess::render();
 		echo '<h2>Novo lote</h2><form method="post" enctype="multipart/form-data" action="' . esc_url( $url ) . '">';
 		self::fields(
 			array(

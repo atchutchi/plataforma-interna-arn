@@ -269,7 +269,7 @@ final class MediaQueue {
 			fclose( $lock ); }
 	}
 
-	public function work( int $actor, int $limit, Closure $pipeline ): int {
+	public function work( int $actor, int $limit, Closure $pipeline, bool $stop_on_failure = false ): int {
 		$this->authorize( $actor );
 		if ( $limit < 1 || $limit > 3 ) {
 			throw new RuntimeException( 'O worker aceita entre uma e três entradas.' ); }
@@ -277,6 +277,12 @@ final class MediaQueue {
 		$processed = 0;
 		try {
 			$rows = $this->listing( $actor );
+			if ( $stop_on_failure ) {
+				foreach ( $rows as $row ) {
+					if ( isset( $row['unavailable'] ) || in_array( 'processing', array_column( $row['items'], 'status' ), true ) ) {
+						throw new RuntimeException( 'A fila exige diagnóstico antes da supervisão.' ); }
+				}
+			}
 			uasort( $rows, static fn( array $a, array $b ): int => ( $a['created_at'] ?? PHP_INT_MAX ) <=> ( $b['created_at'] ?? PHP_INT_MAX ) );
 			foreach ( $rows as $id => $state ) {
 				if ( isset( $state['unavailable'] ) || $state['archived'] ) {
@@ -303,6 +309,8 @@ final class MediaQueue {
 					}
 					// No catch around commit: an indeterminate append must never be overwritten.
 					$state = $this->append( $id, $state['revision'], $event );
+					if ( $stop_on_failure && 'failed' === $event['type'] ) {
+						throw new RuntimeException( 'Análise retida. Supervisão interrompida.' ); }
 					if ( ++$processed >= $limit ) {
 						return $processed; }
 				}

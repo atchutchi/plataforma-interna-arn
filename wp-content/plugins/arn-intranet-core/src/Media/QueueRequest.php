@@ -19,6 +19,11 @@ final class QueueRequest {
 			throw new RuntimeException( 'Pedido inválido.' ); }
 		$keys = array_keys( $post );
 		sort( $keys );
+		if ( in_array( $post['action'], array( 'supervisor_stop', 'supervisor_ack' ), true ) ) {
+			if ( array( 'action', 'nonce', 'reason', 'revision' ) !== $keys || array() !== $files || ! is_string( $post['reason'] ) || ! is_string( $post['revision'] ) || 1 !== preg_match( '/^[1-9][0-9]{0,3}$/D', $post['revision'] ) || (int) $post['revision'] > 1000 ) {
+				throw new RuntimeException( 'Decisão inválida.' ); }
+			return $post;
+		}
 		if ( 'enqueue' === $post['action'] ) {
 			if ( array( 'action', 'nonce', 'request_id' ) !== $keys || ! is_string( $post['request_id'] ) || 1 !== preg_match( '/^[a-f0-9]{32}$/D', $post['request_id'] ) || array( 'media' ) !== array_keys( $files ) || ! is_array( $files['media'] ) ) {
 				throw new RuntimeException( 'Lote inválido.' ); }
