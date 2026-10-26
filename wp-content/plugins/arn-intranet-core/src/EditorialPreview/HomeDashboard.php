@@ -18,15 +18,18 @@ use Throwable;
 final class HomeDashboard {
 	private readonly Closure $source;
 	public function __construct( ?Closure $source = null ) {
-		$this->source = $source ?? static fn( string $module ): ?array => 'tasks_own' === $module ? ( new TaskPortal() )->listing( TaskSelection::pending(), 'own' ) : ( new Portal( $module ) )->listing(
-			'communications' === $module ? NoticeSelection::parse( array() ) : AgendaSelection::parse( array() )
-		);
+		$this->source = $source ?? static fn( string $module ): ?array => match ( $module ) {
+			'tasks_own' => ( new TaskPortal() )->listing( TaskSelection::pending(), 'own' ),
+			'requests_own' => ServiceSources::home( 'requests' ),
+			'tickets_own' => ServiceSources::home( 'tickets' ),
+			default => ( new Portal( $module ) )->listing( 'communications' === $module ? NoticeSelection::parse( array() ) : AgendaSelection::parse( array() ) ),
+		};
 	}
 
 	/** The destinations come from ServiceDirectory, never request parameters. */
 	public function model( array $destinations ): array {
 		$result = array();
-		foreach ( array( 'communications', 'calendar', 'tasks_own' ) as $module ) {
+		foreach ( array( 'communications', 'calendar', 'tasks_own', 'requests_own', 'tickets_own' ) as $module ) {
 			$result[ $module ] = array(
 				'available' => false,
 				'url'       => '',
@@ -43,6 +46,10 @@ final class HomeDashboard {
 					}
 					$items = array();
 					foreach ( array_slice( $list['items'], 0, 3 ) as $item ) {
+						if ( in_array( $module, array( 'requests_own', 'tickets_own' ), true ) ) {
+							$items[] = self::serviceItem( $item, $destination['url'] );
+							continue;
+						}
 						if ( 'tasks_own' === $module ) {
 							$items[] = self::taskItem( $item, $destination['url'] );
 							continue;
@@ -93,6 +100,18 @@ final class HomeDashboard {
 			'state'    => TaskView::STATES[ $item['state'] ],
 			'priority' => TaskView::PRIORITIES[ $item['priority'] ],
 			'overdue'  => $item['overdue'],
+		);
+	}
+	private static function serviceItem( mixed $item, string $base ): array {
+		if ( ! is_array( $item ) || ! is_int( $item['id'] ?? null ) || $item['id'] < 1 || ! is_string( $item['title'] ?? null ) || ! is_string( $item['reference'] ?? null ) || ! is_string( $item['state'] ?? null ) || ! is_int( $item['updated_at'] ?? null ) || $item['updated_at'] < 0 || 'own' !== ( $item['view'] ?? null ) ) {
+			throw new \UnexpectedValueException( 'Projecção indisponível.' );
+		}
+		return array(
+			'title'     => $item['title'],
+			'url'       => $base . ( str_contains( $base, '?' ) ? '&' : '?' ) . 'entry=' . $item['id'],
+			'date'      => gmdate( 'd/m/Y H:i', $item['updated_at'] ) . ' UTC',
+			'reference' => $item['reference'],
+			'state'     => $item['state'],
 		);
 	}
 }

@@ -55,6 +55,9 @@ final class Portal {
 	public function listing( string $view, string $query = '', string $state = '', int $page = 1 ): ?array {
 		return $this->prepare() ? $this->repository->listing( $view, $query, $state, $page ) : null;
 	}
+	public function projection( string $purpose, string $query = '', int $page = 1 ): ?array {
+		return $this->prepare() ? $this->repository->projection( $purpose, $query, $page ) : null;
+	}
 	public function detail( int $id, string $view ): ?array {
 		$data = $this->prepare() ? $this->repository->detail( $id, $view ) : null;
 		if ( null !== $data && ! AttachmentConfiguration::enabled() ) {

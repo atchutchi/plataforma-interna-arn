@@ -741,7 +741,7 @@ Fluxo mínimo: rascunho passa a submetido após validação e depois a em análi
 
 O saldo apresenta separadamente direito anual, dias gozados, dias futuros aprovados e saldo disponível. O disponível corresponde ao direito menos gozados e futuros aprovados, sem dupla contagem. Não aprovar mais dias que o saldo disponível. Validar novamente o saldo e a sobreposição na mesma transacção da aprovação, incluindo decisões concorrentes. O sistema não aceita períodos do mesmo funcionário sobrepostos a pedidos aprovados.
 
-Proposta a validar por RH antes de implementar F2: bloquear submissão de períodos sobrepostos a pedidos do mesmo funcionário em submetido ou em análise. Rascunhos, rejeitados, retirados e cancelados não bloqueiam. Pedidos pendentes não reservam saldo. A aprovação revalida sempre datas e saldo. Esta proposta evita pedidos concorrentes duplicados e ainda não é uma decisão institucional confirmada.
+Regra aprovada pelo responsável para o laboratório em 26 de outubro de 2026: bloquear submissão de períodos sobrepostos a pedidos do mesmo funcionário em submetido ou em análise. Rascunhos, rejeitados, retirados e cancelados não bloqueiam. Pedidos pendentes não reservam saldo. A aprovação revalida sempre datas e saldo. A utilização institucional continua dependente da validação RH e das fontes oficiais. Ver decisões-laboratorio-2026-10-26.md.
 
 Cancelamento de férias futuras aprovado por RH repõe apenas os dias ainda não gozados. Não devolver automaticamente dias gozados. Qualquer correcção administrativa desses dias exige competência RH, motivo e auditoria. Para períodos já iniciados, o tratamento de alteração ou cancelamento parcial e o momento de classificação como gozado precisam de detalhe RH em F2-01.
 
@@ -749,7 +749,7 @@ O funcionário vê os próprios pedidos e saldo. RH gere apenas pessoas e pedido
 
 Não implementar transporte para o ano seguinte, antecipação do ano seguinte, venda, compensação financeira ou acumulação plurianual. O direito é anual. O saldo remanescente em 31 de dezembro não tem perda ou transporte presumidos. Pedidos que cruzem anos exigem uma regra expressa RH antes de implementação, sem consumir automaticamente o direito de um ano pelo outro. A origem operacional dos saldos, eventual reconciliação e decisões pendentes estão em PEN-05/06/14.
 
-F2 só começa quando os pré-requisitos do backlog estiverem prontos. Estas regras ficam especificadas agora e não constituem implementação do módulo.
+O responsável autorizou concluir primeiro os pedidos futuros dentro do mesmo ano, mantendo bloqueados os períodos entre anos e os cancelamentos já iniciados. Os ensaios usam feriados e saldos explicitamente fictícios. Esta decisão permite implementar F2-03 localmente e não constitui aceitação institucional ou prova de implementação.
 
 ### 11.6 Suporte
 

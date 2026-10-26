@@ -17,6 +17,8 @@ final readonly class Query {
 		'communications' => 'Comunicados',
 		'calendar'       => 'Eventos',
 		'tasks'          => 'Tarefas',
+		'requests'       => 'Pedidos internos',
+		'tickets'        => 'Suporte TI',
 	);
 	private function __construct( public string $q, public string $type, public int $page ) {}
 

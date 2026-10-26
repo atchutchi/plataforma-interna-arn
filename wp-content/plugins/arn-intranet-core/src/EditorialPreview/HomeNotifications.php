@@ -17,6 +17,8 @@ final class HomeNotifications {
 		'communications' => 'Comunicados',
 		'calendar'       => 'Calendário',
 		'tasks_own'      => 'Tarefas',
+		'requests'       => 'Pedidos internos',
+		'tickets'        => 'Suporte TI',
 		'news'           => 'Notícias',
 		'account'        => 'Acessos',
 	);

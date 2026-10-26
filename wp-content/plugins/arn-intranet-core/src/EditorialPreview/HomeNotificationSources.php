@@ -21,6 +21,9 @@ final class HomeNotificationSources {
 		if ( ! isset( HomeNotifications::MODULES[ $module ] ) || ! is_user_logged_in() || 'local' !== wp_get_environment_type() || is_admin() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
 			return null;
 		}
+		if ( in_array( $module, array( 'requests', 'tickets' ), true ) ) {
+			return ServiceSources::notices( $module );
+		}
 		$connections = new ReadConnections();
 		try {
 			if ( 'news' === $module ) {

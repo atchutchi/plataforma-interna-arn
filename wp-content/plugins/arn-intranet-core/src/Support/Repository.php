@@ -104,6 +104,36 @@ final class Repository {
 			}
 		);
 	}
+	/** Minimal read-only union. Native policy is applied before selection or totals. */
+	public function projection( string $purpose, string $query = '', int $page = 1 ): ?array {
+		if ( ! \Arn\Intranet\EditorialPreview\ServiceSelection::valid( $purpose, $query, $page ) ) {
+			return null; }
+		return $this->transaction(
+			function ( ActorContext $actor, array $people, int $now ) use ( $purpose, $query, $page ): ?array {
+				$own  = $this->accessFor( 'own', $actor, $now );
+				$team = 'search' === $purpose ? $this->accessFor( 'team', $actor, $now ) : null;
+				if ( null === $own && null === $team ) {
+					return null; }
+				$rows = array();
+				foreach ( $this->ids( 'tickets' ) as $id ) {
+					$r    = $this->loadTicket( $id );
+					$view = null !== $own && TicketPolicy::own( $r, $actor, $now ) ? 'own' : ( null !== $team && TicketPolicy::team( $r, $actor, $now ) ? 'team' : null );
+					if ( null === $view ) {
+						continue; }
+					$rows[] = array(
+						'id'         => $r->id,
+						'title'      => $r->title,
+						'reference'  => $r->reference(),
+						'state'      => $r->state->label(),
+						'updated_at' => $r->updated_at,
+						'view'       => $view,
+						'pending'    => TicketState::Resolved !== $r->state,
+					);
+				}
+				return \Arn\Intranet\EditorialPreview\ServiceSelection::select( $rows, $purpose, $query, $page );
+			}
+		);
+	}
 	public function detail( int $id, string $view ): ?array {
 		return $this->transaction(
 			function ( ActorContext $actor, array $people, int $now ) use ( $id, $view ): ?array {
@@ -329,10 +359,13 @@ final class Repository {
 					}
 					if ( TicketPolicy::read( $r, $actor, $now ) ) {
 						$result[] = array(
-							'id'     => self::number( $row->id ),
-							'ticket' => $r,
-							'kind'   => $row->kind,
-							'read'   => null !== $row->read_at,
+							'id'         => self::number( $row->id ),
+							'ticket'     => $r,
+							'kind'       => $row->kind,
+							'read'       => null !== $row->read_at,
+							'created_at' => (int) $row->created_at,
+							'read_at'    => null === $row->read_at ? null : (int) $row->read_at,
+							'view'       => TicketPolicy::own( $r, $actor, $now ) ? 'own' : 'team',
 						);
 					}
 				}
