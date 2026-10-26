@@ -107,6 +107,7 @@ final class ReconciliationPage {
 				'documents' => 'Documentos',
 				'news'      => 'Notícias',
 				'tasks'     => 'Anexos de tarefas',
+				'requests'  => 'Anexos de pedidos',
 			) as $key => $label ) {
 				echo '<p>' . esc_html( $label ) . ': ' . esc_html( ( $r['coverage'][ $key ] ?? false ) ? 'incluído na comparação' : 'não analisado' ) . '.</p>';
 			}

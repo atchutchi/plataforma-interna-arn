@@ -77,6 +77,10 @@ final class ConsumerPage {
 	private static function returnUrl( array $row ): string {
 		$c  = $row['context'];
 		$id = $row['receipt'] ?? $c['id'];
+		if ( 'requests' === $c['module'] ) {
+			$page = get_page_by_path( ( new \Arn\Intranet\Requests\Pages() )->slug( 'own' ) );
+			return $page instanceof \WP_Post ? add_query_arg( 'entry', $id, get_permalink( $page ) ) : home_url( '/' );
+		}
 		if ( 'tasks' === $c['module'] ) {
 			$page = get_page_by_path( ( new \Arn\Intranet\Tasks\Pages() )->slug( $c['payload']['view'] ) );
 			return $page instanceof \WP_Post ? add_query_arg( 'entry', $id, get_permalink( $page ) ) : home_url( '/' );
@@ -110,6 +114,7 @@ final class ConsumerPage {
 				'news'      => 'Notícias',
 				'documents' => 'Documentos',
 				'tasks'     => 'Tarefas',
+				'requests'  => 'Pedidos internos',
 			)[ $c['module'] ];
 			$ready  = ! array_filter( $row['items'], static fn( array $item ): bool => 'ready' !== $item['status'] );
 			?>

@@ -190,6 +190,7 @@ PeoplePortal::register();
 \Arn\Intranet\F112\PostTypes::register();
 \Arn\Intranet\F112\Portal::register();
 \Arn\Intranet\Tasks\Bootstrap::register();
+\Arn\Intranet\Requests\Bootstrap::register();
 Portal::register();
 \Arn\Intranet\EditorialPreview\NavigationPageList::register();
 \Arn\Intranet\EditorialPreview\ModuleNavigation::register();

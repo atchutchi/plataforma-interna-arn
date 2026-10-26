@@ -23,21 +23,25 @@ final class ServiceDirectory {
 		'calendar'       => array( 'Calendário', 'Consulta os eventos disponíveis para ti e recupera o histórico.' ),
 		'tasks_own'      => array( 'Minhas tarefas', 'Consulta o trabalho que te está atribuído e actualiza o progresso.' ),
 		'tasks_team'     => array( 'Tarefas da equipa', 'Atribui e acompanha o trabalho na unidade que podes gerir.' ),
+		'requests_own'   => array( 'Meus pedidos', 'Prepara pedidos internos e acompanha as respostas e o histórico.' ),
+		'requests_team'  => array( 'Tratar pedidos', 'Analisa os pedidos submetidos nas unidades que podes gerir.' ),
 	);
 	private readonly Closure $people;
 	private readonly Closure $communications;
 	private readonly Closure $tasks;
+	private readonly Closure $requests;
 
-	public function __construct( ?Closure $people = null, ?Closure $communications = null, ?Closure $tasks = null ) {
+	public function __construct( ?Closure $people = null, ?Closure $communications = null, ?Closure $tasks = null, ?Closure $requests = null ) {
 		$this->people         = $people ?? PeopleNavigation::destinations( ... );
 		$this->communications = $communications ?? Navigation::destinations( ... );
 		$this->tasks          = $tasks ?? TaskNavigation::destinations( ... );
+		$this->requests       = $requests ?? \Arn\Intranet\Requests\Navigation::destinations( ... );
 	}
 
 	/** No capability, account data, private content or arbitrary labels reach the view. */
 	public function items(): array {
 		$links = array();
-		foreach ( array( $this->people, $this->communications, $this->tasks ) as $source ) {
+		foreach ( array( $this->people, $this->communications, $this->tasks, $this->requests ) as $source ) {
 			try {
 				$items = $source();
 				if ( ! is_array( $items ) ) {

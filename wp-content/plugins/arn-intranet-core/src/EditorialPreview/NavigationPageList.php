@@ -28,7 +28,7 @@ final class NavigationPageList {
 			}
 			// Module links are supplied once by their own navigation authorities.
 			$filter = static fn( array $pages ): array => array_values(
-				array_filter( $pages, static fn( $page ): bool => ! $page instanceof WP_Post || 0 !== (int) $page->post_parent || ! in_array( $page->post_name, array( 'funcionarios', 'meu-perfil', 'minha-equipa', 'comunicados', 'calendario', 'minhas-tarefas', 'tarefas-da-equipa' ), true ) )
+				array_filter( $pages, static fn( $page ): bool => ! $page instanceof WP_Post || 0 !== (int) $page->post_parent || ! in_array( $page->post_name, array_values( NavigationTargets::SLUGS ), true ) )
 			);
 			add_filter( 'get_pages', $filter, PHP_INT_MAX );
 			try {
