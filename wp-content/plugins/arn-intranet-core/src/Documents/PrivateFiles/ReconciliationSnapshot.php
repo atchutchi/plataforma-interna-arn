@@ -30,6 +30,8 @@ final class ReconciliationSnapshot {
 		$news          = new NewsSchema( $db );
 		$tasks         = new TaskSchema( $db );
 		$has_tasks     = $this->installed( $tasks, array( 'tasks', 'comments', 'audit', 'notifications', 'schema' ) );
+		$requests      = new \Arn\Intranet\Requests\Schema( $db );
+		$has_requests  = $this->installed( $requests, array( 'requests', 'types', 'audit', 'notifications', 'schema' ) );
 		$has_documents = $this->installed( $catalog, array( 'documents', 'versions', 'audit', 'schema' ) );
 		$has_news      = $this->installed( $news, array( 'news', 'versions', 'assets', 'audit', 'notifications', 'schema', 'schema_history' ) );
 		$this->execute( 'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ' );
@@ -41,6 +43,7 @@ final class ReconciliationSnapshot {
 				'documents' => null,
 				'news'      => null,
 				'tasks'     => null,
+				'requests'  => null,
 			);
 			if ( $has_documents ) {
 				$result['documents'] = $this->rows( $db->prepare( 'SELECT v.blob_id,v.sha256,v.size_bytes,v.mime,v.document_id AS object_id,v.number AS version,v.actor_id,v.created_at,d.id AS parent_id FROM %i v LEFT JOIN %i d ON d.id=v.document_id ORDER BY v.document_id,v.number LIMIT 1001', $catalog->table( 'versions' ), $catalog->table( 'documents' ) ) );
@@ -81,6 +84,37 @@ final class ReconciliationSnapshot {
 								'actor_id'   => $event['actor_id'],
 								'created_at' => $event['occurred_at'],
 								'parent_id'  => $task->id,
+							);
+						}
+					}
+				}
+			}
+			if ( $has_requests ) {
+				$result['requests'] = array();
+				$events             = array();
+				foreach ( $this->rows( $db->prepare( 'SELECT object_id,payload FROM %i WHERE kind=%s ORDER BY object_id,revision LIMIT 1001', $requests->table( 'audit' ), 'requests' ) ) as $event ) {
+					$events[ $event['object_id'] ][] = json_decode( $event['payload'], true, 32, JSON_THROW_ON_ERROR );
+				}
+				foreach ( $this->rows( $db->prepare( 'SELECT id,payload FROM %i ORDER BY id LIMIT 1001', $requests->table( 'requests' ) ) ) as $row ) {
+					$request = \Arn\Intranet\Requests\InternalRequest::restore( $events[ $row['id'] ] ?? array() );
+					if ( $request->id !== (int) $row['id'] || $request->snapshot() !== json_decode( $row['payload'], true, 32, JSON_THROW_ON_ERROR ) ) {
+						throw new RuntimeException( 'Pedido incompatível.' );
+					}
+					foreach ( $request->attachments as $data ) {
+						$item  = \Arn\Intranet\Tasks\Attachment::fromArray( $data );
+						$event = $request->history[ $item->revision - 1 ];
+						foreach ( array( 'original' => $item->blob ) + $item->blob->derivatives as $variant => $blob ) {
+							$result['requests'][] = array(
+								'variant'    => $variant,
+								'blob_id'    => $blob->id,
+								'sha256'     => $blob->sha256,
+								'size_bytes' => $blob->size,
+								'mime'       => $blob->mime,
+								'object_id'  => $request->id,
+								'version'    => $item->revision,
+								'actor_id'   => $event['actor'],
+								'created_at' => $event['at'],
+								'parent_id'  => $request->id,
 							);
 						}
 					}

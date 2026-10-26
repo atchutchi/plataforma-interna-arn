@@ -35,4 +35,6 @@ enum Action {
 	case ManageGrants;
 	case ManageDocuments;
 	case ManageCmsSettings;
+	case ManageOwnRequest;
+	case ManageInternalRequest;
 }

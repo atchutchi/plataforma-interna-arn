@@ -41,7 +41,7 @@ final class ConsumerJobs {
 	public static function intent( string $module, int $id, int $expected, string $reason, array $payload ): array {
 		return array(
 			'module'    => $module,
-			'operation' => 'tasks' === $module ? 'attach' : ( 0 === $id ? 'create' : 'revise' ),
+			'operation' => in_array( $module, array( 'tasks', 'requests' ), true ) ? 'attach' : ( 0 === $id ? 'create' : 'revise' ),
 			'id'        => $id,
 			'expected'  => $expected,
 			'reason'    => $reason,
@@ -65,6 +65,10 @@ final class ConsumerJobs {
 			$before   = $id > 0 ? ( new LocalDocumentCatalog() )->findVisible( $id ) : null;
 			$ok       = null !== $actor && ( 0 === $id ? DocumentPolicy::canManageScope( Scope::units( array( 'unidade-ficticia-a' ) ), $actor[0], $actor[2], time() ) : null !== $before && DocumentPolicy::canManage( $before, $actor[0], $actor[2], time() ) );
 			$revision = $before?->revision;
+		} elseif ( 'requests' === $context['module'] ) {
+			$before   = \Arn\Intranet\Requests\AttachmentConfiguration::enabled() ? ( new \Arn\Intranet\Requests\Portal() )->detail( $id, 'own' ) : null;
+			$ok       = null !== $before && ( ! $mutation || in_array( 'attach', $before['operations'], true ) );
+			$revision = $before['revision'] ?? null;
 		} else {
 			$before   = AttachmentConfiguration::enabled() ? ( new Portal() )->detail( $id, $context['payload']['view'] ) : null;
 			$ok       = null !== $before && ( ! $mutation || in_array( 'attach', $before['operations'], true ) );
@@ -168,6 +172,19 @@ final class ConsumerJobs {
 		);
 		return self::enqueue( $context, array( $source ), $post['nonce'] );
 	}
+	public static function request( array $post, string $source, string $view ): string {
+		$context = self::intent(
+			'requests',
+			(int) $post['id'],
+			(int) $post['expected'],
+			'Inclusão de anexo pelo formulário de pedidos',
+			array(
+				'label' => $post['label'],
+				'view'  => $view,
+			)
+		);
+		return self::enqueue( $context, array( $source ), $post['nonce'] );
+	}
 
 	public static function listing(): array {
 		$rows = array();
@@ -207,6 +224,18 @@ final class ConsumerJobs {
 					$metadata = new Metadata( ...$p['metadata'] );
 					$service  = new LocalDocumentCatalog();
 					return ( 0 === $c['id'] ? $service->create( Scope::units( array( 'unidade-ficticia-a' ) ), $metadata, $paths[0], $c['reason'], $prepared ) : $service->revise( $c['id'], $metadata, $p['retained'] ? null : $paths[0], $c['expected'], $c['reason'], $prepared ) )->id;
+				}
+				if ( 'requests' === $c['module'] ) {
+					return ( new \Arn\Intranet\Requests\Portal() )->attach(
+						array(
+							'id'       => (string) $c['id'],
+							'expected' => (string) $c['expected'],
+							'label'    => $p['label'],
+						),
+						$paths[0],
+						'own',
+						$prepared
+					);
 				}
 				return ( new Portal() )->attach(
 					array(

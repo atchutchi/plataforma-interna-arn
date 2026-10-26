@@ -18,6 +18,8 @@ final class NavigationTargets {
 		'calendar'       => 'calendario',
 		'tasks_own'      => 'minhas-tarefas',
 		'tasks_team'     => 'tarefas-da-equipa',
+		'requests_own'   => 'meus-pedidos',
+		'requests_team'  => 'tratar-pedidos',
 	);
 	private readonly array $site;
 	public function __construct( string $site, private readonly array $page_ids ) {

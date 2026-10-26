@@ -41,6 +41,7 @@
     "test:f112-readiness:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp --require=tests/integration/f112-cli-bootstrap.php eval-file tests/integration/f112-readiness.php --user=admin",
     "test:import-preview:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/import-preview.php --user=admin",
     "test:register:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/register-import.php --user=admin",
+    "test:requests:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp --require=tests/integration/requests-cli-bootstrap.php eval-file tests/integration/requests.php --user=admin",
     "test:editorial:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/editorial-preview.php --user=admin",
     "test:private-files:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/private-files.php --user=admin",
     "test:file-reconciliation:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/file-reconciliation.php --user=admin",
