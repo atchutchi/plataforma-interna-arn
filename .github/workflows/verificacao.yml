@@ -75,6 +75,7 @@ jobs:
       - run: npm run test:people:integration
       - run: npm run test:people-installer:integration
       - run: npm run test:import-preview:integration
+      - run: npm run test:register:integration
       - run: npm run test:editorial:integration
       - run: npm run test:private-files:integration
       - run: npm run test:native-media:integration
