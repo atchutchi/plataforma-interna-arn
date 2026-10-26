@@ -43,7 +43,7 @@ try {
 	$assert( ! ReconciliationPage::allowed(), 'CLI sem sessão nativa não abre a página' );
 	$files->install();
 	$reader = new ReconciliationSnapshot( $db );
-	$assert( null === $reader->read()['documents'] && null === $reader->read()['news'] && null === $reader->read()['tasks'], 'módulos ausentes identificados' );
+	$assert( null === $reader->read()['documents'] && null === $reader->read()['news'] && null === $reader->read()['tasks'] && null === $reader->read()['requests'], 'módulos ausentes identificados' );
 	$execute( $db->prepare( 'CREATE TABLE %i LIKE %i', $prefix . 'posts', $GLOBALS['wpdb']->posts ) );
 	( new WpdbAuthorizationRepository( $db ) )->installSchema();
 	$catalog->install();
@@ -78,8 +78,9 @@ try {
 			'documents' => true,
 			'news'      => true,
 			'tasks'     => false,
+			'requests'  => false,
 		) === $report['coverage'],
-		'documentos e notícias incluídos, tarefas ausentes sem cobertura inventada'
+		'documentos e notícias incluídos, tarefas e pedidos ausentes sem cobertura inventada'
 	);
 	$assert( $reader->read() === $before && $store->inventory() === $inventory, 'diagnóstico conserva linhas e bytes' );
 	$assert( array() === array_filter( $queries, static fn( string $sql ): bool => 1 === preg_match( '/^\s*(INSERT|UPDATE|DELETE|REPLACE|CREATE|ALTER|DROP|TRUNCATE)\b/i', $sql ) ), 'nenhum DML ou DDL no diagnóstico' );

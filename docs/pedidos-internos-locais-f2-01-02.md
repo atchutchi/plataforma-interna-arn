@@ -30,6 +30,8 @@ Playwright executa configuração nativa, rascunho, fila PDF, conclusão, previe
 
 A revisão independente identificou a rejeição de CRLF dos formulários e o bloqueio de submissão após desactivar anexos. Ambos foram reproduzidos em testes vermelhos e corrigidos. O browser também revelou a colisão do campo name com a rota WordPress, títulos/menus repetidos e o filtro vazio obrigatório. Essas falhas foram corrigidas. A primeira suite completa sem GD falhou num teste de imagens existente. A execução de fecho carrega GD explicitamente. As falhas iniciais foram conservadas na evidência privada.
 
+A primeira CI da PR70 encontrou a expectativa antiga de três fontes no ensaio de reconciliação. Foi actualizada para incluir pedidos ausentes sem inventar cobertura. O ensaio SQL local passou as 23 verificações. A falha inicial permanece no histórico da CI e o merge exige os controlos do commit corrigido.
+
 A comparação de preservação confirmou 133 tabelas externas, os registos anteriores de 32 tabelas de negócio, 14 linhas de contas e 311 ficheiros inalterados. Acrescentou quatro contas fictícias e um PDF com dois derivados. Reconciliação completa sem novos problemas de integridade. Não equivale a auditoria de todas as tabelas nativas WordPress.
 
 ## Continuação
