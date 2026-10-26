@@ -43,7 +43,7 @@ try {
 	$assert( ! ReconciliationPage::allowed(), 'CLI sem sessão nativa não abre a página' );
 	$files->install();
 	$reader = new ReconciliationSnapshot( $db );
-	$assert( null === $reader->read()['documents'] && null === $reader->read()['news'] && null === $reader->read()['tasks'] && null === $reader->read()['requests'], 'módulos ausentes identificados' );
+	$assert( null === $reader->read()['documents'] && null === $reader->read()['news'] && null === $reader->read()['tasks'] && null === $reader->read()['requests'] && null === $reader->read()['tickets'], 'módulos ausentes identificados' );
 	$execute( $db->prepare( 'CREATE TABLE %i LIKE %i', $prefix . 'posts', $GLOBALS['wpdb']->posts ) );
 	( new WpdbAuthorizationRepository( $db ) )->installSchema();
 	$catalog->install();
@@ -79,6 +79,7 @@ try {
 			'news'      => true,
 			'tasks'     => false,
 			'requests'  => false,
+			'tickets'   => false,
 		) === $report['coverage'],
 		'documentos e notícias incluídos, tarefas e pedidos ausentes sem cobertura inventada'
 	);

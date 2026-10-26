@@ -50,7 +50,7 @@ final class AuthorizationPolicy {
 	 */
 	private function contextAllows( Account $account, Request $request ): bool {
 		return match ( $request->action ) {
-			Action::UpdateOwnProfile, Action::ReadOwnTask, Action::UpdateOwnTask, Action::CreateNewsDraft, Action::SubmitNews, Action::ManageInstitutionalNotice, Action::ManageOwnRequest => $request->owner_id === $account->user_id,
+			Action::UpdateOwnProfile, Action::ReadOwnTask, Action::UpdateOwnTask, Action::CreateNewsDraft, Action::SubmitNews, Action::ManageInstitutionalNotice, Action::ManageOwnRequest, Action::ManageOwnTicket => $request->owner_id === $account->user_id,
 			Action::ReadContent, Action::ReadDirectory => $request->audience_allowed,
 			Action::ApproveNews, Action::PublishNews, Action::DecideInstitutionalNotice => $request->version_current && $request->author_id > 0 && $request->author_id !== $account->user_id,
 			Action::ManageAccount, Action::ManageGrants => $request->owner_id > 0 && $request->owner_id !== $account->user_id,
@@ -67,12 +67,13 @@ final class AuthorizationPolicy {
 	 */
 	private function roleAllows( Role $role, Action $action ): bool {
 		$actions = match ( $role ) {
-			Role::Employee => array( Action::ReadContent, Action::ReadDirectory, Action::UpdateOwnProfile, Action::ReadOwnTask, Action::UpdateOwnTask, Action::CreateNewsDraft, Action::SubmitNews, Action::ManageOwnRequest ),
+			Role::Employee => array( Action::ReadContent, Action::ReadDirectory, Action::UpdateOwnProfile, Action::ReadOwnTask, Action::UpdateOwnTask, Action::CreateNewsDraft, Action::SubmitNews, Action::ManageOwnRequest, Action::ManageOwnTicket ),
 			Role::UnitManager => array( Action::ReadDirectory, Action::AssignUnitTask, Action::ReadUnitTask, Action::PublishTeamNotice ),
 			Role::HumanResources => array( Action::ReadHrRecord, Action::WriteHrRecord, Action::ManageDocuments, Action::ManageInternalRequest ),
 			Role::Editorial => array( Action::ReviewNews, Action::ApproveNews, Action::PublishNews ),
 			Role::AccessAdministrator => array( Action::ManageAccount, Action::ManageGrants ),
-			Role::TechnicalAdministrator, Role::Leadership, Role::Support => array(),
+			Role::TechnicalAdministrator, Role::Leadership => array(),
+			Role::Support => array( Action::ManageSupportTicket ),
 			Role::NoticeAuthor => array( Action::ManageInstitutionalNotice ),
 			Role::NoticeReviewer => array( Action::ReviewInstitutionalNotice, Action::DecideInstitutionalNotice ),
 			Role::UnitEventManager => array( Action::ManageUnitEvent ),

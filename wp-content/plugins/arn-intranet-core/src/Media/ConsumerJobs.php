@@ -41,7 +41,7 @@ final class ConsumerJobs {
 	public static function intent( string $module, int $id, int $expected, string $reason, array $payload ): array {
 		return array(
 			'module'    => $module,
-			'operation' => in_array( $module, array( 'tasks', 'requests' ), true ) ? 'attach' : ( 0 === $id ? 'create' : 'revise' ),
+			'operation' => in_array( $module, array( 'tasks', 'requests', 'tickets' ), true ) ? 'attach' : ( 0 === $id ? 'create' : 'revise' ),
 			'id'        => $id,
 			'expected'  => $expected,
 			'reason'    => $reason,
@@ -68,15 +68,18 @@ final class ConsumerJobs {
 		} elseif ( 'requests' === $context['module'] ) {
 			$before   = \Arn\Intranet\Requests\AttachmentConfiguration::enabled() ? ( new \Arn\Intranet\Requests\Portal() )->detail( $id, 'own' ) : null;
 			$ok       = null !== $before && ( ! $mutation || in_array( 'attach', $before['operations'], true ) );
-			$revision = $before['revision'] ?? null;
-		} else {
-			$before   = AttachmentConfiguration::enabled() ? ( new Portal() )->detail( $id, $context['payload']['view'] ) : null;
+			$revision = $before['revision'] ?? null;        } elseif ( 'tickets' === $context['module'] ) {
+			$before   = \Arn\Intranet\Support\AttachmentConfiguration::enabled() ? ( new \Arn\Intranet\Support\Portal() )->detail( $id, $context['payload']['view'] ) : null;
 			$ok       = null !== $before && ( ! $mutation || in_array( 'attach', $before['operations'], true ) );
 			$revision = $before['revision'] ?? null;
-		}
-		if ( ! $ok || ( $mutation && $id > 0 && $context['expected'] !== $revision ) ) {
-			throw new RuntimeException( 'Permissão ou revisão alterada. Reabre o formulário.' ); }
-		return $before;
+			} else {
+				$before   = AttachmentConfiguration::enabled() ? ( new Portal() )->detail( $id, $context['payload']['view'] ) : null;
+				$ok       = null !== $before && ( ! $mutation || in_array( 'attach', $before['operations'], true ) );
+				$revision = $before['revision'] ?? null;
+			}
+			if ( ! $ok || ( $mutation && $id > 0 && $context['expected'] !== $revision ) ) {
+				throw new RuntimeException( 'Permissão ou revisão alterada. Reabre o formulário.' ); }
+			return $before;
 	}
 
 	private static function original( BlobDescriptor $blob ): string {
@@ -185,6 +188,19 @@ final class ConsumerJobs {
 		);
 		return self::enqueue( $context, array( $source ), $post['nonce'] );
 	}
+	public static function ticket( array $post, string $source, string $view ): string {
+		$context = self::intent(
+			'tickets',
+			(int) $post['id'],
+			(int) $post['expected'],
+			'Inclusão de anexo pelo formulário de tickets',
+			array(
+				'label' => $post['label'],
+				'view'  => $view,
+			)
+		);
+		return self::enqueue( $context, array( $source ), $post['nonce'] );
+	}
 
 	public static function listing(): array {
 		$rows = array();
@@ -234,6 +250,17 @@ final class ConsumerJobs {
 						),
 						$paths[0],
 						'own',
+						$prepared
+					);
+				}               if ( 'tickets' === $c['module'] ) {
+					return ( new \Arn\Intranet\Support\Portal() )->attach(
+						array(
+							'id'       => (string) $c['id'],
+							'expected' => (string) $c['expected'],
+							'label'    => $p['label'],
+						),
+						$paths[0],
+						$p['view'],
 						$prepared
 					);
 				}

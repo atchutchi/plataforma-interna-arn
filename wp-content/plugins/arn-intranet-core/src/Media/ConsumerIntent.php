@@ -51,7 +51,7 @@ final class ConsumerIntent {
 			if ( $keys !== $expected ) {
 				throw new RuntimeException( 'Metadados inválidos.' ); }
 			new Metadata( ...$p['metadata'] );
-		} elseif ( in_array( $value['module'], array( 'tasks', 'requests' ), true ) && 'attach' === $value['operation'] ) {
+		} elseif ( in_array( $value['module'], array( 'tasks', 'requests', 'tickets' ), true ) && 'attach' === $value['operation'] ) {
 			if ( 1 !== $count || array_keys( $p ) !== array( 'label', 'view' ) || ! is_string( $p['label'] ) || ! Content::plainText( $p['label'], 1, 160 ) || ! in_array( $p['view'], array( 'own', 'team' ), true ) ) {
 				throw new RuntimeException( 'Anexo inválido.' ); }
 			if ( 'requests' === $value['module'] && 'own' !== $p['view'] ) {

@@ -25,14 +25,14 @@ final class AuthorizationPolicyTest extends TestCase {
 	/** Testa todos os pares função/acção contra o catálogo explícito. */
 	public function testClosedRoleCatalogueHasNoImplicitInheritance(): void {
 		$catalogue = array(
-			'Employee'                  => array( 'ReadContent', 'ReadDirectory', 'UpdateOwnProfile', 'ReadOwnTask', 'UpdateOwnTask', 'CreateNewsDraft', 'SubmitNews', 'ManageOwnRequest' ),
+			'Employee'                  => array( 'ReadContent', 'ReadDirectory', 'UpdateOwnProfile', 'ReadOwnTask', 'UpdateOwnTask', 'CreateNewsDraft', 'SubmitNews', 'ManageOwnRequest', 'ManageOwnTicket' ),
 			'UnitManager'               => array( 'ReadDirectory', 'AssignUnitTask', 'ReadUnitTask', 'PublishTeamNotice' ),
 			'HumanResources'            => array( 'ReadHrRecord', 'WriteHrRecord', 'ManageDocuments', 'ManageInternalRequest' ),
 			'Editorial'                 => array( 'ReviewNews', 'ApproveNews', 'PublishNews' ),
 			'AccessAdministrator'       => array( 'ManageAccount', 'ManageGrants' ),
 			'TechnicalAdministrator'    => array(),
 			'Leadership'                => array(),
-			'Support'                   => array(),
+			'Support'                   => array( 'ManageSupportTicket' ),
 			'NoticeAuthor'              => array( 'ManageInstitutionalNotice' ),
 			'NoticeReviewer'            => array( 'ReviewInstitutionalNotice', 'DecideInstitutionalNotice' ),
 			'UnitEventManager'          => array( 'ManageUnitEvent' ),

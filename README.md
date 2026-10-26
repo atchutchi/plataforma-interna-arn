@@ -10,6 +10,7 @@ Este README apresenta o estado actual e o trabalho necessário para concluir o s
 
 | Parcela concluída local | Evidência e limites |
 | --- | --- |
+| F2-04: suporte TI e tickets | [Aceitação local](docs/suporte-tickets-locais-f2-04.md). Abertura, assunção por técnico competente, respostas, solução, anexos privados, histórico e avisos. Reabertura, fecho adicional, reatribuição e SLA exigem definição TI. Composição global F2-05/06 pendente. |
 | F2-01/02: pedidos internos e decisões | [Aceitação local](docs/pedidos-internos-locais-f2-01-02.md). Tipos versionados, circuito de decisão, substituição com competência existente, anexos privados, histórico e avisos. PEN-06 e composição global F2-05/06 continuam pendentes. |
 | Fundação WordPress, tema ARN, logótipo, favicon, tipografia, páginas e menus | [Tema e revisão editorial](docs/portal-editorial-local-f1-06.md). A evolução dos módulos conserva o tema existente. |
 | F1-02: login Google OIDC, callback, vínculo issuer/sub e sessão | [Login Google](docs/google-login-local-f1-02.md). Segredos externos ao Git e vínculo auditado. |
@@ -44,12 +45,11 @@ O pré-cadastro Workspace tem documentação própria em docs e dados privados e
 | --- | --- | --- | --- |
 | 1 | F1-08: capacidade operacional de media | Parcial | Manutenção de assinaturas/descodificadores e política operacional de capacidade/conservação. Definir recuperação auditada de conclusões indeterminadas e operação persistente no servidor. A admissão, fila, quarentena, formulários, previews PDF, diagnóstico operacional e supervisão em sessões CLI finitas estão concluídos no laboratório. |
 | 2 | F1-03/05: lacunas de cadastro e delegações | Parcial | Manutenção individual de estados, associação explícita profissional-conta e delegações persistentes. A importação e actualização em lote auditadas estão concluídas com dados fictícios. RH valida a origem, hierarquia, campos e atribuições reais. |
-| 3 | F2-03: férias e ausências | Por implementar | 22 dias úteis anuais repartíveis, pedido prévio, decisão final RH, saldo/reservas/reposições auditados e calendário colectivo sem motivos privados. PEN-14 continua a definir os parâmetros institucionais. |
-| 4 | F2-04: suporte e tickets | Por implementar | Abertura, atribuição, prioridade, estados, resposta, anexos e acompanhamento autorizado. |
-| 5 | F2-05/06: composição e aceitação dos serviços | Por implementar | Pedidos, férias e suporte no painel, pesquisa, notificações e CMS, com autorização em todas as projecções. |
-| 6 | Google Calendar | Por implementar | Consentimento e configuração externos ao Git, calendário/fonte oficial, sentido de sincronização, conflitos, revogação, erros e reconciliação. Não inferir permissões de Calendar a partir do login Google. |
-| 7 | F1-16: QA global e recuperação | Parcial por módulo | Matriz completa por objecto, REST/AJAX/media, acessibilidade, carga e concorrência. Implementar recuperação controlada e auditada de ficheiros a partir do procedimento definido, com aprovação do responsável. Ensaiar restauro e permissões recuperadas. |
-| 8 | F1-17: documentação e pacote de entrega | Por preparar | Manuais de administração/utilização, release por commit, migrações, inventário, rollback e guião de aceitação piloto. |
+| 3 | F2-03: férias e ausências | Aguarda decisões RH | 22 dias úteis anuais repartíveis, pedido prévio e decisão final RH confirmados. Falta definir sobreposição de pedidos pendentes, períodos entre anos e cancelamento após início antes de implementar saldo/reservas/reposições. PEN-14. |
+| 4 | F2-05/06: composição e aceitação dos serviços | Próxima entrega independente | Ligar pedidos e suporte já implementados ao painel, pesquisa e notificações, revalidando a autorização. Acrescentar férias depois de fechar F2-03. |
+| 5 | Google Calendar | Aguarda direcção e fonte oficial | Consentimento e configuração externos ao Git, calendário/fonte oficial, sentido de sincronização, conflitos, revogação, erros e reconciliação. Não inferir permissões de Calendar a partir do login Google. |
+| 6 | F1-16: QA global e recuperação | Parcial por módulo | Matriz completa por objecto, REST/AJAX/media, acessibilidade, carga e concorrência. Implementar recuperação controlada e auditada de ficheiros a partir do procedimento definido, com aprovação do responsável. Ensaiar restauro e permissões recuperadas. |
+| 7 | F1-17: documentação e pacote de entrega | Por preparar | Manuais de administração/utilização, release por commit, migrações, inventário, rollback e guião de aceitação piloto. |
 
 F1-04/06/14/15 acompanham os módulos novos. Não são tarefas para reconstruir os módulos já aceites. F3 fora do requisito Google Calendar fica sujeito a prioridade e fonte oficial aprovadas.
 

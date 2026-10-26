@@ -25,23 +25,27 @@ final class ServiceDirectory {
 		'tasks_team'     => array( 'Tarefas da equipa', 'Atribui e acompanha o trabalho na unidade que podes gerir.' ),
 		'requests_own'   => array( 'Meus pedidos', 'Prepara pedidos internos e acompanha as respostas e o histórico.' ),
 		'requests_team'  => array( 'Tratar pedidos', 'Analisa os pedidos submetidos nas unidades que podes gerir.' ),
+		'tickets_own'    => array( 'Meus tickets', 'Abre um pedido de suporte e acompanha as respostas da equipa técnica.' ),
+		'tickets_team'   => array( 'Suporte TI', 'Assume os tickets autorizados, responde e regista a solução.' ),
 	);
 	private readonly Closure $people;
 	private readonly Closure $communications;
 	private readonly Closure $tasks;
 	private readonly Closure $requests;
+	private readonly Closure $tickets;
 
-	public function __construct( ?Closure $people = null, ?Closure $communications = null, ?Closure $tasks = null, ?Closure $requests = null ) {
+	public function __construct( ?Closure $people = null, ?Closure $communications = null, ?Closure $tasks = null, ?Closure $requests = null, ?Closure $tickets = null ) {
 		$this->people         = $people ?? PeopleNavigation::destinations( ... );
 		$this->communications = $communications ?? Navigation::destinations( ... );
 		$this->tasks          = $tasks ?? TaskNavigation::destinations( ... );
 		$this->requests       = $requests ?? \Arn\Intranet\Requests\Navigation::destinations( ... );
+		$this->tickets        = $tickets ?? \Arn\Intranet\Support\Navigation::destinations( ... );
 	}
 
 	/** No capability, account data, private content or arbitrary labels reach the view. */
 	public function items(): array {
 		$links = array();
-		foreach ( array( $this->people, $this->communications, $this->tasks, $this->requests ) as $source ) {
+		foreach ( array( $this->people, $this->communications, $this->tasks, $this->requests, $this->tickets ) as $source ) {
 			try {
 				$items = $source();
 				if ( ! is_array( $items ) ) {
