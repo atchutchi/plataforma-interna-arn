@@ -19,6 +19,7 @@ final readonly class Query {
 		'tasks'          => 'Tarefas',
 		'requests'       => 'Pedidos internos',
 		'tickets'        => 'Suporte TI',
+		'leave'          => 'Férias',
 	);
 	private function __construct( public string $q, public string $type, public int $page ) {}
 

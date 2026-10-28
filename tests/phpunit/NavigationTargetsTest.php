@@ -33,6 +33,8 @@ final class NavigationTargetsTest extends TestCase {
 			'/intranet/pasta/..?page_id=13'          => 'team',
 			'?page_id=12&tab=contacto'               => 'profile',
 			'/intranet/?pagename=calendario#eventos' => 'calendar',
+			'/intranet/minhas-ferias/'               => 'leave_own',
+			'/intranet/?pagename=gerir-ferias'       => 'leave_team',
 		) as $url => $expected ) {
 			self::assertSame( $expected, $targets->identify( array( 'url' => $url ) ) );
 		}

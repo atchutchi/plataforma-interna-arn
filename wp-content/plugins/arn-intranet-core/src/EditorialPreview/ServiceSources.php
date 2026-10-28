@@ -11,11 +11,11 @@ namespace Arn\Intranet\EditorialPreview;
 final class ServiceSources {
 	private static function portal( string $module ): object {
 		return match ( $module ) {
-			'requests' => new \Arn\Intranet\Requests\Portal(), 'tickets' => new \Arn\Intranet\Support\Portal(), default => throw new \InvalidArgumentException( 'Serviço indisponível.' ) };
+			'requests' => new \Arn\Intranet\Requests\Portal(), 'tickets' => new \Arn\Intranet\Support\Portal(), 'leave'=>new \Arn\Intranet\Leave\Portal(), default => throw new \InvalidArgumentException( 'Serviço indisponível.' ) };
 	}
 	private static function urls( string $module ): array {
 		$items = match ( $module ) {
-			'requests' => \Arn\Intranet\Requests\Navigation::destinations(), 'tickets' => \Arn\Intranet\Support\Navigation::destinations(), default => array() };
+			'requests' => \Arn\Intranet\Requests\Navigation::destinations(), 'tickets' => \Arn\Intranet\Support\Navigation::destinations(), 'leave'=>\Arn\Intranet\Leave\Navigation::destinations(), default => array() };
 		return array_map( static fn( array $item ): string => $item['url'], $items );
 	}
 	public static function home( string $module ): ?array {
@@ -52,11 +52,12 @@ final class ServiceSources {
 			$base = $urls[ $module . '_' . $row['view'] ] ?? null;
 			if ( null === $base ) {
 				return null; }
-			$object  = $row[ 'requests' === $module ? 'request' : 'ticket' ];
-			$event   = 'requests' === $module ? \Arn\Intranet\Requests\View::operationLabel( $row['kind'] ) : \Arn\Intranet\Support\View::operationLabel( $row['kind'] );
+			$object = $row[ 'tickets' === $module ? 'ticket' : 'request' ];
+			$event  = match ( $module ) {
+				'requests'=>\Arn\Intranet\Requests\View::operationLabel( $row['kind'] ), 'leave'=>\Arn\Intranet\Leave\View::operationLabel( $row['kind'] ), default=>\Arn\Intranet\Support\View::operationLabel( $row['kind'] )};
 			$items[] = array(
 				'id'         => $row['id'],
-				'title'      => $object->title,
+				'title'      => 'leave' === $module ? $object->title() : $object->title,
 				'event'      => $event,
 				'created_at' => $row['created_at'],
 				'read_at'    => $row['read_at'],

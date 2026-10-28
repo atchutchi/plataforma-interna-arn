@@ -98,7 +98,7 @@ final class IntegratedSearchTest extends TestCase {
 		self::assertStringNotContainsString( 'private-body', json_encode( $model ) );
 		self::assertContains( array( 'news', 'São %_', 2 ), $calls );
 		self::assertContains( array( 'tasks', 'São %_', 1 ), $calls );
-		self::assertCount( 11, $calls );
+		self::assertCount( 12, $calls );
 		$model = $search->model(
 			array(
 				'q'               => 'x',

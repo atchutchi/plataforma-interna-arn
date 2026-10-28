@@ -13,6 +13,11 @@ use Throwable;
 // phpcs:disable Squiz.Commenting -- Sources apply authority before returning items or totals.
 final class FederatedSearch {
 	public const SOURCES = array(
+		'leave'              => array(
+			'type'  => 'leave',
+			'label' => 'Pedido de férias',
+			'size'  => 20,
+		),
 		'directory'          => array(
 			'type'  => 'directory',
 			'label' => 'Funcionário',

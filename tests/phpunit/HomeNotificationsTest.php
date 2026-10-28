@@ -34,7 +34,7 @@ final class HomeNotificationsTest extends TestCase {
 		$model  = ( new HomeNotifications( $source ) )->model();
 		self::assertTrue( $model['available'] );
 		self::assertCount( 5, $model['items'] );
-		self::assertSame( array( 'Acessos', 'Calendário', 'Comunicados', 'Notícias', 'Pedidos internos' ), array_column( $model['items'], 'module' ) );
+		self::assertSame( array( 'Acessos', 'Calendário', 'Comunicados', 'Férias', 'Notícias' ), array_column( $model['items'], 'module' ) );
 		self::assertSame( array( 'title', 'url', 'module', 'event', 'date', 'read' ), array_keys( $model['items'][0] ) );
 		self::assertSame( '01/01/1970 00:05 UTC', $model['items'][0]['date'] );
 		self::assertStringNotContainsString( 'private', json_encode( $model, JSON_THROW_ON_ERROR ) );
@@ -53,7 +53,7 @@ final class HomeNotificationsTest extends TestCase {
 		) )->model();
 		self::assertTrue( $empty['available'] );
 		self::assertSame( array(), $empty['items'] );
-		self::assertCount( 7, $empty['links'] );
+		self::assertCount( 8, $empty['links'] );
 	}
 
 	public function test_source_exception_and_invalid_row_close_only_their_source(): void {
@@ -71,7 +71,7 @@ final class HomeNotificationsTest extends TestCase {
 			}
 		) )->model();
 		self::assertCount( 5, $model['items'] );
-		self::assertCount( 5, $model['links'] );
+		self::assertCount( 6, $model['links'] );
 		self::assertNotContains( 'Notícias', array_column( $model['items'], 'module' ) );
 		self::assertNotContains( 'Calendário', array_column( $model['items'], 'module' ) );
 		self::assertStringNotContainsString( 'private', json_encode( $model, JSON_THROW_ON_ERROR ) );

@@ -227,3 +227,5 @@ add_action( 'wp_loaded', array( new LocalNotificationsPage(), 'register' ) );
 add_action( 'wp_loaded', array( new \Arn\Intranet\Organization\LocalUnitsPage(), 'register' ) );
 add_action( 'wp_loaded', array( new \Arn\Intranet\Organization\ImportPreview\LocalImportPreviewPage(), 'register' ) );
 add_action( 'wp_loaded', array( new LocalPrivateFilesPage(), 'register' ) );
+
+\Arn\Intranet\Leave\Bootstrap::register();

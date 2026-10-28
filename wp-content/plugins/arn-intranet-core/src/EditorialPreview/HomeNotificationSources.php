@@ -21,7 +21,7 @@ final class HomeNotificationSources {
 		if ( ! isset( HomeNotifications::MODULES[ $module ] ) || ! is_user_logged_in() || 'local' !== wp_get_environment_type() || is_admin() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
 			return null;
 		}
-		if ( in_array( $module, array( 'requests', 'tickets' ), true ) ) {
+		if ( in_array( $module, array( 'requests', 'tickets', 'leave' ), true ) ) {
 			return ServiceSources::notices( $module );
 		}
 		$connections = new ReadConnections();
@@ -77,8 +77,17 @@ final class HomeNotificationSources {
 					),
 				);
 			}
-			// People is not a notice source. Do not open unrelated directory connections.
-			$destinations = array_column( ( new ServiceDirectory( people: static fn(): array => array() ) )->items(), 'url', 'id' );
+			// Resolve only this source. Other modules keep independent native readers.
+			$empty        = static fn(): array => array();
+			$directory    = new ServiceDirectory(
+				people: $empty,
+				communications: 'tasks_own' === $module ? $empty : null,
+				tasks: 'tasks_own' === $module ? null : $empty,
+				requests: $empty,
+				tickets: $empty,
+				leave: $empty
+			);
+			$destinations = array_column( $directory->items(), 'url', 'id' );
 			if ( ! isset( $destinations[ $module ] ) ) {
 				return null; }
 			$list = 'tasks_own' === $module ? ( new TaskPortal() )->notices( 1 ) : ( new Portal( $module ) )->notices( 1 );

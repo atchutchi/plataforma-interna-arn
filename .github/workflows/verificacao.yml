@@ -184,6 +184,7 @@ jobs:
           npm run test:cms-installer:integration
           npm run test:requests:integration
           npm run test:tickets:integration
+          npm run test:leave:integration
       - name: Activar local apenas no contentor efémero desta job
         run: node scripts/wp-env.mjs --tests run cli wp config set WP_ENVIRONMENT_TYPE local --type=constant
       - run: npm run test:tasks-foundation:integration
@@ -192,6 +193,7 @@ jobs:
       - run: npm run test:cms-installer:integration
       - run: npm run test:requests:integration
       - run: npm run test:tickets:integration
+      - run: npm run test:leave:integration
       - if: always()
         run: npm run env:stop:tests
 
