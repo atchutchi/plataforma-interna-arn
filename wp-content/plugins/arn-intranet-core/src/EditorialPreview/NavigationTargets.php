@@ -22,6 +22,8 @@ final class NavigationTargets {
 		'requests_team'  => 'tratar-pedidos',
 		'tickets_own'    => 'meus-tickets',
 		'tickets_team'   => 'suporte-ti',
+		'leave_own'      => 'minhas-ferias',
+		'leave_team'     => 'gerir-ferias',
 	);
 	private readonly array $site;
 	public function __construct( string $site, private readonly array $page_ids ) {

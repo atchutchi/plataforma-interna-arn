@@ -17,6 +17,7 @@ $dashboard = $args['dashboard'] ?? array();
 		'tasks_own'      => 'Tarefas pendentes',
 		'requests_own'   => 'Os teus pedidos em curso',
 		'tickets_own'    => 'Os teus tickets em curso',
+		'leave_own'      => 'Os teus pedidos de férias',
 	) as $module => $section_title ) :
 		?>
 		<?php
@@ -39,6 +40,7 @@ $dashboard = $args['dashboard'] ?? array();
 						'tasks_own' => 'Todas as minhas tarefas',
 						'requests_own' => 'Todos os meus pedidos',
 						'tickets_own' => 'Todos os meus tickets',
+						'leave_own'=>'Todas as minhas férias',
 						default => 'Todos os comunicados' }
 					);
 					?>
@@ -61,7 +63,7 @@ $dashboard = $args['dashboard'] ?? array();
 				<ul class="arn-home-summary-list">
 					<?php foreach ( $section['items'] as $item ) : ?>
 						<li><p class="arn-home-summary-date"><?php echo esc_html( $item['date'] ); ?></p><h3><a href="<?php echo esc_url( $item['url'] ); ?>"><?php echo esc_html( $item['title'] ); ?></a></h3>
-						<?php if ( in_array( $module, array( 'requests_own', 'tickets_own' ), true ) ) : ?>
+						<?php if ( in_array( $module, array( 'requests_own', 'tickets_own', 'leave_own' ), true ) ) : ?>
 							<p class="arn-home-summary-date"><?php echo esc_html( $item['reference'] . ' · ' . $item['state'] ); ?></p>
 						<?php endif; ?>
 						<?php if ( 'tasks_own' === $module ) : ?>
@@ -83,6 +85,7 @@ $dashboard = $args['dashboard'] ?? array();
 					'tasks_own' => 'Não tens tarefas pendentes neste momento.',
 					'requests_own' => 'Não tens pedidos em curso neste momento.',
 					'tickets_own' => 'Não tens tickets em curso neste momento.',
+					'leave_own'=>'Não tens pedidos de férias pendentes.',
 					default => 'Ainda não há comunicados publicados disponíveis para ti.' }
 				);
 				?>

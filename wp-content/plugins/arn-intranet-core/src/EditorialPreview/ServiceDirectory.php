@@ -27,25 +27,29 @@ final class ServiceDirectory {
 		'requests_team'  => array( 'Tratar pedidos', 'Analisa os pedidos submetidos nas unidades que podes gerir.' ),
 		'tickets_own'    => array( 'Meus tickets', 'Abre um pedido de suporte e acompanha as respostas da equipa técnica.' ),
 		'tickets_team'   => array( 'Suporte TI', 'Assume os tickets autorizados, responde e regista a solução.' ),
+		'leave_own'      => array( 'Minhas férias', 'Consulta o saldo e acompanha os teus pedidos de férias.' ),
+		'leave_team'     => array( 'Gerir férias', 'Analisa pedidos de férias e consulta as ausências autorizadas.' ),
 	);
 	private readonly Closure $people;
 	private readonly Closure $communications;
 	private readonly Closure $tasks;
 	private readonly Closure $requests;
 	private readonly Closure $tickets;
+	private readonly Closure $leave;
 
-	public function __construct( ?Closure $people = null, ?Closure $communications = null, ?Closure $tasks = null, ?Closure $requests = null, ?Closure $tickets = null ) {
+	public function __construct( ?Closure $people = null, ?Closure $communications = null, ?Closure $tasks = null, ?Closure $requests = null, ?Closure $tickets = null, ?Closure $leave = null ) {
 		$this->people         = $people ?? PeopleNavigation::destinations( ... );
 		$this->communications = $communications ?? Navigation::destinations( ... );
 		$this->tasks          = $tasks ?? TaskNavigation::destinations( ... );
 		$this->requests       = $requests ?? \Arn\Intranet\Requests\Navigation::destinations( ... );
 		$this->tickets        = $tickets ?? \Arn\Intranet\Support\Navigation::destinations( ... );
+		$this->leave          = $leave ?? \Arn\Intranet\Leave\Navigation::destinations( ... );
 	}
 
 	/** No capability, account data, private content or arbitrary labels reach the view. */
 	public function items(): array {
 		$links = array();
-		foreach ( array( $this->people, $this->communications, $this->tasks, $this->requests, $this->tickets ) as $source ) {
+		foreach ( array( $this->people, $this->communications, $this->tasks, $this->requests, $this->tickets, $this->leave ) as $source ) {
 			try {
 				$items = $source();
 				if ( ! is_array( $items ) ) {

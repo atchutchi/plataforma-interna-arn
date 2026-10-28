@@ -22,6 +22,7 @@ final class HomeDashboard {
 			'tasks_own' => ( new TaskPortal() )->listing( TaskSelection::pending(), 'own' ),
 			'requests_own' => ServiceSources::home( 'requests' ),
 			'tickets_own' => ServiceSources::home( 'tickets' ),
+'leave_own'=>ServiceSources::home( 'leave' ),
 			default => ( new Portal( $module ) )->listing( 'communications' === $module ? NoticeSelection::parse( array() ) : AgendaSelection::parse( array() ) ),
 		};
 	}
@@ -29,7 +30,7 @@ final class HomeDashboard {
 	/** The destinations come from ServiceDirectory, never request parameters. */
 	public function model( array $destinations ): array {
 		$result = array();
-		foreach ( array( 'communications', 'calendar', 'tasks_own', 'requests_own', 'tickets_own' ) as $module ) {
+		foreach ( array( 'communications', 'calendar', 'tasks_own', 'requests_own', 'tickets_own', 'leave_own' ) as $module ) {
 			$result[ $module ] = array(
 				'available' => false,
 				'url'       => '',
@@ -46,7 +47,7 @@ final class HomeDashboard {
 					}
 					$items = array();
 					foreach ( array_slice( $list['items'], 0, 3 ) as $item ) {
-						if ( in_array( $module, array( 'requests_own', 'tickets_own' ), true ) ) {
+						if ( in_array( $module, array( 'requests_own', 'tickets_own', 'leave_own' ), true ) ) {
 							$items[] = self::serviceItem( $item, $destination['url'] );
 							continue;
 						}

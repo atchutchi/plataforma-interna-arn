@@ -19,6 +19,7 @@ final class HomeNotifications {
 		'tasks_own'      => 'Tarefas',
 		'requests'       => 'Pedidos internos',
 		'tickets'        => 'Suporte TI',
+		'leave'          => 'Férias',
 		'news'           => 'Notícias',
 		'account'        => 'Acessos',
 	);
