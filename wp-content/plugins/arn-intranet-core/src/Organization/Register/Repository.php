@@ -62,6 +62,13 @@ final class Repository {
 		}
 		return $catalog;
 	}
+	/** Shared transaction reader. The owner supplies authority and commit guards. */
+	public function catalogInTransaction(): Catalog {
+		if ( ! $this->db->inTransaction() ) {
+			throw new RuntimeException( 'Transacção requerida.' ); }
+		$this->schema->validate();
+		return $this->catalog();
+	}
 	public function preview( string $csv ): array {
 		return $this->transaction(
 			function ( int $actor ) use ( $csv ): array {

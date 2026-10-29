@@ -12,7 +12,7 @@ Usar a conta apropriada a cada ensaio. Nunca promover contas reais para tornar u
 
 Guardar configuração OIDC e segredos fora do Git e do document root. O vínculo definitivo usa issuer/sub. O login Google não fornece autorização Calendar. Uma configuração local não serve de callback institucional. O pré-cadastro real e os dados privados têm procedimentos próprios e não fazem parte deste pacote.
 
-O motor verifica conta activa, sessão, competências e âmbito. Alterações devem usar os circuitos auditados existentes. A gestão individual do cadastro, a associação explícita profissional-conta e as delegações persistentes ainda têm lacunas no README. Não substituir esses circuitos por alterações SQL ou papéis WordPress. O fim de uma delegação deve impedir novas atribuições sem retirar a validade própria das concessões anteriores.
+O motor verifica conta activa, sessão, competências e âmbito. Alterações devem usar os circuitos auditados existentes. No laboratório, RH usa Cadastro > Estado e acesso para decidir o estado profissional e associar explicitamente a conta fictícia dedicada. Suspender ou encerrar o registo suspende a conta associada e invalida as sessões anteriores. Reactivar o registo não reactiva a conta, que exige uma decisão de acesso separada e auditada. Não substituir esses circuitos por alterações SQL ou papéis WordPress. A adaptação institucional e as delegações persistentes continuam pendentes. O fim de uma delegação deve impedir novas atribuições sem retirar a validade própria das concessões anteriores. Consultar [ciclo profissional](../ciclo-profissional-local-f1-03-05.md).
 
 ## Media privada
 
