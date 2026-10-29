@@ -166,16 +166,29 @@ final class WpdbAuthorizationRepository implements AuthorizationRepository {
 	 * @throws RuntimeException Quando a validação ou persistência recusa a operação.
 	 */
 	public function createGrant( Grant $grant, int $expected_revision, ChangeContext $context ): int {
-		return $this->operation(
-			function () use ( $grant, $expected_revision, $context ): int {
-				$account = $this->current( $grant->user_id, $expected_revision );
-				$this->active( $account, $grant );
-				$stored = $this->insertGrant( $grant );
-				$this->bump( $account, $account->state, $context );
-				$this->audit( $grant->user_id, $account->revision + 1, 'grant_created', null, $this->payload( $stored ), $context );
-				return $stored->id;
-			}
-		);
+		return $this->operation( fn(): int => $this->createGrantInTransaction( $grant, $expected_revision, $context ) );
+	}
+
+	/**
+	 * Create under an owner's transaction. Business authority belongs to that owner.
+	 *
+	 * @param Grant         $grant Explicit grant.
+	 * @param int           $expected_revision Observed account revision.
+	 * @param ChangeContext $context Audited decision.
+	 * @return int Stored grant ID.
+	 * @throws RuntimeException When transaction or storage validation fails.
+	 */
+	public function createGrantInTransaction( Grant $grant, int $expected_revision, ChangeContext $context ): int {
+		if ( ! $this->database->inTransaction() ) {
+			throw new RuntimeException( 'Transacção requerida.' );
+		}
+		$this->schema->validate();
+		$account = $this->current( $grant->user_id, $expected_revision );
+		$this->active( $account, $grant );
+		$stored = $this->insertGrant( $grant );
+		$this->bump( $account, $account->state, $context );
+		$this->audit( $grant->user_id, $account->revision + 1, 'grant_created', null, $this->payload( $stored ), $context );
+		return $stored->id;
 	}
 
 	/**

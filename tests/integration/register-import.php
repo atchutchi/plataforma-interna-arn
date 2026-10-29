@@ -205,16 +205,17 @@ try {
 	$literal = "Pessoa fictícia A &amp; B &#65; \"C\" 'D'";
 	$assert( html_entity_decode( esc_attr( Page::escapeLiteral( $literal ) ), ENT_QUOTES, 'UTF-8' ) === $literal, 'entidades e aspas conservadas pelo escape WordPress real' );
 	require __DIR__ . '/lifecycle-cases.php';
+	require __DIR__ . '/delegation-cases.php';
 } finally {
 	if ( null !== $filter ) {
 		remove_filter( 'query', $filter ); }
 	$db->query( 'ROLLBACK' );
 	$second->query( 'ROLLBACK' );
 	$clean = true;
-	foreach ( array( 'arn_lifecycle_audit', 'arn_lifecycle_batches', 'arn_lifecycle_header', 'arn_reg_audit', 'arn_reg_batches', 'arn_reg_header', 'arn_org_audit', 'arn_org_units', 'arn_org_header', 'arn_authz_audit', 'arn_authz_grants', 'arn_authz_accounts', 'arn_authz_schema' ) as $suffix ) {
+	foreach ( array( 'arn_delegation_audit', 'arn_delegation_batches', 'arn_delegation_header', 'arn_lifecycle_audit', 'arn_lifecycle_batches', 'arn_lifecycle_header', 'arn_reg_audit', 'arn_reg_batches', 'arn_reg_header', 'arn_org_audit', 'arn_org_units', 'arn_org_header', 'arn_authz_audit', 'arn_authz_grants', 'arn_authz_accounts', 'arn_authz_schema' ) as $suffix ) {
 		$clean = false !== $second->query( $second->prepare( 'DROP TABLE IF EXISTS %i', $prefix . $suffix ) ) && $clean; }
 	$db->close();
 	$second->close();
-	$assert( $clean, 'limpeza apenas das dez tabelas exclusivas' );
+	$assert( $clean, 'limpeza apenas das dezasseis tabelas exclusivas' );
 }
 WP_CLI::success( 'Cadastro fictício: ' . $checks . ' verificações SQL.' );
