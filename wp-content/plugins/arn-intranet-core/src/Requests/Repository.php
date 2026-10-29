@@ -90,6 +90,15 @@ final class Repository {
 		return $this->transaction( fn( ActorContext $actor, array $people, int $now ): ?array => $this->accessFor( $view, $actor, $people, $now ) );
 	}
 
+	public function navigation(): array {
+		return $this->transaction(
+			fn( ActorContext $actor, array $people, int $now ): array => array(
+				'own'  => $this->accessFor( 'own', $actor, $people, $now ),
+				'team' => $this->accessFor( 'team', $actor, $people, $now ),
+			)
+		);
+	}
+
 	public function listing( string $view, string $query = '', string $state = '', int $page = 1 ): ?array {
 		if ( $page < 1 || $page > 100 || mb_strlen( $query ) > 100 || ( '' !== $state && null === RequestState::tryFrom( $state ) ) ) {
 			return null;

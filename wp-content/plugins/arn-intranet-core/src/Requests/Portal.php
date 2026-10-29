@@ -52,6 +52,9 @@ final class Portal {
 	public function access( string $view ): ?array {
 		return $this->prepare() ? $this->repository->access( $view ) : null;
 	}
+	public function navigation(): array {
+		return $this->prepare() ? $this->repository->navigation() : array();
+	}
 	public function listing( string $view, string $query = '', string $state = '', int $page = 1 ): ?array {
 		return $this->prepare() ? $this->repository->listing( $view, $query, $state, $page ) : null;
 	}
