@@ -57,6 +57,7 @@ Autoloader::register( __DIR__ . '/src' );
 \Arn\Intranet\Documents\PrivateFiles\ReconciliationPage::register();
 \Arn\Intranet\Media\QueuePage::register();
 \Arn\Intranet\Organization\Register\Page::register();
+\Arn\Intranet\Organization\Lifecycle\Page::register();
 \Arn\Intranet\Media\ConsumerPage::register();
 
 $arn_vendor = defined( 'ARN_OIDC_VENDOR_AUTOLOAD' ) ? ARN_OIDC_VENDOR_AUTOLOAD : dirname( __DIR__, 3 ) . '/vendor/autoload.php';

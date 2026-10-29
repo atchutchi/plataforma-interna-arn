@@ -123,6 +123,40 @@ final class WpdbAuthorizationRepository implements AuthorizationRepository {
 	}
 
 	/**
+	 * Suspend within an owner's transaction, without committing it or granting access.
+	 *
+	 * @param int           $user_id Target account.
+	 * @param int           $expected_revision Observed revision.
+	 * @param ChangeContext $context Audited decision.
+	 * @throws RuntimeException When no transaction exists or persistence fails.
+	 */
+	public function suspendInTransaction( int $user_id, int $expected_revision, ChangeContext $context ): void {
+		if ( ! $this->database->inTransaction() ) {
+			throw new RuntimeException( 'Transacção requerida.' );
+		}
+		$this->schema->validate();
+		$account = $this->current( $user_id, $expected_revision );
+		if ( AccountState::Suspended === $account->state ) {
+			return;
+		}
+		$this->bump( $account, AccountState::Suspended, $context );
+		$this->audit(
+			$user_id,
+			$account->revision + 1,
+			'state_changed',
+			array(
+				'user_id' => $user_id,
+				'state'   => $account->state->name,
+			),
+			array(
+				'user_id' => $user_id,
+				'state'   => AccountState::Suspended->name,
+			),
+			$context
+		);
+	}
+
+	/**
 	 * Cria concessão apenas em conta activa.
 	 *
 	 * @param Grant         $grant Concessão.
