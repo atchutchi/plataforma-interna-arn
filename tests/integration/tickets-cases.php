@@ -9,8 +9,8 @@ use Arn\Intranet\Identity\IdentityWpdb;
 // phpcs:disable Squiz.Commenting, WordPress.DB, WordPress.WP.AlternativeFunctions, WordPress.Security.EscapeOutput, WordPress.NamingConventions.PrefixAllGlobals
 if ( ! defined( 'ARN_TICKETS_SQL_HARNESS' ) || ! isset( $repo, $db, $result, $prefix, $auth, $clock, $root ) || ! \Arn\Intranet\Support\LocalRoster::validPrefix( $prefix ) ) {
 	throw new RuntimeException( 'Fronteira de ensaio ausente.' ); }
-$ids    = $result['user_ids'];
-$login  = static function ( int $id ) use ( $auth ): void {
+$ids                    = $result['user_ids'];
+$login                  = static function ( int $id ) use ( $auth ): void {
 	wp_set_current_user( $id );
 	$expiry                        = time() + 3600;
 	$tokens                        = WP_Session_Tokens::get_instance( $id );
@@ -22,8 +22,10 @@ $login  = static function ( int $id ) use ( $auth ): void {
 	$tokens->update( $token, $session );
 	$_COOKIE[ LOGGED_IN_COOKIE ] = wp_generate_auth_cookie( $id, $expiry, 'logged_in', $token );
 };
-$key    = static fn(): string => bin2hex( random_bytes( 16 ) );
-$digest = static fn(): array => $snapshot( $tables );
+$key                    = static fn(): string => bin2hex( random_bytes( 16 ) );
+$digest                 = static fn(): array => $snapshot( $tables );
+$navigation_actor_class = CurrentActor::class;
+require __DIR__ . '/service-navigation-cases.php';
 $before = $digest();
 $assert( array() === $repo->listing( 'team' )['items'] && $before === $digest(), 'catálogo inicial vazio, leitura sem escrita' );
 $login( $ids['a'] );

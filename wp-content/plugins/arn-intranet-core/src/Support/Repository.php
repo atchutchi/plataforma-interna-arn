@@ -81,6 +81,14 @@ final class Repository {
 	}
 	public function access( string $view ): ?array {
 		return $this->transaction( fn( ActorContext $actor, array $people, int $now ): ?array => $this->accessFor( $view, $actor, $now ) ); }
+	public function navigation(): array {
+		return $this->transaction(
+			fn( ActorContext $actor, array $people, int $now ): array => array(
+				'own'  => $this->accessFor( 'own', $actor, $now ),
+				'team' => $this->accessFor( 'team', $actor, $now ),
+			)
+		);
+	}
 	public function listing( string $view, string $query = '', string $state = '', int $page = 1, string $priority = '' ): ?array {
 		if ( $page < 1 || $page > 100 || mb_strlen( $query ) > 100 || ( '' !== $state && null === TicketState::tryFrom( $state ) ) || ! in_array( $priority, array( '', 'low', 'normal', 'high' ), true ) ) {
 			return null; }

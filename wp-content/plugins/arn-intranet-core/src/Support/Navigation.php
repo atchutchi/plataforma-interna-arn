@@ -24,12 +24,17 @@ final class Navigation {
 		$result = array();
 		$portal = new Portal();
 		$pages  = new Pages();
+		try {
+			$access = $portal->navigation();
+		} catch ( Throwable ) {
+			return array();
+		}
 		foreach ( array(
 			'own'  => 'Meus tickets',
 			'team' => 'Suporte TI',
 		) as $view => $label ) {
 			try {
-				if ( null === $portal->access( $view ) ) {
+				if ( null === ( $access[ $view ] ?? null ) ) {
 					continue;
 				}
 				$post = get_page_by_path( $pages->slug( $view ), OBJECT, 'page' );
