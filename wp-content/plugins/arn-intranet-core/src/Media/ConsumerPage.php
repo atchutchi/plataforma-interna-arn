@@ -111,20 +111,23 @@ final class ConsumerPage {
 		if ( array() === $rows ) {
 			echo '<p>Ainda não tens envios disponíveis para acompanhar.</p>'; }
 		foreach ( $rows as $id => $row ) {
-			$c      = $row['context'];
-			$p      = $c['payload'];
-			$title  = $p['title'] ?? $p['metadata']['title'] ?? $p['label'];
-			$module = array(
+			$c           = $row['context'];
+			$p           = $c['payload'];
+			$title       = $p['title'] ?? $p['metadata']['title'] ?? $p['label'];
+			$module      = array(
 				'news'      => 'Notícias',
 				'documents' => 'Documentos',
 				'tasks'     => 'Tarefas',
 				'requests'  => 'Pedidos internos',
 				'tickets'   => 'Suporte TI',
 			)[ $c['module'] ];
-			$ready  = ! array_filter( $row['items'], static fn( array $item ): bool => 'ready' !== $item['status'] );
+			$ready       = ! array_filter( $row['items'], static fn( array $item ): bool => 'ready' !== $item['status'] );
+			$ready_count = count( array_filter( $row['items'], static fn( array $item ): bool => 'ready' === $item['status'] ) );
 			?>
 			<article class="arn-media-card"><p class="arn-media-kicker"><?php echo esc_html( $module . ' · ' . gmdate( 'd/m/Y H:i', $row['created_at'] ) . ' UTC' ); ?></p><h2><a href="<?php echo esc_url( self::url( $id ) ); ?>"><?php echo esc_html( $title ); ?></a></h2>
 			<?php
+			if ( 'open' === $row['consumption'] ) {
+				echo '<p role="status">' . esc_html( $ready_count . ' de ' . count( $row['items'] ) . ' ficheiros prontos. O progresso fica guardado entre ciclos de análise.' ) . '</p>'; }
 			if ( 'applied' === $row['consumption'] ) :
 				?>
 				<p role="status">Envio concluído. O registo foi guardado no módulo.</p>
