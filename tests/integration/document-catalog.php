@@ -44,6 +44,9 @@ $db->suppress_errors( true );
 $db->query( $db->prepare( 'CREATE TABLE %i LIKE %i', $prefix . 'posts', $GLOBALS['wpdb']->posts ) );
 $files = new FileSchema( $db );
 try {
+	require_once __DIR__ . '/media-receipt-fixture.php';
+	$receipt_owned = arn_receipt_schema_fixture( $db );
+
 	$files->install();
 	$catalog_schema = new CatalogSchema( $db );
 	$catalog_schema->install();
@@ -100,7 +103,20 @@ try {
 	$repository = new WpdbDocumentRepository( $db, $authority );
 	$metadata   = new Metadata( 'Circular fictícia', 'Resumo', 'circular', 'LAB-01', 'RH teste', '2026-10-14', null, null, array( 1 ) );
 	$blob       = new BlobDescriptor( bin2hex( random_bytes( 16 ) ), str_repeat( 'b', 64 ), 12, 'application/pdf' );
-	$document   = $repository->create( Scope::units( array( 'LAB-A' ) ), new Revision( 1, $metadata, $blob, 1, time() ), 'Ensaio de criação' );
+	require_once __DIR__ . '/media-receipt-fixture.php';
+	$receipt  = arn_receipt_fixture(
+		'documents',
+		1,
+		0,
+		0,
+		array( $blob ),
+		array(
+			'metadata' => get_object_vars( $metadata ),
+			'retained' => false,
+		)
+	);
+	$document = $repository->create( Scope::units( array( 'LAB-A' ) ), new Revision( 1, $metadata, $blob, 1, time() ), 'Ensaio de criação', $receipt );
+	$assert( $document->id === $receipt->resolve( $db ), 'recibo documental atomico' );
 	$assert( 1 === $document->revision && null === $document->published_version && 1 === count( $document->versions ), 'criação documental' );
 	$assert( $repository->find( $document->id )?->version( 1 )?->metadata->title === 'Circular fictícia', 'hidratação da versão' );
 	$assert( 'Documento privado' === (string) $db->get_var( $db->prepare( 'SELECT post_title FROM %i WHERE ID=%d', $prefix . 'posts', $document->id ) ), 'âncora genérica' );
@@ -215,6 +231,8 @@ try {
 	echo esc_html( 'Catálogo documental: ' . $checks . " verificações.\n" );
 } finally {
 	$db->query( 'ROLLBACK' );
+	foreach ( $receipt_owned ?? array() as $receipt_table ) {
+		$db->query( $db->prepare( 'DROP TABLE IF EXISTS %i', $receipt_table ) ); }
 	foreach ( array( 'audit', 'files', 'schema' ) as $name ) {
 		$db->query( $db->prepare( 'DROP TABLE IF EXISTS %i', $files->table( $name ) ) );
 	}

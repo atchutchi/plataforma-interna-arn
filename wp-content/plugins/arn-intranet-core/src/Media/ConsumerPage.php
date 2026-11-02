@@ -131,7 +131,8 @@ final class ConsumerPage {
 				<?php
 			elseif ( 'applying' === $row['consumption'] ) :
 				?>
-				<p role="alert" class="arn-media-alert">Conclusão iniciada, sem recibo confirmado. Não voltes a enviar. Pede a verificação da auditoria do módulo.</p>
+				<p role="alert" class="arn-media-alert">Conclusão iniciada, sem confirmação na fila. Podes verificar se o módulo já guardou o registo. Esta acção não repete o envio. Sem prova suficiente, o envio continuará pendente de revisão.</p>
+				<form method="post" action="<?php echo esc_url( self::url( $id ) ); ?>"><input type="hidden" name="revision" value="<?php echo esc_attr( (string) $row['revision'] ); ?>"><input type="hidden" name="nonce" value="<?php echo esc_attr( wp_create_nonce( 'arn_media_complete_' . get_current_user_id() . '_' . $id . '_' . $row['revision'] ) ); ?>"><button type="submit">Confirmar registo guardado</button></form>
 				<?php
 			else :
 				?>

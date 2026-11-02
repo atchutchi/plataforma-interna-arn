@@ -39,13 +39,13 @@ final class WpdbDocumentRepository {
 	}
 
 	/** Create a private generic WordPress anchor and version one atomically. */
-	public function create( Scope $scope, Revision $initial, string $reason ): Document {
+	public function create( Scope $scope, Revision $initial, string $reason, ?\Arn\Intranet\Media\ConsumptionReceipt $receipt = null ): Document {
 		$this->reason( $reason );
 		if ( 1 !== $initial->number ) {
 			throw new RuntimeException( self::ERROR );
 		}
 		return $this->transaction(
-			function () use ( $scope, $initial, $reason ): Document {
+			function () use ( $scope, $initial, $reason, $receipt ): Document {
 				$actor = $this->authority->lockAndAssert( $scope, $initial->metadata->recipient_ids );
 				if ( $initial->actor_id !== $actor ) {
 					throw new RuntimeException( self::ERROR );
@@ -62,6 +62,7 @@ final class WpdbDocumentRepository {
 				$this->execute( $this->database->prepare( 'INSERT INTO %i (id,scope_type,scope_targets_json,revision,published_version,archived,created_at) VALUES (%d,%s,%s,1,NULL,0,%d)', $this->schema->table( 'documents' ), $id, $scope->type->name, $this->json( $scope->targets ), $initial->created_at ), 1 );
 				$this->insertVersion( $id, $initial );
 				$this->audit( $id, 1, 'created', $actor, $reason, $initial->created_at );
+				$receipt?->record( $this->database, 'documents', 'create', $actor, $id, $doc->revision );
 				$this->authority->assertUploadCurrent();
 				return $doc;
 			}
@@ -69,11 +70,11 @@ final class WpdbDocumentRepository {
 	}
 
 	/** Append a fully independent private original. */
-	public function revise( int $id, Revision $next, int $expected, string $reason, ?string $retained_id = null ): Document {
+	public function revise( int $id, Revision $next, int $expected, string $reason, ?string $retained_id = null, ?\Arn\Intranet\Media\ConsumptionReceipt $receipt = null ): Document {
 		$this->reason( $reason );
 		$scope = $this->preflightScope( $id );
 		return $this->transaction(
-			function () use ( $id, $next, $expected, $reason, $scope, $retained_id ): Document {
+			function () use ( $id, $next, $expected, $reason, $scope, $retained_id, $receipt ): Document {
 				$actor = $this->authority->lockAndAssert( $scope, $next->metadata->recipient_ids );
 				if ( $actor !== $next->actor_id ) {
 					throw new RuntimeException( self::ERROR );
@@ -91,6 +92,7 @@ final class WpdbDocumentRepository {
 				$this->insertVersion( $id, $next );
 				$this->execute( $this->database->prepare( 'UPDATE %i SET revision=%d WHERE id=%d AND revision=%d', $this->schema->table( 'documents' ), $after->revision, $id, $expected ), 1 );
 				$this->audit( $id, $after->revision, 'revised', $actor, $reason, $next->created_at );
+				$receipt?->record( $this->database, 'documents', 'revise', $actor, $id, $after->revision );
 				$this->authority->assertUploadCurrent();
 				return $after;
 			}

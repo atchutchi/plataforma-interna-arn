@@ -281,10 +281,10 @@ final class Repository {
 		return match ( $view ) {
 			'own' => RequestPolicy::own( $r, $actor, $now ), 'team' => RequestPolicy::team( $r, $actor, $now ), default => false };
 	}
-	public function attach( int $id, BlobDescriptor $blob, string $label, int $expected, int $expected_actor ): InternalRequest {
+	public function attach( int $id, BlobDescriptor $blob, string $label, int $expected, int $expected_actor, ?\Arn\Intranet\Media\ConsumptionReceipt $receipt = null ): InternalRequest {
 		( new FileSchema( $this->db ) )->assertReady();
 		return $this->transaction(
-			function ( ActorContext $actor, array $people, int $now ) use ( $id, $blob, $label, $expected, $expected_actor ): InternalRequest {
+			function ( ActorContext $actor, array $people, int $now ) use ( $id, $blob, $label, $expected, $expected_actor, $receipt ): InternalRequest {
 				$r = $this->loadRequest( $id );
 				if ( null === $r || $actor->id() !== $expected_actor || $r->revision !== $expected || ! in_array( 'attach', RequestPolicy::operations( $r, $actor, $now ), true ) ) {
 						self::deny();
@@ -296,6 +296,7 @@ final class Repository {
 				( new WpdbFileRegistry( $this->db ) )->registerInTransaction( new FileRecord( $blob, 'request_attachment', $id, $after->revision, 'original', $actor->id(), $now ) );
 				$this->final_guard = static fn( ActorContext $current, int $end ): bool => in_array( 'attach', RequestPolicy::operations( $r, $current, $end ), true );
 				$this->persistRequest( $r, $after, $people, $blob->id, self::json( array( 'attach', $id, $expected, $attachment->toArray() ) ) );
+				$receipt?->record( $this->db, 'requests', 'attach', $actor->id(), $id, $after->revision );
 				return $after;
 			}
 		);

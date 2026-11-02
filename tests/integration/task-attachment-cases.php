@@ -47,7 +47,23 @@ try {
 	$original  = $make_blob();
 	$thumbnail = $make_blob();
 	$blob      = new BlobDescriptor( $original->id, $original->sha256, $original->size, $original->mime, array( 'thumbnail' => $thumbnail ) );
-	$task      = $repo->attach( $task->id, $blob, 'Imagem sintética', 1, $ids['a'] );
+	require_once __DIR__ . '/media-receipt-fixture.php';
+	$receipt_schema = new \Arn\Intranet\Media\ReceiptSchema( $db );
+	$owned_tables[] = $receipt_schema->table();
+	$receipt_schema->install();
+	$receipt = arn_receipt_fixture(
+		'tasks',
+		$ids['a'],
+		$task->id,
+		1,
+		array( $blob ),
+		array(
+			'label' => 'Imagem sintética',
+			'view'  => 'own',
+		)
+	);
+	$task    = $repo->attach( $task->id, $blob, 'Imagem sintética', 1, $ids['a'], $receipt );
+	$assert( $task->id === $receipt->resolve( $db ), 'recibo de tarefa atomico' );
 	$assert( 2 === $task->revision && 1 === count( $repo->find( $task->id )->attachments ), 'anexo persistido e reconstituído' );
 	$registry = new WpdbFileRegistry( $db );
 	$assert( $registry->find( $blob->id )?->version === 2 && $registry->find( $thumbnail->id )?->object_type === 'task_attachment', 'original e variante associados à revisão' );

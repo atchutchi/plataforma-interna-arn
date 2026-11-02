@@ -19,6 +19,21 @@ use Throwable;
 
 // phpcs:disable Squiz.Commenting, WordPress.Security.EscapeOutput.ExceptionNotEscaped, WordPress.WP.AlternativeFunctions
 final class ConsumerJobs {
+	private static function database(): \Arn\Intranet\Identity\IdentityWpdb {
+		global $wpdb;
+		$db = new \Arn\Intranet\Identity\IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+		$db->set_prefix( $wpdb->prefix );
+		return $db;
+	}
+
+	/** Explicit CLI migration, never triggered by a browser request. */
+	public static function installReceipts( array $args, array $assoc ): void {
+		if ( ! defined( 'WP_CLI' ) || true !== WP_CLI || array() !== $args || array() !== $assoc || ! self::enabled() || ! QueueAccess::allowed( get_current_user_id(), true ) ) {
+			throw new RuntimeException( 'Instalação local de recibos recusada.' ); }
+		( new ReceiptSchema( self::database() ) )->install();
+		\WP_CLI::success( 'Schema de recibos validado. Nenhum envio foi recuperado.' );
+	}
+
 	public static function enabled(): bool {
 		return defined( 'ARN_ALLOW_LOCAL_MEDIA_CONSUMERS' ) && true === ARN_ALLOW_LOCAL_MEDIA_CONSUMERS;
 	}
@@ -217,15 +232,30 @@ final class ConsumerJobs {
 	}
 
 	public static function complete( string $id, int $revision ): int {
+		$queue   = self::queue();
+		$current = $queue->read( $id, get_current_user_id() );
+		if ( 'applying' === $current['consumption'] ) {
+			return $queue->reconcile(
+				$id,
+				$revision,
+				get_current_user_id(),
+				static function ( array $state ) use ( $id ): int {
+					return ( new ConsumptionReceipt( $id, $state ) )->resolve( self::database() );
+				},
+				static fn( array $state, int $receipt ) => self::preflight( $state['context'], false, $receipt )
+			);
+		}
+		if ( 'open' === $current['consumption'] ) {
+			( new ReceiptSchema( self::database() ) )->assertReady(); }
 		$prepared = null;
-		return self::queue()->complete(
+		return $queue->complete(
 			$id,
 			$revision,
 			get_current_user_id(),
-			static function ( array $state ) use ( &$prepared ): void {
+			static function ( array $state ) use ( &$prepared, $id ): void {
 				self::preflight( $state['context'], 'applied' !== $state['consumption'], $state['receipt'] );
 				if ( 'applied' !== $state['consumption'] ) {
-					$prepared = new PreparedBatch( $state, ARN_MEDIA_QUARANTINE_DIR, array_merge( LocalPrivateFiles::publicRoots(), array( ARN_MEDIA_QUEUE_DIR, ARN_LOCAL_PRIVATE_FILES_DIR ) ), time() ); }
+					$prepared = new PreparedBatch( $state, ARN_MEDIA_QUARANTINE_DIR, array_merge( LocalPrivateFiles::publicRoots(), array( ARN_MEDIA_QUEUE_DIR, ARN_LOCAL_PRIVATE_FILES_DIR ) ), time(), new ConsumptionReceipt( $id, $state ) ); }
 			},
 			static function ( array $state, string $directory ) use ( &$prepared ): int {
 				$c     = $state['context'];

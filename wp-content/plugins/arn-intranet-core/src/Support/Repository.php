@@ -202,10 +202,10 @@ final class Repository {
 		return match ( $view ) {
 			'own' => TicketPolicy::own( $r, $actor, $now ), 'team' => TicketPolicy::team( $r, $actor, $now ), default => false };
 	}
-	public function attach( int $id, BlobDescriptor $blob, string $label, int $expected, int $expected_actor ): Ticket {
+	public function attach( int $id, BlobDescriptor $blob, string $label, int $expected, int $expected_actor, ?\Arn\Intranet\Media\ConsumptionReceipt $receipt = null ): Ticket {
 		( new FileSchema( $this->db ) )->assertReady();
 		return $this->transaction(
-			function ( ActorContext $actor, array $people, int $now ) use ( $id, $blob, $label, $expected, $expected_actor ): Ticket {
+			function ( ActorContext $actor, array $people, int $now ) use ( $id, $blob, $label, $expected, $expected_actor, $receipt ): Ticket {
 				$r = $this->loadTicket( $id );
 				if ( null === $r || $actor->id() !== $expected_actor || $r->revision !== $expected || ! in_array( 'attach', TicketPolicy::operations( $r, $actor, $now ), true ) ) {
 						self::deny();
@@ -217,6 +217,7 @@ final class Repository {
 				( new WpdbFileRegistry( $this->db ) )->registerInTransaction( new FileRecord( $blob, 'ticket_attachment', $id, $after->revision, 'original', $actor->id(), $now ) );
 				$this->final_guard = static fn( ActorContext $current, int $end ): bool => in_array( 'attach', TicketPolicy::operations( $r, $current, $end ), true );
 				$this->persistTicket( $r, $after, $people, $blob->id, self::json( array( 'attach', $id, $expected, $attachment->toArray() ) ) );
+				$receipt?->record( $this->db, 'tickets', 'attach', $actor->id(), $id, $after->revision );
 				return $after;
 			}
 		);

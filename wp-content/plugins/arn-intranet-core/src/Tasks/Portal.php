@@ -146,9 +146,9 @@ final class Portal {
 		if ( null === $pipeline ) {
 			throw new \DomainException( 'Análise de anexos indisponível.' ); }
 		return ( new ImportBatch( LocalPrivateFiles::store(), $pipeline ) )->run(
-			function ( ImportBatch $batch ) use ( $post, $source, $actor ): int {
+			function ( ImportBatch $batch ) use ( $post, $source, $actor, $prepared ): int {
 				$blob = $batch->importFile( $source );
-				return $this->repository->attach( Input::id( $post['id'] ), $blob, $post['label'], Input::id( $post['expected_revision'] ), $actor )->id;
+				return $this->repository->attach( Input::id( $post['id'] ), $blob, $post['label'], Input::id( $post['expected_revision'] ), $actor, $prepared?->receipt )->id;
 			},
 			static function (): WpdbFileRegistry {
 				global $wpdb;

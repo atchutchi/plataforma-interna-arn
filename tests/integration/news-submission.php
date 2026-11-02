@@ -55,6 +55,9 @@ $schema        = new NewsSchema( $db );
 $created_users = array();
 $db->query( $db->prepare( 'CREATE TABLE %i LIKE %i', $schema->table( 'posts' ), $GLOBALS['wpdb']->posts ) );
 try {
+	require_once __DIR__ . '/media-receipt-fixture.php';
+	$receipt_owned = arn_receipt_schema_fixture( $db );
+
 	$files->install();
 	$authorization = new WpdbAuthorizationRepository( $db );
 	$authorization->installSchema();
@@ -134,8 +137,35 @@ try {
 	$gallery    = array( $asset( 'gallery', 'Primeira imagem' ), $asset( 'gallery', 'Segunda imagem' ) );
 	$attachment = $asset( 'attachment', 'Documento anexo' );
 	$next       = new Version( 2, new Content( 'Notícia de ensaio', "Corpo de notícia\nParágrafo novo", 'nota-interna', $featured, $gallery, array( $attachment ), Audience::all() ), $author_id, time() );
-	$article    = $repo->revise( $article->id, $next, 1, 'Revisão com assets' );
-	$hydrated   = $repo->find( $article->id );
+	require_once __DIR__ . '/media-receipt-fixture.php';
+	$assets_receipt = array_merge( array( $featured ), $gallery, array( $attachment ) );
+	$receipt        = arn_receipt_fixture(
+		'news',
+		$author_id,
+		$article->id,
+		1,
+		array_map( static fn( $a ) => $a->blob, $assets_receipt ),
+		array(
+			'title'    => $next->content->title,
+			'body'     => $next->content->body,
+			'category' => 'nota-interna',
+			'audience' => array(
+				'kind'    => 'all',
+				'targets' => array(),
+			),
+			'media'    => array_map(
+				static fn( $a ) => array(
+					'kind'        => $a->kind,
+					'existing'    => null,
+					'description' => $a->description,
+				),
+				$assets_receipt
+			),
+		)
+	);
+	$article        = $repo->revise( $article->id, $next, 1, 'Revisão com assets', array(), $receipt );
+	$assert( $article->id === $receipt->resolve( $reader_db ), 'recibo editorial atomico' );
+	$hydrated = $repo->find( $article->id );
 	$assert( 2 === $hydrated->revision && 2 === count( $hydrated->version( 2 )->content->gallery ) && 1 === count( $hydrated->version( 2 )->content->attachments ), 'hidratação completa' );
 	$asset_row = $repo->asset( $featured->blob->id );
 	$assert( $asset_row['article_id'] === $article->id && 2 === $asset_row['version'] && $registry->find( $featured->blob->id )->object_id === $asset_row['asset_id'] && 'news_asset' === $registry->find( $featured->blob->id )->object_type, 'vínculo ao ID próprio do asset' );
@@ -577,6 +607,8 @@ try {
 	echo esc_html( 'Notícias locais: ' . $checks . " verificações.\n" );
 } finally {
 	$db->query( 'ROLLBACK' );
+	foreach ( $receipt_owned ?? array() as $receipt_table ) {
+		$db->query( $db->prepare( 'DROP TABLE IF EXISTS %i', $receipt_table ) ); }
 	$reader_db->query( 'ROLLBACK' );
 	foreach ( array( 'audit', 'grants', 'accounts', 'schema' ) as $name ) {
 		$db->query( $db->prepare( 'DROP TABLE IF EXISTS %i', $prefix . 'arn_authz_' . $name ) );

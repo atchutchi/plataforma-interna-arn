@@ -15,7 +15,7 @@ final class PreparedBatch {
 	private array $results = array();
 	private readonly string $root;
 
-	public function __construct( array $state, string $root, private readonly array $excluded, int $now ) {
+	public function __construct( array $state, string $root, private readonly array $excluded, int $now, public readonly ?ConsumptionReceipt $receipt = null ) {
 		new PrivateBlobStore( $root, $excluded, array( 'application/pdf' ), 1048576 );
 		$this->root = str_replace( '\\', '/', realpath( $root ) );
 		foreach ( $state['items'] as $i => $item ) {
