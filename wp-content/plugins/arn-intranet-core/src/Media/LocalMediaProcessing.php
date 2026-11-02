@@ -41,7 +41,8 @@ final class LocalMediaProcessing {
 				}
 			},
 			$actor,
-			PdfRenderer::configured()
+			PdfRenderer::configured(),
+			$scanner->scanMany( ... )
 		);
 	}
 }

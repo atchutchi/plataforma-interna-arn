@@ -43,7 +43,12 @@ try {
 		file_put_contents( $job . '/thumbnail.png', $png );
 		file_put_contents( $job . '/preview.png', $png );
 		},
-		1
+		1,
+		null,
+		static function ( array $paths, string $job ) use ( $assert ): string {
+			$assert( array( $job . '/thumbnail.png', $job . '/preview.png' ) === $paths, 'par de derivados exacto na transaccao' );
+			return 'clean';
+		}
 	);
 	$make     = static function ( string $object_type, int $version = 1 ) use ( $store, $pipeline, $registry, $base ): BlobDescriptor {
 		return ( new ImportBatch( $store, $pipeline() ) )->run(

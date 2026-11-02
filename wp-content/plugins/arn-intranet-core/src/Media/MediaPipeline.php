@@ -20,7 +20,7 @@ final class MediaPipeline {
 	private readonly string $root;
 	private readonly float $deadline;
 
-	public function __construct( string $root, private readonly array $excluded, private readonly Closure $scanner, private readonly Closure $images, private readonly int $actor, private readonly ?Closure $pdfs = null ) {
+	public function __construct( string $root, private readonly array $excluded, private readonly Closure $scanner, private readonly Closure $images, private readonly int $actor, private readonly ?Closure $pdfs = null, private readonly ?Closure $derivative_scanner = null ) {
 		new PrivateBlobStore( $root, $excluded, array( 'application/pdf' ), 1048576 );
 		$this->root     = str_replace( '\\', '/', realpath( $root ) );
 		$this->deadline = microtime( true ) + 120;
@@ -91,9 +91,9 @@ final class MediaPipeline {
 					if ( ! is_file( $derived ) || is_link( $derived ) || filesize( $derived ) < 1 || filesize( $derived ) > 1048576 ) {
 						throw new RuntimeException( 'Derivado privado indisponível.' );
 					}
-					$hashes[ $variant ] = $this->scan( $derived, $job );
-					$paths[ $variant ]  = $derived;
+					$paths[ $variant ] = $derived;
 				}
+				$hashes = array_merge( $hashes, $this->scanDerivatives( array_slice( $paths, 1, null, true ), $job ) );
 			}
 			if ( ! hash_equals( $hash, hash_file( 'sha256', $path ) ) ) {
 				throw new RuntimeException( 'Cópia de quarentena alterada.' );
@@ -120,6 +120,37 @@ final class MediaPipeline {
 
 	public function prepared( array $prepared, array $ids ): void {
 		$this->event( $prepared['job'], 'prepared_for_registration', array( 'blobs' => $ids ) );
+	}
+
+	private function scanDerivatives( array $paths, string $job ): array {
+		$hashes = array();
+		if ( null === $this->derivative_scanner ) {
+			foreach ( $paths as $variant => $path ) {
+				$hashes[ $variant ] = $this->scan( $path, $job ); }
+			return $hashes;
+		}
+		foreach ( $paths as $variant => $path ) {
+			$hashes[ $variant ] = $this->derivativeHash( $path ); }
+		if ( microtime( true ) >= $this->deadline ) {
+			throw new RuntimeException( 'Orçamento de processamento esgotado.' ); }
+		$status = ( $this->derivative_scanner )( array_values( $paths ), $job, $this->deadline );
+		foreach ( $hashes as $hash ) {
+			$this->event( $job, in_array( $status, array( 'clean', 'rejected', 'inconclusive' ), true ) ? $status : 'inconclusive', array( 'sha256' => $hash ) ); }
+		if ( 'clean' !== $status ) {
+			throw new RuntimeException( 'Análise antimalware não aprovada.' ); }
+		foreach ( $paths as $variant => $path ) {
+			if ( ! hash_equals( $hashes[ $variant ], $this->derivativeHash( $path ) ) ) {
+				throw new RuntimeException( 'Derivado privado alterado.' ); }
+		}
+		return $hashes;
+	}
+
+	private function derivativeHash( string $path ): string {
+		clearstatcache( true, $path );
+		$stat = lstat( $path );
+		if ( false === $stat || 0100000 !== ( $stat['mode'] & 0170000 ) || 1 !== $stat['nlink'] || $stat['size'] < 1 || $stat['size'] > 1048576 ) {
+			throw new RuntimeException( 'Derivado privado indisponível.' ); }
+		return hash_file( 'sha256', $path );
 	}
 
 	private function scan( string $path, string $job ): string {

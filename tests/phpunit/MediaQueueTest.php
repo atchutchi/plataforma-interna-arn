@@ -57,18 +57,20 @@ final class MediaQueueTest extends TestCase {
 		self::assertCount( 1, $this->queue()->listing( 42 ) );
 	}
 	public function testWorkerResumesBatchWithoutRepeatingCompletedItems(): void {
-		$id    = $this->enqueue( 4 );
+		$id    = $this->enqueue( 8 );
 		$calls = 0;
 		$scan  = function () use ( &$calls ): string {
 			++$calls;
 			return 'clean';
 		};
 		self::assertSame( 3, $this->queue()->work( 42, 3, $this->pipeline( $scan ) ) );
-		self::assertSame( array( 'ready', 'ready', 'ready', 'queued' ), array_column( $this->queue()->read( $id, 42 )['items'], 'status' ) );
-		self::assertSame( 1, $this->queue()->work( 42, 3, $this->pipeline( $scan ) ) );
+		self::assertSame( array_merge( array_fill( 0, 3, 'ready' ), array_fill( 0, 5, 'queued' ) ), array_column( $this->queue()->read( $id, 42 )['items'], 'status' ) );
+		self::assertSame( 3, $this->queue()->work( 42, 3, $this->pipeline( $scan ) ) );
+		self::assertSame( 6, count( array_filter( $this->queue()->read( $id, 42 )['items'], static fn( array $item ): bool => 'ready' === $item['status'] ) ) );
+		self::assertSame( 2, $this->queue()->work( 42, 3, $this->pipeline( $scan ) ) );
 		self::assertSame( 0, $this->queue()->work( 42, 1, $this->pipeline( $scan ) ) );
-		self::assertSame( 4, $calls );
-		self::assertSame( 9, $this->queue()->read( $id, 42 )['revision'] );
+		self::assertSame( 8, $calls );
+		self::assertSame( 17, $this->queue()->read( $id, 42 )['revision'] );
 	}
 	public function testPdfWithDerivativesSurvivesDurableQueueReplay(): void {
 		$id      = $this->enqueue();
