@@ -130,6 +130,7 @@ try {
 	$clock                       = static fn(): int => time();
 	$repo                        = new Repository( $db, new CurrentActor( $db, $roster, $clock ), $clock );
 	require __DIR__ . '/tickets-cases.php';
+	require __DIR__ . '/service-receipt-cases.php';
 	wp_set_current_user( $admin );
 	$before = $snapshot( array_merge( $normal_tables, $tables ) );
 	$installer->install();

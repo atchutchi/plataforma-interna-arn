@@ -65,10 +65,10 @@ final class LocalNewsroom {
 			throw new RuntimeException( self::ERROR );
 		}
 		return ( new ImportBatch( ( $this->store_factory )(), $prepared ?? LocalMediaProcessing::pipeline( $actor[1] ) ) )->run(
-			function ( ImportBatch $batch ) use ( $input, $actor, $reason ): Article {
+			function ( ImportBatch $batch ) use ( $input, $actor, $reason, $prepared ): Article {
 				$content      = $this->content( $input, null, $batch );
 				[$repository] = ( $this->repository_factory )();
-				return $repository->create( $actor[1], Scope::queues( array( 'editorial-ficticia' ) ), new Version( 1, $content, $actor[1], time() ), $reason );
+				return $repository->create( $actor[1], Scope::queues( array( 'editorial-ficticia' ) ), new Version( 1, $content, $actor[1], time() ), $reason, $prepared?->receipt );
 			},
 			fn(): WpdbFileRegistry => ( $this->repository_factory )()[1]
 		);
@@ -84,10 +84,10 @@ final class LocalNewsroom {
 		}
 		$this->validateText( $input );
 		return ( new ImportBatch( ( $this->store_factory )(), $prepared ?? LocalMediaProcessing::pipeline( $actor[1] ) ) )->run(
-			function ( ImportBatch $batch ) use ( $input, $before, $repository, $id, $actor, $expected, $reason ): Article {
+			function ( ImportBatch $batch ) use ( $input, $before, $repository, $id, $actor, $expected, $reason, $prepared ): Article {
 				$retained = array();
 				$content  = $this->content( $input, $before, $batch, $retained );
-				return $repository->revise( $id, new Version( count( $before->versions ) + 1, $content, $actor[1], time() ), $expected, $reason, $retained );
+				return $repository->revise( $id, new Version( count( $before->versions ) + 1, $content, $actor[1], time() ), $expected, $reason, $retained, $prepared?->receipt );
 			},
 			fn(): WpdbFileRegistry => ( $this->repository_factory )()[1]
 		);

@@ -63,9 +63,9 @@ final class QueueState {
 		} elseif ( '' !== $event['reason'] ) {
 			throw new RuntimeException( 'Evento inválido.' );
 		}
-		if ( 'open' !== $state['consumption'] && ! ( 'applying' === $state['consumption'] && 'applied' === $type ) && ! ( 'applied' === $state['consumption'] && 'archive' === $type ) ) {
+		if ( 'open' !== $state['consumption'] && ! ( 'applying' === $state['consumption'] && in_array( $type, array( 'applied', 'reconciled' ), true ) ) && ! ( 'applied' === $state['consumption'] && 'archive' === $type ) ) {
 			throw new RuntimeException( 'Conclusão já iniciada. Consulta a auditoria.' ); }
-		if ( in_array( $type, array( 'applying', 'applied' ), true ) ) {
+		if ( in_array( $type, array( 'applying', 'applied', 'reconciled' ), true ) ) {
 			if ( null === $state['context'] || $state['owner'] !== $event['actor'] || -1 !== $event['item'] || array_filter( $state['items'], static fn( array $item ): bool => 'ready' !== $item['status'] ) ) {
 				throw new RuntimeException( 'Envio não está pronto.' ); }
 			if ( 'applying' === $type ) {
@@ -73,7 +73,7 @@ final class QueueState {
 					throw new RuntimeException( 'Conclusão inválida.' ); }
 			} elseif ( 'applying' !== $state['consumption'] || array_keys( $event['data'] ) !== array( 'receipt' ) || ! is_int( $event['data']['receipt'] ) || $event['data']['receipt'] < 1 ) {
 				throw new RuntimeException( 'Recibo inválido.' ); }
-			$state['consumption'] = $type;
+			$state['consumption'] = 'reconciled' === $type ? 'applied' : $type;
 			$state['receipt']     = $event['data']['receipt'] ?? null;
 		} elseif ( 'archive' === $type ) {
 			if ( -1 !== $event['item'] || array_intersect( array( 'queued', 'processing' ), array_column( $state['items'], 'status' ) ) ) {

@@ -210,6 +210,7 @@ try {
 	$assert( null === VariantSelection::select( $registry, $legacy_record, 'preview' ), 'PDF legado não devolve original como imagem' );
 	$selected_legacy = VariantSelection::select( $registry, $legacy_record, 'original' );
 	$assert( $selected_legacy?->id === $legacy->id, 'download legado conservado' );
+	require __DIR__ . '/media-receipt-cases.php';
 	echo esc_html( 'Media privada SQL: ' . $checks . " verificações.\n" );
 } finally {
 	if ( null !== $filter ) {

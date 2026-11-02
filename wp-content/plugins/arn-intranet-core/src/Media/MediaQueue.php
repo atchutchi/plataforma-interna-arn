@@ -269,6 +269,26 @@ final class MediaQueue {
 			fclose( $lock ); }
 	}
 
+	/** Confirm a proven commit without ever invoking a business mutation. */
+	public function reconcile( string $id, int $revision, int $actor, Closure $proof, Closure $preflight ): int {
+		$this->authorize( $actor );
+		$lock = $this->lock( $this->root . '/worker.lock' );
+		try {
+			$state = $this->read( $id, $actor );
+			if ( $state['owner'] !== $actor || null === $state['context'] || $revision !== $state['revision'] || ! in_array( $state['consumption'], array( 'applying', 'applied' ), true ) ) {
+				throw new RuntimeException( 'Confirmação de envio indisponível.' ); }
+			$receipt = $proof( $state );
+			if ( ! is_int( $receipt ) || $receipt < 1 || ( null !== $state['receipt'] && $receipt !== $state['receipt'] ) ) {
+				throw new RuntimeException( 'Confirmação de envio divergente.' ); }
+			$preflight( $state, $receipt );
+			$this->authorize( $actor );
+			if ( 'applied' !== $state['consumption'] ) {
+				$this->append( $id, $revision, $this->event( 'reconciled', $actor, -1, '', array( 'receipt' => $receipt ) ) ); }
+			return $receipt;
+		} finally {
+			fclose( $lock ); }
+	}
+
 	public function work( int $actor, int $limit, Closure $pipeline, bool $stop_on_failure = false ): int {
 		$this->authorize( $actor );
 		if ( $limit < 1 || $limit > 3 ) {

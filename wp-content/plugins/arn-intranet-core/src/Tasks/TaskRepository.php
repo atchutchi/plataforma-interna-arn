@@ -76,10 +76,10 @@ final class TaskRepository {
 	}
 
 	/** Registration and task revision share the authority transaction after processing. */
-	public function attach( int $id, BlobDescriptor $blob, string $label, int $expected, int $expected_actor ): Task {
+	public function attach( int $id, BlobDescriptor $blob, string $label, int $expected, int $expected_actor, ?\Arn\Intranet\Media\ConsumptionReceipt $receipt = null ): Task {
 		( new FileSchema( $this->database ) )->assertReady();
 		return $this->transaction(
-			function ( ActorContext $actor, array $people, int $now ) use ( $id, $blob, $label, $expected, $expected_actor ): Task {
+			function ( ActorContext $actor, array $people, int $now ) use ( $id, $blob, $label, $expected, $expected_actor, $receipt ): Task {
 				$before = $this->load( $id, 'either', $actor, $now );
 				if ( $actor->id() !== $expected_actor || null === $before || ! TaskPolicy::manage( $before, 'attach', $actor, $now ) ) {
 					self::denied(); }
@@ -90,6 +90,7 @@ final class TaskRepository {
 				if ( ! TaskPolicy::manage( $before, 'attach', $actor, ( $this->clock )() ) ) {
 					self::denied(); }
 				$this->persist( $before, $after, $people, $now );
+				$receipt?->record( $this->database, 'tasks', 'attach', $actor->id(), $id, $after->revision );
 				if ( ! TaskPolicy::manage( $before, 'attach', $actor, ( $this->clock )() ) ) {
 					self::denied(); }
 				return $after;

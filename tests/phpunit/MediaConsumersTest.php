@@ -64,6 +64,72 @@ final class MediaConsumersTest extends TestCase {
 		$this->refused( fn() => $this->queue()->complete( $id, 1, 1, static function (): void {}, static fn(): int => 99 ) );
 		self::assertSame( 1, $this->queue()->read( $id, 42 )['revision'] );
 	}
+	public function testCommittedResultCanBeReconciledWithoutRepeatingBusinessWrite(): void {
+		$id     = $this->enqueue();
+		$s      = $this->ready( $id );
+		$writes = 0;
+		$this->refused(
+			function () use ( $id, $s, &$writes ): void {
+				$this->queue()->complete(
+					$id,
+					$s['revision'],
+					42,
+					static function (): void {},
+					static function () use ( &$writes ): int {
+						++$writes;
+						throw new RuntimeException( 'Committed, response lost' );
+					}
+				);
+			}
+		);
+		$s         = $this->queue()->read( $id, 42 );
+		$preflight = static function ( array $state, int $receipt ): void {
+			self::assertSame( 42, $state['owner'] );
+			self::assertSame( 7, $receipt );
+		};
+		self::assertSame( 7, $this->queue()->reconcile( $id, $s['revision'], 42, static fn(): int => 7, $preflight ) );
+		$after = $this->queue()->read( $id, 42 );
+		self::assertSame( 'applied', $after['consumption'] );
+		self::assertSame( 'reconciled', $after['history'][ count( $after['history'] ) - 1 ]['type'] );
+		self::assertSame( $s['items'], $after['items'] );
+		self::assertSame( 7, $this->queue()->reconcile( $id, $after['revision'], 42, static fn(): int => 7, $preflight ) );
+		self::assertSame( $after, $this->queue()->read( $id, 42 ) );
+		self::assertSame( 1, $writes );
+	}
+	public function testReconciliationRefusesMissingProofStaleRevisionOtherActorAndRevokedPermission(): void {
+		$id   = $this->enqueue();
+		$s    = $this->ready( $id );
+		$fail = static function (): int {
+			throw new RuntimeException( 'No committed receipt' );
+		};
+		$this->refused( fn() => $this->queue()->complete( $id, $s['revision'], 42, static function (): void {}, $fail ) );
+		$s     = $this->queue()->read( $id, 42 );
+		$proof = static fn(): int => 7;
+		$ok    = static function (): void {};
+		foreach ( array(
+			fn() => $this->queue()->reconcile( $id, $s['revision'], 42, $fail, $ok ),
+			fn() => $this->queue()->reconcile( $id, $s['revision'] - 1, 42, $proof, $ok ),
+			fn() => $this->queue()->reconcile( $id, $s['revision'], 1, $proof, $ok ),
+			fn() => $this->queue()->reconcile( $id, $s['revision'], 42, $proof, $fail ),
+			fn() => $this->queue()->reconcile( $id, $s['revision'], 42, static fn(): int => 0, $ok ),
+		) as $attempt ) {
+			$this->refused( $attempt );
+			self::assertSame( $s, $this->queue()->read( $id, 42 ) );
+		}
+		$this->refused(
+			fn() => $this->queue()->reconcile(
+				$id,
+				$s['revision'],
+				42,
+				$proof,
+				function (): void {
+				$this->allowed = false;
+				}
+			)
+		);
+		$this->allowed = true;
+		self::assertSame( $s, $this->queue()->read( $id, 42 ) );
+	}
 	public function testCompletionRequiresReadyAndCurrentRevision(): void {
 		$id     = $this->enqueue();
 		$writes = 0;

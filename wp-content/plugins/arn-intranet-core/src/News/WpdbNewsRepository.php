@@ -36,13 +36,13 @@ final class WpdbNewsRepository {
 		$this->registry             = new WpdbFileRegistry( $database );
 	}
 
-	public function create( int $author_id, Scope $review_scope, Version $initial, string $reason ): Article {
+	public function create( int $author_id, Scope $review_scope, Version $initial, string $reason, ?\Arn\Intranet\Media\ConsumptionReceipt $receipt = null ): Article {
 		$this->reason( $reason );
 		if ( 1 !== $initial->number || $author_id < 1 || $initial->actor_id !== $author_id ) {
 			throw new RuntimeException( self::ERROR );
 		}
 		return $this->transaction(
-			function () use ( $author_id, $review_scope, $initial, $reason ): Article {
+			function () use ( $author_id, $review_scope, $initial, $reason, $receipt ): Article {
 				$decision = $this->authority->lockAndAssert( $author_id, $review_scope, 'create' );
 				if ( $author_id !== $decision['actor_id'] ) {
 						throw new RuntimeException( self::ERROR );
@@ -55,17 +55,18 @@ final class WpdbNewsRepository {
 				$this->execute( $this->database->prepare( 'INSERT INTO %i (id,author_id,review_queue,revision,submitted_version,submitted_at,created_at) VALUES (%d,%d,%s,1,NULL,NULL,%d)', $this->schema->table( 'news' ), $id, $author_id, $review_scope->targets[0], $initial->created_at ), 1 );
 				$this->insertVersion( $id, $initial );
 				$this->audit( $id, 1, 'created', $author_id, $reason, $initial->created_at, 1 );
+				$receipt?->record( $this->database, 'news', 'create', $author_id, $id, $article->revision );
 				$this->authority->assertUploadCurrent();
 				return $article;
 			}
 		);
 	}
 
-	public function revise( int $id, Version $next, int $expected, string $reason, array $retained = array() ): Article {
+	public function revise( int $id, Version $next, int $expected, string $reason, array $retained = array(), ?\Arn\Intranet\Media\ConsumptionReceipt $receipt = null ): Article {
 		$this->reason( $reason );
 		$preflight = $this->preflight( $id );
 		return $this->transaction(
-			function () use ( $id, $next, $expected, $reason, $preflight, $retained ): Article {
+			function () use ( $id, $next, $expected, $reason, $preflight, $retained, $receipt ): Article {
 				$decision = $this->authority->lockAndAssert( $preflight['author_id'], $preflight['scope'], 'revise' );
 				if ( $decision['actor_id'] !== $next->actor_id ) {
 						throw new RuntimeException( self::ERROR );
@@ -76,6 +77,7 @@ final class WpdbNewsRepository {
 				$this->insertVersion( $id, $next );
 				$this->execute( $this->database->prepare( 'UPDATE %i SET revision=%d WHERE id=%d AND revision=%d', $this->schema->table( 'news' ), $after->revision, $id, $expected ), 1 );
 				$this->audit( $id, $after->revision, 'revised', $decision['actor_id'], $reason, $next->created_at, $next->number );
+				$receipt?->record( $this->database, 'news', 'revise', $decision['actor_id'], $id, $after->revision );
 				$this->authority->assertUploadCurrent();
 				return $after;
 			}

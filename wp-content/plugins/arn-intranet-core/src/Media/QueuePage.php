@@ -43,6 +43,14 @@ final class QueuePage {
 		);
 		if ( defined( 'WP_CLI' ) && true === WP_CLI ) {
 			\WP_CLI::add_command(
+				'arn media install-receipts',
+				array( ConsumerJobs::class, 'installReceipts' ),
+				array(
+					'shortdesc' => 'Instala recibos SQL apenas no laboratório fictício.',
+					'synopsis'  => array(),
+				)
+			);
+			\WP_CLI::add_command(
 				'arn media work',
 				array( QueueAccess::class, 'command' ),
 				array(

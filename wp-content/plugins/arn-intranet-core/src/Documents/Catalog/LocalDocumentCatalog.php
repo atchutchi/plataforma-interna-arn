@@ -122,10 +122,10 @@ final class LocalDocumentCatalog {
 			throw new RuntimeException( 'Operação documental não autorizada.' );
 		}
 		return ( new ImportBatch( ( $this->store_factory )(), $prepared ?? LocalMediaProcessing::pipeline( $actor[1] ) ) )->run(
-			function ( ImportBatch $batch ) use ( $source, $scope, $metadata, $actor, $reason ): Document {
+			function ( ImportBatch $batch ) use ( $source, $scope, $metadata, $actor, $reason, $prepared ): Document {
 				$blob         = $batch->importFile( $source );
 				[$repository] = ( $this->repository_factory )();
-				return $repository->create( $scope, new Revision( 1, $metadata, $blob, $actor[1], time() ), $reason );
+				return $repository->create( $scope, new Revision( 1, $metadata, $blob, $actor[1], time() ), $reason, $prepared?->receipt );
 			},
 			fn(): WpdbFileRegistry => ( $this->repository_factory )()[1]
 		);
@@ -144,9 +144,9 @@ final class LocalDocumentCatalog {
 			throw new RuntimeException( 'Operação documental não autorizada.' );
 		}
 		return ( new ImportBatch( ( $this->store_factory )(), $prepared ?? LocalMediaProcessing::pipeline( $actor[1] ) ) )->run(
-			function ( ImportBatch $batch ) use ( $source, $before, $repository, $id, $metadata, $actor, $expected, $reason ): Document {
+			function ( ImportBatch $batch ) use ( $source, $before, $repository, $id, $metadata, $actor, $expected, $reason, $prepared ): Document {
 				$blob = null === $source ? $batch->duplicate( $before->version( count( $before->versions ) )->blob ) : $batch->importFile( $source );
-				return $repository->revise( $id, new Revision( count( $before->versions ) + 1, $metadata, $blob, $actor[1], time() ), $expected, $reason, null === $source ? $before->version( count( $before->versions ) )->blob->id : null );
+				return $repository->revise( $id, new Revision( count( $before->versions ) + 1, $metadata, $blob, $actor[1], time() ), $expected, $reason, null === $source ? $before->version( count( $before->versions ) )->blob->id : null, $prepared?->receipt );
 			},
 			fn(): WpdbFileRegistry => ( $this->repository_factory )()[1]
 		);
