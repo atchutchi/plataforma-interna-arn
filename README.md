@@ -83,6 +83,8 @@ Não aceder ao controlador de domínio, DNS ou produção durante o desenvolvime
 
 ## Como continuar
 
+Próxima entrega técnica: [contrato de identidade institucional](docs/entrega/contrato-identidade-institucional.md), com 16 critérios de aceitação. Começar pela geração persistente dos vínculos e migração vazia. O contrato está preparado, mas a implementação e activação institucional continuam pendentes. Uma revogação seguida da recriação do mesmo issuer/sub não pode recuperar sessões antigas.
+
 1. Ler AGENTS.md, o módulo relevante e este backlog. Conferir origin/main, branches e PRs. Não reutilizar PRs históricas substituídas nem reactivar tarefas antigas.
 2. Criar branch a partir da versão integrada, preservar checkouts usados por serviços em execução e implementar uma entrega coerente com dados fictícios.
 3. Agrupar testes no fecho: PHP, Node, lint/build, integração pertinente e Playwright do circuito real. Verificar os dados e ficheiros que devem ficar inalterados.
