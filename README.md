@@ -6,7 +6,7 @@ Este README apresenta o estado actual e o trabalho necessário para concluir o s
 
 ## Entrada em serviço
 
-Seguir o [plano de entrada em serviço](docs/entrega/plano-entrada-servico.md), que organiza entregas, responsáveis e critérios de aceitação. O destino Windows .205 fora do domínio e o nome curto plataforma-interna estão confirmados. Atchutchi gere o DNS de arn.gw. `https://plataforma-interna.arn.gw` continua a ser uma proposta por confirmar, não um site configurado.
+Seguir o [plano de entrada em serviço](docs/entrega/plano-entrada-servico.md). O DNS interno 192.168.17.151 serve arn.local. O servidor da plataforma é 192.168.17.205, fora do domínio, com Windows Server 2019 e IIS em execução. O nome plataforma-arn.duckdns.org está reservado. A resolução interna ainda devolveu o IP público na prova recebida. Certificado, cliente OAuth criado e login institucional continuam por demonstrar. A proposta arn.gw foi abandonada por falta de acesso à sua gestão.
 
 A prioridade para preparar o servidor é concluir a [adaptação institucional](docs/entrega/adaptacao-institucional.md), começando pela identidade, sessões e fonte de actores, seguida de migrações sem fixtures. O [preparador de candidatos](docs/entrega/instalacao-recuperacao.md#candidato-de-preparação) separa fontes e dependências dos dados locais e mantém o deploy bloqueado. Depois seguem operação de media, Calendar, configuração de homologação, restauro e piloto. As lacunas abaixo continuam abertas até terem provas próprias.
 

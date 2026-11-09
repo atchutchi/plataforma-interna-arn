@@ -1,6 +1,6 @@
 # Plano de entrada em serviço
 
-Estado em 9 de novembro de 2026. Este plano organiza o fecho do produto e a instalação. O servidor Windows identificado pelo responsável com o sufixo .205, fora do domínio, continua a ser o destino. «plataforma-interna» é o nome curto escolhido. `https://plataforma-interna.arn.gw` é uma proposta, não um endereço aprovado ou configurado. Atchutchi confirmou que gere o DNS de arn.gw. Não há autorização implícita para alterar DNS, produção ou contas reais.
+Estado em 9 de novembro de 2026, actualizado após confirmação do responsável e imagem dos comandos no servidor. O DNS interno 192.168.17.151 serve o domínio arn.local. A plataforma será alojada no IIS de 192.168.17.205, fora do domínio. O nome reservado é plataforma-arn.duckdns.org. A proposta anterior plataforma-interna.arn.gw foi abandonada porque não existe acesso à gestão desse domínio. Esta actualização é documental, sem alterações remotas aos servidores.
 
 ## Sequência de entrega
 
@@ -21,9 +21,9 @@ O pacote de preparação pode ser produzido antes da adaptação institucional. 
 
 | Assunto | Conhecido | Ainda necessário | Responsável |
 | --- | --- | --- | --- |
-| Destino | Windows .205, fora do domínio | Endereço completo, versão Windows, capacidade, serviços existentes, volume e janela de acesso | Atchutchi/DCSI |
-| Nome | Nome curto plataforma-interna | Aprovar FQDN proposto, confirmar disponibilidade e acesso via LAN/VPN | Atchutchi |
-| DNS | Atchutchi gere arn.gw | Fornecedor/painel DNS, responsável pela resolução interna e validação DNS-01 | Atchutchi/DCSI |
+| Destino | 192.168.17.205, Windows Server 2019 Standard, build 17763, 64 bits, fora do domínio. IIS instalado, W3SVC Running/Automatic, conforme imagem do responsável | Capacidade, actualizações, restantes serviços, volumes, bindings IIS e janela de acesso | Atchutchi/DCSI |
+| Nome | plataforma-arn.duckdns.org reservado na conta institucional, conforme imagem | Resolução interna e acesso HTTPS em dois equipamentos | Atchutchi |
+| DNS | 192.168.17.151 serve arn.local. DuckDNS fornece a zona pública do nome reservado | Registo interno exacto para 192.168.17.205 e validação DNS-01 pública | Atchutchi/DCSI |
 | HTTPS | Certificado ainda não demonstrado | Emissão, instalação IIS, renovação automática e responsável pelos alertas | Atchutchi/DCSI |
 | Identidade | OIDC local existente | Cliente/callback institucional, sessões/MFA e fonte autorizada de pessoas | Atchutchi/RH/DCSI |
 | Competências | Regras técnicas e delegações ensaiadas | Organograma, matriz, gestores designados e processo de reactivação | RH/DCSI |
@@ -34,15 +34,37 @@ O pacote de preparação pode ser produzido antes da adaptação institucional. 
 
 Recolher referências de configuração, não palavras-passe neste documento. Guardar credenciais e ficheiros de pessoas fora do Git. As decisões que alteram direitos ou dados reais exigem confirmação própria.
 
-## DNS e certificado
+## DNS, servidores e certificado
 
-O endereço proposto é um subdomínio de arn.gw dedicado à plataforma, não um novo domínio a adquirir nem um domínio Active Directory. O domínio Windows arn.local mantém a sua função. O servidor .205 continua fora desse domínio. Definir o nome HTTPS não autoriza alterações ao Active Directory, aos registos de email ou ao site institucional. Confirmar primeiro qual o resolvedor DNS efectivamente usado pelos computadores da LAN/VPN e onde deve ser criado apenas o registo necessário para este nome.
+Separação operacional obrigatória:
 
-Proposta: usar o FQDN público `plataforma-interna.arn.gw`, resolvido para o endereço privado completo do servidor no DNS utilizado pela LAN/VPN. Não criar uma nova zona interna arn.gw sem estudar a resolução dos serviços existentes. Não mudar os registos do site, email ou Workspace.
+| Local | Função | Acção prevista |
+| --- | --- | --- |
+| 192.168.17.151 | DNS interno de arn.local | Criar ou conferir apenas a zona plataforma-arn.duckdns.org e o registo A na raiz para 192.168.17.205. Não alterar arn.local. |
+| 192.168.17.205 | Servidor da aplicação, Windows Server 2019 e IIS | Alojar site, certificado e configuração privada. Não instalar DNS nem promover a controlador de domínio. |
+| DuckDNS | Gestão pública do nome reservado | Validar controlo pelo TXT DNS-01 e renovar certificado. Não usar actualizador de IP público para publicar o servidor. |
+| Google Cloud, projecto arn-platform | Cliente OAuth da plataforma | Cliente separado do laboratório e callback exacto, sem concessões de negócio implícitas. |
 
-O site pode continuar privado. Uma autoridade de certificação pública pode validar o controlo do nome pelo desafio DNS-01. O cliente ACME cria um TXT em `_acme-challenge.plataforma-interna.arn.gw` através do DNS público e renova o certificado. O mecanismo de renovação, acesso ao fornecedor e protecção das credenciais ainda devem ser escolhidos e ensaiados. Ver [Let’s Encrypt DNS-01](https://letsencrypt.org/docs/challenge-types/#dns-01-challenge).
+A consulta fornecida pelo responsável usou 192.168.17.151 e devolveu o IP público, não 192.168.17.205. Portanto, a resolução interna ainda não está demonstrada. O texto Server: Unknown não prova falha de resolução. As várias interfaces do servidor devem ser inventariadas antes de qualquer mudança de bindings, rotas ou firewall. Não assumir a máscara da rede a partir do endereço IP.
 
-No IIS, associar o certificado ao site HTTPS com o FQDN aprovado. Confirmar cadeia de confiança, nome e validade a partir de um segundo PC. Não desactivar a verificação TLS para fazer o login funcionar. O callback proposto é `https://plataforma-interna.arn.gw/wp-login.php?action=arn_google_callback`, sujeito à confirmação do nome e da rota institucional. Registar exactamente esse URI no cliente Google aprovado. Nomes curtos, .local e IPs privados não satisfazem as regras do callback web institucional do Google. Ver [regras OAuth](https://developers.google.com/identity/protocols/oauth2/web-server#uri-validation).
+No DNS interno existente, criar ou conferir uma zona primária com o nome completo plataforma-arn.duckdns.org. Na raiz dessa zona, usar um único registo A para 192.168.17.205, sem actualizações dinâmicas. Não criar uma zona geral duckdns.org nem modificar arn.local, arn.gw, email ou Workspace. A execução no DNS fica a cargo do responsável. Não substituir os resolvedores dos computadores do domínio por DNS públicos.
+
+Validar no servidor da aplicação e num segundo computador:
+
+~~~powershell
+nslookup plataforma-arn.duckdns.org 192.168.17.151
+nslookup plataforma-arn.duckdns.org
+~~~
+
+Ambas as consultas devem devolver 192.168.17.205. Confirmar também a resolução dos serviços existentes de arn.local após a alteração.
+
+Para HTTPS, emitir certificado por DNS-01 usando o TXT público _acme-challenge.plataforma-arn.duckdns.org e automatizar a renovação. O token DuckDNS mostrado numa imagem deve ser regenerado pelo responsável antes de utilização e guardado fora do Git, logs e document root. Não copiar o token nem as imagens para o repositório. Como a zona interna exacta oculta os subnomes públicos, o cliente ACME deve verificar a propagação TXT através de resolução pública apropriada. Não criar o desafio apenas no DNS interno. Ver [DuckDNS](https://www.duckdns.org/spec.jsp) e [Let’s Encrypt DNS-01](https://letsencrypt.org/docs/challenge-types/#dns-01-challenge).
+
+Inventariar sites e bindings existentes no IIS antes de associar o certificado ao nome aprovado, porta 443 e endereço de destino previsto. Verificar confiança, nome, validade e renovação a partir de um segundo PC, sem ignorar erros TLS. Manter acesso de entrada limitado às redes internas autorizadas, sem encaminhamento de portas no router. Rever regras amplas existentes e IPv6, quando aplicável. O registo público observado não demonstra exposição do site, mas também não substitui a verificação de isolamento LAN/VPN. A configuração pública A/AAAA deve ser revista separadamente, sem alterar os registos TXT necessários ao certificado.
+
+Callback preparado: https://plataforma-arn.duckdns.org/wp-login.php?action=arn_google_callback. O formulário Google não mostrou erro e habilitou Criar, mas não existe ainda prova de criação do cliente, aceitação pelo servidor OAuth ou login completo. A criação foi entregue ao responsável. Preservar o cliente localhost existente. Credenciais fora do Git e da raiz pública. Ver [regras OAuth](https://developers.google.com/identity/protocols/oauth2/web-server#uri-validation).
+
+Ordem de execução: confirmar DNS interno, inventariar IIS e rede, emitir certificado e provar renovação, configurar binding HTTPS, concluir cliente OAuth e adaptação institucional, ensaiar login/sessões/recusas com dados fictícios e confirmar isolamento fora da rede. DNS e HTTPS não encerram as lacunas de identidade, migrações, operação ou aceite piloto.
 
 ## Critério de disponibilização
 
