@@ -2,6 +2,41 @@
 
 Preparação F1-17, 28 de outubro de 2026. Este é um guião para preparar e aceitar a entrega. Não é um instalador institucional. A aplicação continua com opções e instaladores limitados ao laboratório. Faltam as decisões e provas da secção de deploy do README.
 
+Actualização de 9 de novembro: seguir o [plano de entrada em serviço](plano-entrada-servico.md) e o [levantamento da adaptação institucional](adaptacao-institucional.md). O destino .205 e o nome curto plataforma-interna foram confirmados. O FQDN proposto, certificado e configuração efectiva continuam por confirmar.
+
+## Candidato de preparação
+
+`scripts/release-candidate.mjs` prepara uma directoria com fontes de um commit e permite selar e verificar as dependências. Não instala WordPress, não executa migrações, não activa módulos e não cria contas. `deployReady` é sempre false. Não transferir o candidato para o servidor como produto pronto.
+
+Na raiz do checkout, com Node 24, Git, PHP 8.4 e Composer disponíveis, usar um SHA completo aprovado e um destino absoluto novo fora de qualquer repositório. O pai do destino tem de existir. Os comandos seguintes são modelos, não caminhos reais:
+
+~~~text
+node scripts/release-candidate.mjs stage SHA_COMPLETO DESTINO_ABSOLUTO_NOVO
+~~~
+
+Na subdirectoria `app` criada, executar Composer no ambiente de preparação. Manter o seu directório de trabalho e cache privados. Não copiar o vendor do laboratório, que pode conter ferramentas de desenvolvimento. Não usar `composer update`.
+
+~~~text
+composer install --no-dev --prefer-dist --no-interaction --no-progress --no-scripts --no-plugins --optimize-autoloader
+composer check-platform-reqs --no-dev
+composer audit --locked --no-dev --format=json
+~~~
+
+Guardar os resultados fora do candidato. Uma vulnerabilidade ou incompatibilidade bloqueia a entrega. A análise tem validade no momento da consulta e deve repetir-se na preparação da release. Os comandos exigem rede para obter dependências e consultar avisos. O estado da rede não é prova de ausência de vulnerabilidades.
+
+Regressar ao checkout e selar. Guardar separadamente o `manifestSha256` devolvido, junto do recibo privado da preparação:
+
+~~~text
+node scripts/release-candidate.mjs seal SHA_COMPLETO DESTINO_ABSOLUTO
+node scripts/release-candidate.mjs verify SHA_COMPLETO DESTINO_ABSOLUTO HASH_DO_MANIFESTO
+~~~
+
+A selagem confirma fontes contra blobs Git, conjunto exacto de nomes/versões/referências de dependências de produção em composer.lock e metadados Composer sem pacotes de desenvolvimento. Exige a instalação convencional dentro de vendor, identidade do pacote no seu composer.json e conteúdo físico. Metapackages não têm pasta instalada. Inventaria os bytes de toda a árvore `app`. Recusa destinos em checkouts, caminhos ambíguos no Windows, symlinks/junctions, hard links, ficheiros de configuração inesperados fora de vendor e repetição sobre um destino existente. A verificação detecta ficheiros ausentes, adicionais ou alterados e exige o hash do manifesto guardado separadamente.
+
+O recibo não é assinatura digital, scanner de segredos ou atestado de origem dos bytes do fornecedor. A comparação dos metadados não substitui a instalação Composer a partir de uma origem confiável. Proteger a pasta de preparação contra escritas concorrentes e conferir o recibo por canal separado após transporte. Não modificar o candidato selado. Se a preparação falhar, conservar a pasta para diagnóstico e começar noutra pasta nova, sem limpar automaticamente.
+
+O candidato inclui tema, plugin, composer.json/lock e vendor de produção. Não inclui núcleo WordPress, PHP, SQL, Python/descodificador PDF, ClamAV/assinaturas, serviço worker, certificados, configurações, base de dados ou volumes privados. Estas dependências continuam na ficha de release e no ensaio de instalação. Os instaladores locais presentes no código não são executados pelo preparador e continuam proibidos como migrações institucionais.
+
 ## Inventário reproduzível
 
 A partir da raiz do checkout, executar `node scripts/release-inventory.mjs SHA_COMPLETO`, substituindo o argumento pelo commit exacto aprovado. O programa escreve JSON no stdout. Guardar o resultado num ficheiro privado fora do repositório. Exige Git e Node 24.21.0.
