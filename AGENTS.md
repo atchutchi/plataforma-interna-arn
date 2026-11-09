@@ -107,9 +107,11 @@ Usa os scripts npm: `scripts/wp-env.mjs` fornece bindings HTTP e MariaDB em `127
 
 `npm run env:check` e `npm run env:check:tests` confirmam o estado e os bindings reais do projeto selecionado. Qualquer publicação fora de loopback falha, incluindo IPs específicos da LAN. As duas configurações mantêm `testsEnvironment=false` e `phpmyadmin=false`, também nos overrides. O ambiente de testes próprio é `.wp-env.test.json`.
 
-PHP, Composer, MariaDB e WordPress vêm dos contentores. Não há `mysqlVersion`: a base local configurada é MariaDB 11.8 e não prova compatibilidade com MySQL 8.4. `composer.lock` já está integrado pela PR #3. Quando for necessário actualizá-lo, só deve ser gerado com `npm run composer:install`, dentro do contentor. Sem Docker, PHPUnit e phpcs podem correr com um PHP 8.4 local e `vendor/` não versionado; isso verifica o código, não o ambiente.
+PHP, Composer, MariaDB e WordPress vêm dos contentores. Não há `mysqlVersion`: a base local configurada é MariaDB 11.8 e não prova compatibilidade com MySQL 8.4. `composer.lock` já está integrado pela PR #3. Instalar as versões fixadas com `npm run composer:install`, dentro do contentor. Para a correcção de segurança de symfony/http-client, usar primeiro `npm run composer:update:http-client`, que limita a resolução a esse pacote e dependências indispensáveis no mesmo ambiente, seguido de `npm run composer:install` e `npm run composer:audit`. Não editar referências ou hashes manualmente, resolver o lock com PHP portátil ou executar actualizações gerais de dependências. Sem Docker, PHPUnit e phpcs podem correr com um PHP 8.4 local e `vendor/` não versionado; isso verifica o código, não o ambiente.
 
 ## Código
+
+Antes de PHPUnit e phpcs, a guarda scripts/check-php-test-discovery.php compara scandir com o iterador de PHPUnit. Os comandos npm e a CI recusam descoberta incompleta. No bind mount Windows/WSL foram observados 65 de 145 ficheiros Test.php, sem erro do PHPUnit. Não aceitar esse verde parcial nem retirar a guarda. Usar uma cópia privada no filesystem Linux do mesmo contentor, conferida por hashes contra o checkout e vendor, e executar aí a guarda, PHPUnit e phpcs. A resolução do composer.lock continua obrigatoriamente no contentor. Ver docs/entrega/qa-dependencia-http-2026-11-09.md.
 
 O plugin usa o autoloader PSR-4 em `src/Autoloader.php`, namespace `Arn\Intranet`. Não acrescentes `require_once` por classe. Regras puras ficam em classes sem WordPress e com testes em `tests/phpunit`; a ligação aos hooks fica em classes separadas, como `Access\PrivatePortal`.
 

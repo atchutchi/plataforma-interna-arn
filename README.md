@@ -10,7 +10,7 @@ Seguir o [plano de entrada em serviço](docs/entrega/plano-entrada-servico.md), 
 
 A prioridade para preparar o servidor é concluir a [adaptação institucional](docs/entrega/adaptacao-institucional.md), começando pela identidade, sessões e fonte de actores, seguida de migrações sem fixtures. O [preparador de candidatos](docs/entrega/instalacao-recuperacao.md#candidato-de-preparação) separa fontes e dependências dos dados locais e mantém o deploy bloqueado. Depois seguem operação de media, Calendar, configuração de homologação, restauro e piloto. As lacunas abaixo continuam abertas até terem provas próprias.
 
-Bloqueio de dependências detectado em 9 de novembro: a auditoria Composer do lock actual reporta dois avisos para symfony/http-client v8.0.16. Corrigir a dependência transitiva pelo procedimento do projecto, ensaiar OIDC e repetir a auditoria antes de qualquer instalação. Ver [registo da preparação](docs/entrega/qa-preparacao-servidor-2026-11-09.md). CI verde das ferramentas não dispensa esta correcção.
+Correcção da dependência HTTP concluída localmente em 9 de novembro: o Composer resolveu symfony/http-client para v7.4.23 dentro do contentor, preservando as outras versões. Auditoria sem avisos, regressão de credenciais e integração de identidade/sessão verificadas. A CI passa a exigir auditoria e descoberta completa dos ficheiros de testes. Ver [evidência e limites](docs/entrega/qa-dependencia-http-2026-11-09.md). O candidato antigo com v8.0.16 não deve ser instalado.
 
 ## Concluído no laboratório
 

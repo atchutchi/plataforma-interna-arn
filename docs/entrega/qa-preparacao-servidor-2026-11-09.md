@@ -1,5 +1,7 @@
 # Preparação F1-17, evidência de 9 de novembro
 
+Registo da preparação inicial, conservado como evidência do candidato antigo. O bloqueio de Docker e os avisos da dependência descritos abaixo foram depois tratados na [correcção HTTP](qa-dependencia-http-2026-11-09.md). Essa correcção não modifica este candidato antigo nem o aprova para instalação.
+
 Base integrada: 79afcaf58455a6997d49d1f9f5d8587033466321. Branch de trabalho: feat/preparacao-entrega-servidor-f1-17. Não houve instalação no servidor, modificação de DNS, aplicação de código aos laboratórios, migrações ou operações de contas/conteúdo.
 
 ## Resultado técnico

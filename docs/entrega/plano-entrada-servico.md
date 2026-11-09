@@ -6,7 +6,7 @@ Estado em 9 de novembro de 2026. Este plano organiza o fecho do produto e a inst
 
 | Ordem | Entrega | Execução | Prova que permite fechar |
 | --- | --- | --- | --- |
-| 0 | Correcção da dependência transitiva com avisos | Codex, ambiente Composer do projecto | Actualizar symfony/http-client fixado em v8.0.16, auditoria sem os avisos e regressões OIDC/PHP aprovadas. O motor Docker estava indisponível no levantamento. |
+| 0 | Correcção da dependência transitiva com avisos | Concluída localmente, 9 de novembro | symfony/http-client resolvido para v7.4.23 no contentor, auditoria sem avisos e regressões PHP/OIDC aprovadas. Docker recuperado e guarda de descoberta de testes acrescentada. [Evidência](qa-dependencia-http-2026-11-09.md). |
 | 1 | Candidato reproduzível e inventário de dependências | Codex, local | Fontes do commit exacto, vendor de produção segundo o lock, hashes verificados, exclusão de configuração/dados e limites explícitos. Não equivale a instalador. |
 | 2 | Adaptação institucional e migrações | Codex, local com fonte fictícia separada | Fornecedor de pessoas/unidades/competências configurável, fonte ausente fecha acesso, migrations sem fixtures, instalação vazia e upgrade ensaiados. Não activar flags locais no servidor. |
 | 3 | Operação de media | Codex, ensaio local e depois homologação autorizada | Worker supervisionado persistente, manutenção de assinaturas/descodificadores, falhas e alertas, dimensionamento, retenção aprovada e recuperação manual sem apagar originais. |
@@ -35,6 +35,8 @@ O pacote de preparação pode ser produzido antes da adaptação institucional. 
 Recolher referências de configuração, não palavras-passe neste documento. Guardar credenciais e ficheiros de pessoas fora do Git. As decisões que alteram direitos ou dados reais exigem confirmação própria.
 
 ## DNS e certificado
+
+O endereço proposto é um subdomínio de arn.gw dedicado à plataforma, não um novo domínio a adquirir nem um domínio Active Directory. O domínio Windows arn.local mantém a sua função. O servidor .205 continua fora desse domínio. Definir o nome HTTPS não autoriza alterações ao Active Directory, aos registos de email ou ao site institucional. Confirmar primeiro qual o resolvedor DNS efectivamente usado pelos computadores da LAN/VPN e onde deve ser criado apenas o registo necessário para este nome.
 
 Proposta: usar o FQDN público `plataforma-interna.arn.gw`, resolvido para o endereço privado completo do servidor no DNS utilizado pela LAN/VPN. Não criar uma nova zona interna arn.gw sem estudar a resolução dos serviços existentes. Não mudar os registos do site, email ou Workspace.
 
