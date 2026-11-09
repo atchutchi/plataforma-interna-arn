@@ -16,7 +16,9 @@ Decisão técnica: composer install preserva um lock existente e não selecciona
 - [x] Acrescentar composer audit --locked --no-dev ao job PHP da CI.
 - [x] Detectar e recusar descoberta incompleta de testes no mount Windows/WSL. Copiar fontes/vendor para filesystem Linux e verificar os hashes antes da suite. Desvio necessário descoberto na validação, sem alterar código de terceiros ou resolver o lock no host.
 - [x] Agrupar PHPUnit, PHPCS, Node/lint/build, integração de identidade/OIDC e auditoria. Usar dados fictícios. Playwright verifica o acesso local sem usar Google real.
-- [ ] Actualizar README e relatório. Revisão independente do delta desta tarefa, commit/push e CI exacta. Merge da PR #80 apenas após auditoria e checks aprovados. Confirmar main.
+- [x] Actualizar README e relatório. Revisão independente do delta desta tarefa sem achados accionáveis.
+
+Fecho operacional: commit/push e CI exacta. Merge da PR #80 apenas após auditoria e checks aprovados. Confirmar main. O estado remoto é a prova destes passos, não uma antecipação neste plano.
 
 ## Revisão
 

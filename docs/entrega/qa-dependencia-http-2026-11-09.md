@@ -30,7 +30,15 @@ Foi criada uma cópia privada em /tmp, dentro do mesmo contentor, com fontes e v
 
 scripts/check-php-test-discovery.php compara uma enumeração por scandir com a lista de ficheiros usada por PHPUnit, recusando divergência, catálogo vazio ou ligações simbólicas. A guarda falhou no mount afectado, com 145 esperados e 65 encontrados, e passou na cópia Linux. Corre antes de PHPUnit no comando npm e na CI. Não se deve remover esta guarda para obter uma execução verde. A execução PHPCS parcial no mount também não é a prova final de cobertura.
 
-PHPCS final na cópia Linux: 662 ficheiros aprovados. Node: 72 testes aprovados, sem omissões. Lint e build aprovados. A revisão independente e a CI do SHA exacto continuam a ser condições da integração.
+PHPCS final na cópia Linux: 662 ficheiros aprovados. Node: 72 testes aprovados, sem omissões. Lint e build aprovados.
+
+## Revisão independente
+
+O delta 8af1969..00d2b9b foi revisto em leitura, sem achados críticos, importantes ou menores. A revisão confirmou a alteração de um só pacote, a referência oficial da tag corrigida, os dois avisos, os requisitos PHP, a regressão e o uso do mesmo iterador de PHPUnit na guarda. Não repetiu as suites ou os hashes privados. A ferramenta de candidatos anterior já tinha sido revista e corrigida separadamente.
+
+As decisões mantidas são a resolução dirigida no contentor, a conservação de PHP 8.4.0 como requisito e a recusa do verde parcial no mount, substituído por prova numa cópia Linux conferida. A guarda verifica o catálogo de testes actual, não eventuais exclusões futuras nem toda a enumeração de PHPCS. A prova de PHPCS nesta execução é a corrida nos 662 ficheiros da cópia Linux.
+
+A revisão não homologou Google real, exploração efectiva, o segundo aviso através de rede, runtime PHP 8.4.0, servidor, contas reais ou recuperação de discos. Esses limites ficam conservados. A selecção da versão corrigida e a auditoria sustentam a correcção do segundo aviso, sem alegar ensaio de rede. A CI do SHA exacto e a confirmação de main são verificadas separadamente antes de declarar integração.
 
 ## Recuperação do ambiente Docker
 
