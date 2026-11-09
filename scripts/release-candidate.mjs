@@ -111,7 +111,7 @@ function sourceState(root, commit, destination) {
   return { source, files };
 }
 
-function productionDependencies(app) {
+function productionDependencies(app, files) {
   const lock = jsonAt(join(app, 'composer.lock'));
   const installed = jsonAt(join(app, 'vendor/composer/installed.json'));
   if (!Array.isArray(lock.packages) || !Array.isArray(installed.packages) || installed.dev !== false ||
@@ -122,6 +122,22 @@ function productionDependencies(app) {
   }).sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
   const expected = normalize(lock.packages), actual = normalize(installed.packages);
   if (new Set(expected.map((pkg) => pkg.name)).size !== expected.length || !isDeepStrictEqual(actual, expected)) fail();
+  for (const pkg of installed.packages) {
+    const locked = lock.packages.find((item) => item.name === pkg.name);
+    if (!/^[a-z0-9_.-]+\/[a-z0-9_.-]+$/.test(pkg.name) ||
+      (pkg.type ?? 'library') !== (locked.type ?? 'library')) fail();
+    if (pkg.type === 'metapackage') {
+      if (pkg['install-path'] != null) fail();
+      continue;
+    }
+    // Plugins/custom installers are disabled: only the standard Composer vendor layout is admitted.
+    if (pkg['install-path'] !== `../${pkg.name}`) fail();
+    const prefix = `vendor/${pkg.name}/`;
+    assertPortablePath(prefix + 'composer.json');
+    const metadata = jsonAt(join(app, prefix, 'composer.json'));
+    if (metadata.name !== pkg.name || !files.some((file) =>
+      file.path.startsWith(prefix) && file.path !== `${prefix}composer.json`)) fail();
+  }
   bytesAt(join(app, 'vendor/autoload.php'));
   bytesAt(join(app, 'vendor/composer/installed.php'));
   return actual;
@@ -157,7 +173,7 @@ export function sealCandidate(root, commit, destination) {
   const target = destinationPath(destination);
   assertEnvelope(target, false);
   const { source, files } = sourceState(root, commit, target);
-  const packages = productionDependencies(join(target, 'app'));
+  const packages = productionDependencies(join(target, 'app'), files);
   const candidate = {
     schema: 1, kind: 'preparation-candidate', deployReady: false, commit, tree: source.tree,
     blockers, packages, files,
@@ -177,7 +193,7 @@ export function verifyCandidate(root, commit, destination, manifestSha256) {
   const actual = JSON.parse(manifest.toString('utf8'));
   const { source, files } = sourceState(root, commit, target);
   const expected = { schema: 1, kind: 'preparation-candidate', deployReady: false, commit,
-    tree: source.tree, blockers, packages: productionDependencies(join(target, 'app')), files };
+    tree: source.tree, blockers, packages: productionDependencies(join(target, 'app'), files), files };
   if (!isDeepStrictEqual(actual, expected)) fail();
   return { commit, files: files.length, packages: expected.packages.length, integrity: 'verified', deployReady: false };
 }

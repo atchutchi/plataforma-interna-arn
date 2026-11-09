@@ -27,10 +27,12 @@ function fixture(t) {
   const commit = () => { git('add', '.'); git('commit', '-m', 'Synthetic fixture'); return git('rev-parse', 'HEAD'); };
   const sha = commit();
   const vendor = (overrides = {}) => {
-    write(join(target, 'app'), 'vendor/composer/installed.json', JSON.stringify({ dev: false, 'dev-package-names': [], packages, ...overrides }));
+    const physicalPackages = packages.map(pkg => ({ ...pkg, 'install-path': `../${pkg.name}` }));
+    write(join(target, 'app'), 'vendor/composer/installed.json', JSON.stringify({ dev: false, 'dev-package-names': [], packages: physicalPackages, ...overrides }));
     write(join(target, 'app'), 'vendor/autoload.php', '<?php // Synthetic.');
     write(join(target, 'app'), 'vendor/composer/installed.php', '<?php return [];');
     write(join(target, 'app'), 'vendor/fictional/runtime/src.php', '<?php // Synthetic dependency.');
+    write(join(target, 'app'), 'vendor/fictional/runtime/composer.json', JSON.stringify({ name: 'fictional/runtime' }));
   };
   return { root, target, outer, sha, git, write, commit, vendor, packages };
 }
@@ -46,7 +48,7 @@ test('candidate stages immutable Git sources only, seals production inventory an
   assert.throws(() => sealCandidate(f.root, f.sha, f.target));
   f.vendor();
   const sealed = sealCandidate(f.root, f.sha, f.target);
-  assert.equal(sealed.packages, 1); assert.equal(sealed.files, 8);
+  assert.equal(sealed.packages, 1); assert.equal(sealed.files, 9);
   assert.equal(verifyCandidate(f.root, f.sha, f.target, sealed.manifestSha256).integrity, 'verified');
   assert.throws(() => sealCandidate(f.root, f.sha, f.target));
   assert.throws(() => verifyCandidate(f.root, f.sha, f.target, '0'.repeat(64)));
@@ -140,4 +142,19 @@ test('hard links cannot smuggle externally mutable bytes into the candidate', (t
   f.write(f.outer, 'external.txt', 'synthetic');
   linkSync(join(f.outer, 'external.txt'), join(f.target, 'app/vendor/linked.txt'));
   assert.throws(() => sealCandidate(f.root, f.sha, f.target));
+});
+
+test('sealing refuses a production package whose code disappeared before sealing', (t) => {
+  const f = fixture(t); stageCandidate(f.root, f.sha, f.target); f.vendor();
+  rmSync(join(f.target, 'app/vendor/fictional/runtime/src.php'));
+  assert.throws(() => sealCandidate(f.root, f.sha, f.target));
+  assert.equal(existsSync(join(f.target, 'candidate.json')), false);
+});
+
+test('production install paths cannot escape vendor or point to another package', (t) => {
+  const f = fixture(t); stageCandidate(f.root, f.sha, f.target);
+  for (const path of ['../../wp-content', '../composer', '/tmp/outside', '..\\fictional\\runtime']) {
+    f.vendor({ packages: [{ ...f.packages[0], 'install-path': path }] });
+    assert.throws(() => sealCandidate(f.root, f.sha, f.target));
+  }
 });
