@@ -1,6 +1,6 @@
 # Renovação HTTPS da ARN
 
-Estado em 10 de novembro de 2026. O responsável confirmou a página estática por HTTPS. As imagens confirmam DNS interno para 192.168.17.205, certificado de produção importado com chave privada e associação SNI exclusiva no site ARN-Intranet. A validade observada termina em 7 de fevereiro de 2027. Não há ainda prova de renovação automática, isolamento externo ou funcionamento institucional da aplicação.
+Estado em 10 de novembro de 2026. O responsável confirmou a página estática por HTTPS. As imagens confirmam DNS interno para 192.168.17.205, certificado de produção importado com chave privada e associação SNI exclusiva no site ARN-Intranet. A validade observada termina em 7 de fevereiro de 2027. O responsável confirmou em 10 de novembro os ensaios CheckOnly=True e CheckOnly=False com OK/código 0 e a execução da tarefa pelo Agendador com resultado 0x0. A emissão efectiva na janela futura de renovação, execução sem sessão interactiva, alertas, isolamento externo e funcionamento institucional continuam por comprovar.
 
 ## Script e limites
 
