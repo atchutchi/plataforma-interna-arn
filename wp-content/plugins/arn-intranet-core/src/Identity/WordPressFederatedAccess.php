@@ -14,6 +14,7 @@ use Throwable;
 use WP_Error;
 use WP_Session_Tokens;
 use WP_User;
+use Arn\Intranet\Identity\Institutional\PrincipalSource;
 
 /** Revalida o vínculo e impede password, reset ou API da conta federada. */
 final class WordPressFederatedAccess {
@@ -35,10 +36,11 @@ final class WordPressFederatedAccess {
 	/**
 	 * Recebe as consultas do vínculo e da configuração activa.
 	 *
-	 * @param callable $lookup  Consulta actual por conta local.
-	 * @param callable $enabled Estado efectivo do cliente nesta instalação.
+	 * @param callable             $lookup  Consulta actual por conta local.
+	 * @param callable             $enabled Estado efectivo do cliente nesta instalação.
+	 * @param PrincipalSource|null $institutional Fonte institucional explicitamente composta.
 	 */
-	public function __construct( callable $lookup, callable $enabled ) {
+	public function __construct( callable $lookup, callable $enabled, private readonly ?PrincipalSource $institutional = null ) {
 		$this->lookup  = Closure::fromCallable( $lookup );
 		$this->enabled = Closure::fromCallable( $enabled );
 	}
@@ -82,9 +84,26 @@ final class WordPressFederatedAccess {
 		if ( ! $user_id ) {
 			return $user_id;
 		}
-		$manager    = WP_Session_Tokens::get_instance( (int) $user_id );
-		$token      = wp_get_session_token();
-		$session    = '' === $token ? array() : $manager->get( $token );
+		$manager = WP_Session_Tokens::get_instance( (int) $user_id );
+		$token   = wp_get_session_token();
+		$session = '' === $token ? array() : $manager->get( $token );
+		if ( is_array( $session ) && array_key_exists( 'arn_institutional', $session ) ) {
+			try {
+				if ( null !== $this->institutional?->read( (int) $user_id, $token ) ) {
+					$session['arn_oidc_last_seen'] = time();
+					$manager->update( $token, $session );
+					$confirmed = $this->institutional->read( (int) $user_id, $token );
+					if ( null !== $confirmed && $confirmed[2] === $session ) {
+						return $user_id;
+					}
+				}
+			} catch ( Throwable ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- A falha segue para destruicao do token e recusa.
+				// Sem fonte válida, a sessão institucional não usa o circuito local.
+			}
+			$manager->destroy( $token );
+			wp_clear_auth_cookie();
+			return false;
+		}
 		$revoke_all = true;
 		try {
 			$link = ( $this->lookup )( (int) $user_id );

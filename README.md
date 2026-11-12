@@ -6,11 +6,15 @@ Este README apresenta o estado actual e o trabalho necessário para concluir o s
 
 ## Entrada em serviço
 
-Seguir o [plano de entrada em serviço](docs/entrega/plano-entrada-servico.md), que organiza entregas, responsáveis e critérios de aceitação. O destino Windows .205 fora do domínio e o nome curto plataforma-interna estão confirmados. Atchutchi gere o DNS de arn.gw. `https://plataforma-interna.arn.gw` continua a ser uma proposta por confirmar, não um site configurado.
+Seguir o [plano de entrada em serviço](docs/entrega/plano-entrada-servico.md). O DNS interno 192.168.17.151 serve arn.local. O servidor da plataforma é 192.168.17.205, fora do domínio, com Windows Server 2019 e IIS em execução. O nome plataforma-arn.duckdns.org está reservado. Em 10 de novembro, o responsável confirmou a página de teste HTTPS. DNS interno, certificado de produção e associação SNI foram configurados. A [tarefa de renovação](docs/entrega/renovacao-https.md) foi criada pelo responsável, que confirmou execução pelo Agendador com 0x0. A renovação efectiva quando devida e os alertas continuam por verificar. Criação do cliente OAuth, login institucional e isolamento externo continuam por demonstrar. A proposta arn.gw foi abandonada por falta de acesso à sua gestão.
+
+Preparação do servidor confirmada pelo responsável em 12 de novembro: WordPress instalado de raiz, idioma pt-PT, fuso Africa/Bissau e acesso administrativo funcional. PHP dedicado no IIS e MySQL exclusivo em 127.0.0.1:3308, com protocolo X desactivado. O Wamp foi preservado. A manutenção permite apenas o PC de preparação. Estes resultados são relatos e capturas do responsável, não uma homologação executada pelo agente. O tema e os módulos ARN ainda não foram instalados para uso institucional.
 
 A prioridade para preparar o servidor é concluir a [adaptação institucional](docs/entrega/adaptacao-institucional.md), começando pela identidade, sessões e fonte de actores, seguida de migrações sem fixtures. O [preparador de candidatos](docs/entrega/instalacao-recuperacao.md#candidato-de-preparação) separa fontes e dependências dos dados locais e mantém o deploy bloqueado. Depois seguem operação de media, Calendar, configuração de homologação, restauro e piloto. As lacunas abaixo continuam abertas até terem provas próprias.
 
 Correcção da dependência HTTP concluída localmente em 9 de novembro: o Composer resolveu symfony/http-client para v7.4.23 dentro do contentor, preservando as outras versões. Auditoria sem avisos, regressão de credenciais e integração de identidade/sessão verificadas. A CI passa a exigir auditoria e descoberta completa dos ficheiros de testes. Ver [evidência e limites](docs/entrega/qa-dependencia-http-2026-11-09.md). O candidato antigo com v8.0.16 não deve ser instalado.
+
+Identidade institucional: persistência versionada dos vínculos, auditoria de gerações, emissão e revalidação de sessões nativas e ponte comum de autorização implementadas no laboratório. Ver [aceitação e limites](docs/entrega/qa-vinculos-sessoes-institucionais.md). A [ligação do callback Google](docs/entrega/callback-google-institucional.md) à fonte e à guarda nativa também está implementada com opt-in privado e testes fictícios. Faltam a migração operacional, a transição dos pré-cadastros e a adaptação das factories de cada módulo. Não activar em produção.
 
 ## Concluído no laboratório
 
@@ -82,6 +86,8 @@ F1-04/06/14/15 acompanham os módulos novos. Não são tarefas para reconstruir 
 Não aceder ao controlador de domínio, DNS ou produção durante o desenvolvimento. O servidor .205 está fora do domínio por decisão do responsável. As provas PHP/MariaDB locais não homologam IIS/MySQL 8.4. Nenhuma integração desta branch executa deploy.
 
 ## Como continuar
+
+Próxima entrega técnica: preparar a migração operacional da identidade, a origem institucional dos actores e a primeira composição de módulo com vista sem competências. A geração persistente, fonte, emissão, revalidação e callback estão implementados nas parcelas de identidade em revisão. Ver [estado do callback](docs/entrega/callback-google-institucional.md) e [contrato de aceitação](docs/entrega/contrato-identidade-institucional.md). A activação, as contas reais e a homologação no servidor continuam pendentes.
 
 1. Ler AGENTS.md, o módulo relevante e este backlog. Conferir origin/main, branches e PRs. Não reutilizar PRs históricas substituídas nem reactivar tarefas antigas.
 2. Criar branch a partir da versão integrada, preservar checkouts usados por serviços em execução e implementar uma entrega coerente com dados fictícios.

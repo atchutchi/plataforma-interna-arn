@@ -31,6 +31,7 @@ final readonly class LocalIdentityLink {
 	 * @param string $subject    Claim sub opaca, sem alteração ou truncagem.
 	 * @param bool   $authorized Acesso local explicitamente autorizado.
 	 * @param bool   $active     Conta local activa.
+	 * @param int    $generation Geração persistida, zero apenas sem prova.
 	 *
 	 * @throws InvalidArgumentException Em identificadores inválidos.
 	 */
@@ -40,9 +41,10 @@ final readonly class LocalIdentityLink {
 		public string $subject,
 		public bool $authorized,
 		public bool $active,
+		public int $generation = 0,
 	) {
 		$canonical = self::canonicalIssuer( $issuer );
-		if ( $user_id < 1 || null === $canonical || ! self::validSubject( $subject ) ) {
+		if ( $generation < 0 || $user_id < 1 || null === $canonical || ! self::validSubject( $subject ) ) {
 			throw new InvalidArgumentException( 'Vínculo de identidade inválido.' );
 		}
 		$this->issuer = $canonical;

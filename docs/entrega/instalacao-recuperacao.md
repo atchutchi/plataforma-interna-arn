@@ -2,7 +2,7 @@
 
 Preparação F1-17, 28 de outubro de 2026. Este é um guião para preparar e aceitar a entrega. Não é um instalador institucional. A aplicação continua com opções e instaladores limitados ao laboratório. Faltam as decisões e provas da secção de deploy do README.
 
-Actualização de 9 de novembro: seguir o [plano de entrada em serviço](plano-entrada-servico.md) e o [levantamento da adaptação institucional](adaptacao-institucional.md). O destino .205 e o nome curto plataforma-interna foram confirmados. O FQDN proposto, certificado e configuração efectiva continuam por confirmar.
+Actualização de 9 de novembro: seguir o [plano de entrada em serviço](plano-entrada-servico.md) e o [levantamento da adaptação institucional](adaptacao-institucional.md). O destino é 192.168.17.205, com Windows Server 2019 e IIS em execução. O DNS interno 192.168.17.151 serve arn.local. O nome reservado é plataforma-arn.duckdns.org. A resolução interna, certificado e login institucional ainda exigem prova. Não instalar DNS no servidor da aplicação nem alterar o domínio arn.local.
 
 ## Candidato de preparação
 

@@ -14,6 +14,8 @@ use RuntimeException;
 use Throwable;
 use WP_Session_Tokens;
 use Arn\Intranet\Identity\PreRegistration\CurrentPreRegistration;
+use Arn\Intranet\Identity\Institutional\{PrincipalSource, CallbackLogin};
+use Arn\Intranet\Authorization\Storage\WpdbAuthorizationRepository;
 
 /** Mantém o protocolo no cliente mantido e as decisões locais no serviço auditado. */
 final class GoogleLoginController {
@@ -58,18 +60,35 @@ final class GoogleLoginController {
 	 * @throws RuntimeException Quando a configuração ou o callback é inválido.
 	 */
 	public static function configuration(): ?OidcConfiguration {
-		if ( 'local' !== wp_get_environment_type() ) {
+		if ( ! self::institutionalMode() && 'local' !== wp_get_environment_type() ) {
 			return null;
 		}
 		$file = defined( 'ARN_OIDC_CONFIG_FILE' ) ? ARN_OIDC_CONFIG_FILE : getenv( 'ARN_OIDC_CONFIG_FILE' );
 		if ( ! is_string( $file ) || '' === $file ) {
 			return null;
 		}
-		$config = ProtectedOidcConfiguration::load( $file, ABSPATH, dirname( __DIR__, 5 ), wp_get_environment_type() );
+		$config = ProtectedOidcConfiguration::load( $file, ABSPATH, dirname( __DIR__, 5 ), self::institutionalMode() ? 'production' : wp_get_environment_type() );
 		if ( null !== $config && site_url( '/wp-login.php?action=arn_google_callback' ) !== $config->redirect_uri ) {
 			throw new RuntimeException( 'O callback não corresponde a esta instalação.' );
 		}
 		return $config;
+	}
+	/** Opt-in privado do operador, nunca parâmetro HTTP ou opção WordPress. */
+	public static function institutionalMode(): bool {
+		return defined( 'ARN_INSTITUTIONAL_IDENTITY_ENABLED' ) && true === ARN_INSTITUTIONAL_IDENTITY_ENABLED;
+	}
+	/** Fonte comum às sessões e ao callback. Não instala tabelas ou cria contas. */
+	public static function institutionalSource(): ?PrincipalSource {
+		if ( ! self::institutionalMode() ) {
+			return null; }
+		try {
+			global $wpdb;
+			$database = new IdentityWpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+			$database->set_prefix( $wpdb->prefix );
+			return new PrincipalSource( new WpdbIdentityLinkRepository( $database ), new WpdbAuthorizationRepository( $database ), static fn(): bool => self::institutionalMode() && class_exists( \GuzzleHttp\Client::class ) && null !== self::configuration(), static fn(): int => time() );
+		} catch ( Throwable ) {
+			return null;
+		}
 	}
 	/** Serviço com ligação dedicada, sem cache ou permissões por email. */
 	public static function links(): IdentityLinkService {
@@ -153,7 +172,7 @@ final class GoogleLoginController {
 	private function start( string $purpose, int $target, int $actor ): never {
 		try {
 			$config = self::configuration();
-			if ( null === $config ) {
+			if ( null === $config || ( self::institutionalMode() && ( ! is_ssl() || 'login' !== $purpose ) ) ) {
 				throw new RuntimeException();
 			}
 			$context = array(
@@ -198,7 +217,15 @@ final class GoogleLoginController {
 			}
 			$context = $this->attempts()->consume();
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- state/nonce consumíveis verificados pelo cliente mantido, antes de qualquer concessão.
-			$params  = wp_unslash( $_GET );
+			$params = wp_unslash( $_GET );
+			if ( self::institutionalMode() ) {
+				$source = self::institutionalSource();
+				if ( null === $source ) {
+					throw new RuntimeException(); }
+				( new CallbackLogin( $this->client, self::repository(), $source ) )->complete( $config, $params, $context );
+				wp_safe_redirect( home_url( '/' ), 302 );
+				exit;
+			}
 			$claims  = $this->client->complete( $config, $params, $context );
 			$service = self::links();
 			if ( 'link' === $context['purpose'] ) {
@@ -252,10 +279,12 @@ final class GoogleLoginController {
 	/** Armazenamento privado derivado do ficheiro já validado, fora do webroot/Git. */
 	private function attempts(): PhpOidcAttemptStore {
 		$file = defined( 'ARN_OIDC_CONFIG_FILE' ) ? ARN_OIDC_CONFIG_FILE : getenv( 'ARN_OIDC_CONFIG_FILE' );
-		return new PhpOidcAttemptStore( dirname( (string) realpath( $file ) ) . DIRECTORY_SEPARATOR . 'sessions', is_ssl() );
+		return new PhpOidcAttemptStore( dirname( (string) realpath( $file ) ) . DIRECTORY_SEPARATOR . ( self::institutionalMode() ? 'sessions-institutional' : 'sessions' ), is_ssl() );
 	}
 	/** Página administrativa, acessível apenas com competência local. */
 	public function adminMenu(): void {
+		if ( self::institutionalMode() ) {
+			return; }
 		add_management_page( __( 'Acesso Google local', 'arn-intranet-core' ), __( 'Acesso Google local', 'arn-intranet-core' ), 'manage_options', 'arn-google-access', array( $this, 'adminPage' ) );
 	}
 	/**
@@ -264,7 +293,7 @@ final class GoogleLoginController {
 	 * @throws RuntimeException Interceptada internamente para apresentar a configuração indisponível.
 	 */
 	public function adminPage(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( self::institutionalMode() || ! current_user_can( 'manage_options' ) ) {
 			$this->fail();
 		}
 		echo '<div class="wrap"><h1>' . esc_html__( 'Acesso Google local', 'arn-intranet-core' ) . '</h1>';
@@ -318,7 +347,7 @@ final class GoogleLoginController {
 	 * @param string $action Finalidade do nonce administrativo.
 	 */
 	private function requireAdministrator( string $action ): void {
-		if ( 'local' !== wp_get_environment_type() || 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || ! current_user_can( 'manage_options' ) ) {
+		if ( self::institutionalMode() || 'local' !== wp_get_environment_type() || 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || ! current_user_can( 'manage_options' ) ) {
 			$this->fail();
 		}
 		check_admin_referer( $action );

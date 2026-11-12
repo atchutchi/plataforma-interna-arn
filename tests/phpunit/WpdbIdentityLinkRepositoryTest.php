@@ -506,6 +506,7 @@ final class WpdbIdentityLinkRepositoryTest extends TestCase {
 	 */
 	private function row( string $authorized = '1', string $active = '1' ): object {
 		return (object) array(
+			'generation' => '1',
 			'user_id'    => '12',
 			'issuer'     => 'https://accounts.google.com',
 			'subject'    => 'opaque-sub',
