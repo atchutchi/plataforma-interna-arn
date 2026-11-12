@@ -12,7 +12,7 @@ LocalIdentityLink contém user_id, issuer, subject, authorized e active. Não co
 
 Institutional/Principal representa uma decisão corrente e imutável: identificador WordPress positivo, identidade canónica, geração persistente do vínculo e revisão da autorização. A fonte não recebe email, função, unidade ou identificador de actor a partir de parâmetros do browser. Resolve o utilizador efectivamente autenticado e os metadados do seu token nativo.
 
-Institutional/PrincipalSource expõe current(): ?Principal. Ausência de configuração, schema incompatível, conta inexistente, vínculo revogado, fonte indisponível ou sessão inválida devolvem ausência de principal. Erros técnicos podem produzir diagnóstico controlado sem tokens, emails ou claims. Nunca usar um snapshot antigo como alternativa a uma falha SQL.
+Institutional/PrincipalSource expõe current(): ?array, com Principal, snapshot de autorização e metadados de sessão validados. Ausência de configuração, schema incompatível, conta inexistente, vínculo revogado, fonte indisponível ou sessão inválida devolvem ausência de principal. Erros técnicos podem produzir diagnóstico controlado sem tokens, emails ou claims. Nunca usar um snapshot antigo como alternativa a uma falha SQL.
 
 A leitura exige conta Active, vínculo autorizado e activo, correspondência do titular e das gerações e sessão federada válida. Mantêm-se os limites temporais de FederatedSessionPolicy existentes. A validade de uma sessão não concede competências. As concessões e os âmbitos continuam sujeitos ao motor Authorization em cada operação.
 
