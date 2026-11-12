@@ -27,7 +27,7 @@ Ensaiar instalação vazia, reexecução idempotente, upgrade da versão suporta
 
 ## Parcela implementada em 12 de novembro
 
-A [persistência de vínculos e sessões](qa-vinculos-sessoes-institucionais.md) acrescenta gerações auditadas, migração explícita retomável, fonte corrente, emissão nativa e ponte com o núcleo de autorização. A guarda federada admite composição institucional explícita e recusa regressar ao circuito local. Isto não abre os módulos nem conclui o callback institucional.
+A [persistência de vínculos e sessões](qa-vinculos-sessoes-institucionais.md) acrescenta gerações auditadas, migração explícita retomável, fonte corrente, emissão nativa e ponte com o núcleo de autorização. A guarda federada admite composição institucional explícita e recusa regressar ao circuito local. A [parcela seguinte do callback](callback-google-institucional.md) compõe a fonte e a guarda com configuração privada HTTPS. Não abre os módulos nem migra pré-cadastros. A homologação Google real permanece pendente.
 
 ## Próxima entrega de desenvolvimento
 

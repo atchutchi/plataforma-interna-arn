@@ -92,7 +92,8 @@ if ( class_exists( \GuzzleHttp\Client::class ) ) {
 
 ( new WordPressFederatedAccess(
 	static fn( int $id ) => GoogleLoginController::linkedUser( $id ),
-	static fn(): bool => class_exists( \GuzzleHttp\Client::class ) && null !== GoogleLoginController::configuration()
+	static fn(): bool => ! GoogleLoginController::institutionalMode() && class_exists( \GuzzleHttp\Client::class ) && null !== GoogleLoginController::configuration(),
+	GoogleLoginController::institutionalSource()
 ) )->register();
 
 /**

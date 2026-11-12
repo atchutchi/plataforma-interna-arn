@@ -48,10 +48,19 @@ final class SessionIssuer {
 			if ( null === $current || $current[0]->link_generation !== $expected->generation || $current[0]->authorization_revision !== $state[1]->revision || $current[2] !== $metadata ) {
 				throw new RuntimeException(); }
 			$expiration = static fn(): int => FederatedSessionPolicy::LIFETIME;
+			$accepted   = false;
+			$observe    = static function ( bool $send ) use ( &$accepted ): bool {
+				$accepted = $send;
+				return $send;
+			};
+			add_filter( 'send_auth_cookies', $observe, PHP_INT_MAX );
 			add_filter( 'auth_cookie_expiration', $expiration );
 			try {
 				wp_set_auth_cookie( $expected->user_id, false, true, $token );
+				if ( ! $accepted ) {
+					throw new RuntimeException(); }
 			} finally {
+				remove_filter( 'send_auth_cookies', $observe, PHP_INT_MAX );
 				remove_filter( 'auth_cookie_expiration', $expiration ); }
 			return $token;
 		} catch ( Throwable ) {

@@ -5,6 +5,8 @@
  */
 
 // phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Apenas contador de ensaio CLI.
+// phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_putenv -- Configuracao temporaria do ensaio CLI, reposta no finally.
+// phpcs:disable WordPress.WP.AlternativeFunctions -- Ficheiro privado temporario exclusivo deste ensaio, removido no finally.
 use Arn\Intranet\Identity\{IdentityWpdb, LocalIdentityLink, WpdbIdentityLinkRepository, AuthorizedIdentityClaim, WordPressFederatedAccess};
 use Arn\Intranet\Identity\Institutional\{PrincipalSource, SessionIssuer, ModuleAccess};
 use Arn\Intranet\Authorization\{AccountState, Action, Request, Scope, Role, Grant};
@@ -98,7 +100,99 @@ try {
 	$source           = new PrincipalSource( $links, $auth, static fn(): bool => true, static fn(): int => time() );
 	$issuer           = new SessionIssuer( $source );
 	$_SERVER['HTTPS'] = 'on';
-	$token            = $issuer->issue( $links->findForUser( $user ) );
+
+	// Protocolo real com RSA efémera e transporte fictício, sem chamar o Google.
+	require_once __DIR__ . '/../phpunit/doubles/OidcHttpDouble.php';
+	require_once __DIR__ . '/../phpunit/doubles/OidcRsaFixture.php';
+	$rsa            = new \Arn\Intranet\Tests\OidcRsaFixture();
+	$claims         = array(
+		'iss'            => 'https://accounts.google.com',
+		'sub'            => 'fictional-sub',
+		'aud'            => 'synthetic-client',
+		'exp'            => time() + 600,
+		'iat'            => time() - 1,
+		'nonce'          => str_repeat( 'b', 64 ),
+		'email'          => 'changed@example.test',
+		'email_verified' => true,
+		'hd'             => 'example.test',
+	);
+	$values         = array(
+		'ARN_OIDC_ENABLED'          => '1',
+		'ARN_OIDC_CLIENT_ID'        => 'synthetic-client',
+		'ARN_OIDC_CLIENT_SECRET'    => 'synthetic-secret',
+		'ARN_OIDC_REDIRECT_URI'     => 'https://intranet.example.test/wp-login.php?action=arn_google_callback',
+		'ARN_OIDC_WORKSPACE_DOMAIN' => 'example.test',
+	);
+	$config         = \Arn\Intranet\Identity\OidcConfiguration::fromEnvironment( static fn( $name )=>$values[ $name ] ?? false );
+	$attempt        = array(
+		'state'          => str_repeat( 'a', 64 ),
+		'nonce'          => str_repeat( 'b', 64 ),
+		'code_verifier'  => str_repeat( 'c', 64 ),
+		'issued_at'      => time(),
+		'purpose'        => 'login',
+		'target_user_id' => 0,
+		'actor_id'       => 0,
+	);
+	$params         = array(
+		'state' => $attempt['state'],
+		'code'  => 'synthetic-code',
+	);
+	$http           = new \Arn\Intranet\Tests\OidcHttpDouble(
+		static function ( $request ) use ( &$claims, $rsa ) {
+			$uri = (string) $request->getUri();
+			if ( 'https://oauth2.googleapis.com/token' === $uri ) {
+				$data = array(
+					'access_token' => 'synthetic-access',
+					'token_type'   => 'Bearer',
+					'expires_in'   => 3600,
+					'id_token'     => $rsa->token( $claims ),
+				); } elseif ( 'https://www.googleapis.com/oauth2/v3/certs' === $uri ) {
+				$data = $rsa->jwks(); } else {
+					throw new RuntimeException( 'Endpoint inesperado.' ); }
+				return new \GuzzleHttp\Psr7\Response( 200, array( 'Content-Type' => 'application/json' ), wp_json_encode( $data ) );
+		}
+	);
+	$callback       = new \Arn\Intranet\Identity\Institutional\CallbackLogin( new \Arn\Intranet\Identity\MaintainedGoogleClient( $http ), $links, $source );
+	$before_audit   = $db->get_var( "SELECT COUNT(*) FROM {$prefix}arn_identity_audit" );
+	$callback_token = $callback->complete( $config, $params, $attempt );
+	$assert( null !== $source->read( $user, $callback_token ) );
+	$assert( 2 === count( $http->requests ) );
+	$assert( $before_audit === $db->get_var( "SELECT COUNT(*) FROM {$prefix}arn_identity_audit" ) );
+	$assert( array() === $auth->find( $user )->stored_grants );
+	$before_tokens = count( WP_Session_Tokens::get_instance( $user )->get_all() );
+	$refused( static fn()=>$callback->complete( $config, array_merge( $params, array( 'state' => 'wrong' ) ), $attempt ) );
+	$refused( static fn()=>$callback->complete( $config, $params, array_merge( $attempt, array( 'purpose' => 'link' ) ) ) );
+	$refused( static fn()=>$callback->complete( $config, $params, array_merge( $attempt, array( 'target_user_id' => $user ) ) ) );
+	foreach ( array(
+		'nonce'          => 'wrong',
+		'aud'            => 'wrong',
+		'iss'            => 'https://evil.example.test',
+		'exp'            => time() - 600,
+		'hd'             => 'other.example.test',
+		'email_verified' => false,
+		'sub'            => 'unknown-same-email',
+	) as $field => $bad ) {
+		$old              = $claims[ $field ];
+		$claims[ $field ] = $bad;
+		$refused( static fn()=>$callback->complete( $config, $params, $attempt ) );
+		$claims[ $field ] = $old;
+	}
+	$_SERVER['HTTPS'] = 'off';
+	$refused( static fn()=>$callback->complete( $config, $params, $attempt ) );
+	$_SERVER['HTTPS'] = 'on';
+	$assert( count( WP_Session_Tokens::get_instance( $user )->get_all() ) === $before_tokens );
+	$assert( $before_audit === $db->get_var( "SELECT COUNT(*) FROM {$prefix}arn_identity_audit" ) );
+	$veto = static fn(): bool => false;
+	add_filter( 'send_auth_cookies', $veto );
+	try {
+		$refused( static fn() => $callback->complete( $config, $params, $attempt ) );
+		$assert( count( WP_Session_Tokens::get_instance( $user )->get_all() ) === $before_tokens );
+		$assert( null !== $source->read( $user, $callback_token ) );
+	} finally {
+		remove_filter( 'send_auth_cookies', $veto ); }
+	WP_Session_Tokens::get_instance( $user )->destroy( $callback_token );
+
+	$token = $issuer->issue( $links->findForUser( $user ) );
 	$assert( null !== $source->read( $user, $token ) );
 	wp_set_current_user( $user );
 	$_COOKIE[ LOGGED_IN_COOKIE ] = wp_generate_auth_cookie( $user, time() + 3600, 'logged_in', $token );
@@ -156,6 +250,57 @@ try {
 	$filter = null;
 	$assert( $generation === $links->findForUser( $user )->generation && $links->findForUser( $user )->active );
 	$assert( (string) $generation === (string) $db->get_var( "SELECT new_generation FROM {$prefix}arn_identity_audit ORDER BY id DESC LIMIT 1" ) );
+
+	// Configuração institucional explícita e rotas locais de associação fechadas.
+	$assert( ! \Arn\Intranet\Identity\GoogleLoginController::institutionalMode() );
+	define( 'ARN_INSTITUTIONAL_IDENTITY_ENABLED', true );
+	$private_config  = tempnam( sys_get_temp_dir(), 'arn-oidc-config-' );
+	$previous_config = getenv( 'ARN_OIDC_CONFIG_FILE' );
+	$site_filter     = static fn()=> 'https://intranet.example.test';
+	$die_filter      = static function () {
+		return static function () {
+			throw new RuntimeException( 'Recusa HTTP esperada.' );
+		};
+	};
+	$previous_method = $_SERVER['REQUEST_METHOD'] ?? null;
+	try {
+		chmod( $private_config, 0600 );
+		file_put_contents( $private_config, wp_json_encode( $values ) );
+		putenv( 'ARN_OIDC_CONFIG_FILE=' . $private_config );
+		add_filter( 'option_siteurl', $site_filter );
+		$assert( null !== \Arn\Intranet\Identity\GoogleLoginController::configuration() );
+		$assert( null !== \Arn\Intranet\Identity\GoogleLoginController::institutionalSource() );
+		$bad_values                              = $values;
+		$bad_values['ARN_OIDC_REDIRECT_URI']     = 'http://localhost/wp-login.php?action=arn_google_callback';
+		$bad_values['ARN_OIDC_ALLOW_LOCAL_HTTP'] = '1';
+		file_put_contents( $private_config, wp_json_encode( $bad_values ) );
+		$refused( static fn()=>\Arn\Intranet\Identity\GoogleLoginController::configuration() );
+		$bad_values                          = $values;
+		$bad_values['ARN_OIDC_REDIRECT_URI'] = 'https://other.example.test/wp-login.php?action=arn_google_callback';
+		file_put_contents( $private_config, wp_json_encode( $bad_values ) );
+		$refused( static fn()=>\Arn\Intranet\Identity\GoogleLoginController::configuration() );
+		file_put_contents( $private_config, wp_json_encode( $values ) );
+		add_filter( 'wp_die_handler', $die_filter, PHP_INT_MAX );
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$controller                = new \Arn\Intranet\Identity\GoogleLoginController();
+		$refused( static fn()=>$controller->startLink() );
+		$refused( static fn()=>$controller->revokeLink() );
+		$refused( static fn()=>$controller->callback() );
+		$disabled                     = $values;
+		$disabled['ARN_OIDC_ENABLED'] = '0';
+		file_put_contents( $private_config, wp_json_encode( $disabled ) );
+		$assert( null === \Arn\Intranet\Identity\GoogleLoginController::configuration() );
+	} finally {
+		remove_filter( 'wp_die_handler', $die_filter, PHP_INT_MAX );
+		remove_filter( 'option_siteurl', $site_filter );
+		putenv( false === $previous_config ? 'ARN_OIDC_CONFIG_FILE' : 'ARN_OIDC_CONFIG_FILE=' . $previous_config );
+		if ( null === $previous_method ) {
+			unset( $_SERVER['REQUEST_METHOD'] );
+		} else {
+			$_SERVER['REQUEST_METHOD'] = $previous_method; }
+		unlink( $private_config );
+	}
+
 	// Remover uma linha à mão não permite repor a sua geração enquanto existir histórico.
 	$db->query( $db->prepare( "DELETE FROM {$prefix}arn_identity_links WHERE user_id=%d", $user ) );
 	$refused( static fn() => $links->create( new LocalIdentityLink( $user, 'accounts.google.com', 'fictional-sub', false, false ), $actor ) );
