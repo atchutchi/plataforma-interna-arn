@@ -71,6 +71,7 @@ unset( $arn_vendor );
 ( new \Arn\Intranet\Identity\PreRegistration\WordPressPreRegistrationAccess() )->register();
 \Arn\Intranet\Identity\PreRegistration\PreRegistrationPortal::register();
 if ( defined( 'WP_CLI' ) && true === WP_CLI ) {
+	\WP_CLI::add_command( 'arn institutional preflight', array( new \Arn\Intranet\Identity\Institutional\MigrationCommand(), 'preflight' ) );
 	$arn_workspace_command = new \Arn\Intranet\Identity\PreRegistration\WorkspacePreRegistrationCommand();
 	foreach ( array(
 		'install-schema' => 'installSchema',

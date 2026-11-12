@@ -14,7 +14,7 @@ A prioridade para preparar o servidor é concluir a [adaptação institucional](
 
 Correcção da dependência HTTP concluída localmente em 9 de novembro: o Composer resolveu symfony/http-client para v7.4.23 dentro do contentor, preservando as outras versões. Auditoria sem avisos, regressão de credenciais e integração de identidade/sessão verificadas. A CI passa a exigir auditoria e descoberta completa dos ficheiros de testes. Ver [evidência e limites](docs/entrega/qa-dependencia-http-2026-11-09.md). O candidato antigo com v8.0.16 não deve ser instalado.
 
-Identidade institucional: persistência versionada dos vínculos, auditoria de gerações, emissão e revalidação de sessões nativas e ponte comum de autorização implementadas no laboratório. Ver [aceitação e limites](docs/entrega/qa-vinculos-sessoes-institucionais.md). A [ligação do callback Google](docs/entrega/callback-google-institucional.md) à fonte e à guarda nativa também está implementada com opt-in privado e testes fictícios. Faltam a migração operacional, a transição dos pré-cadastros e a adaptação das factories de cada módulo. Não activar em produção.
+Identidade institucional: persistência versionada dos vínculos, auditoria de gerações, emissão e revalidação de sessões nativas e ponte comum de autorização implementadas no laboratório. Ver [aceitação e limites](docs/entrega/qa-vinculos-sessoes-institucionais.md). A [ligação do callback Google](docs/entrega/callback-google-institucional.md) à fonte e à guarda nativa também está implementada com opt-in privado e testes fictícios. O diagnóstico CLI sem escrita das migrações está implementado. Ver [preflight institucional](docs/entrega/migracoes-institucionais.md). Faltam a aplicação operacional das migrações, a transição dos pré-cadastros e a adaptação das factories de cada módulo. Não activar em produção.
 
 ## Concluído no laboratório
 
@@ -87,7 +87,7 @@ Não aceder ao controlador de domínio, DNS ou produção durante o desenvolvime
 
 ## Como continuar
 
-Próxima entrega técnica: preparar a migração operacional da identidade, a origem institucional dos actores e a primeira composição de módulo com vista sem competências. A geração persistente, fonte, emissão, revalidação e callback estão implementados nas parcelas de identidade em revisão. Ver [estado do callback](docs/entrega/callback-google-institucional.md) e [contrato de aceitação](docs/entrega/contrato-identidade-institucional.md). A activação, as contas reais e a homologação no servidor continuam pendentes.
+Próxima entrega técnica: preparar a migração operacional da identidade, a origem institucional dos actores e a primeira composição de módulo com vista sem competências. A geração persistente, fonte, emissão, revalidação e callback foram integrados pelas PR #81, #82 e #83 após revisão integral e CI verde. Ver [estado do callback](docs/entrega/callback-google-institucional.md) e [contrato de aceitação](docs/entrega/contrato-identidade-institucional.md). A activação, as contas reais e a homologação no servidor continuam pendentes.
 
 1. Ler AGENTS.md, o módulo relevante e este backlog. Conferir origin/main, branches e PRs. Não reutilizar PRs históricas substituídas nem reactivar tarefas antigas.
 2. Criar branch a partir da versão integrada, preservar checkouts usados por serviços em execução e implementar uma entrega coerente com dados fictícios.

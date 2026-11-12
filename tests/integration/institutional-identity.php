@@ -39,7 +39,11 @@ $filter     = null;
 $old_https  = $_SERVER['HTTPS'] ?? null;
 $old_cookie = $_COOKIE[ LOGGED_IN_COOKIE ] ?? null;
 try {
+	$preflight = new \Arn\Intranet\Identity\Institutional\MigrationPreflight( $db );
+	$assert( 'absent' === $preflight->inspect()['identity'] );
+	$assert( 'absent' === $preflight->inspect()['authorization'] );
 	$links->installSchema();
+	$assert( 'current' === $preflight->inspect()['identity'] );
 	$links->installSchema();
 	$assert( '0' === (string) $db->get_var( "SELECT COUNT(*) FROM {$prefix}arn_identity_links" ) );
 	$links->create( new LocalIdentityLink( 987654321, 'accounts.google.com', 'synthetic-legacy', false, false ), $actor );
@@ -48,15 +52,18 @@ try {
 	// Reproduz v1 e uma interrupção após a primeira coluna do upgrade.
 	$db->query( "ALTER TABLE {$prefix}arn_identity_links DROP COLUMN generation" );
 	$db->query( "ALTER TABLE {$prefix}arn_identity_audit DROP COLUMN previous_generation, DROP COLUMN new_generation" );
+	$assert( 'legacy' === $preflight->inspect()['identity'] );
 	$refused( static fn() => $links->findForUser( 1 ) );
 	$filter = static fn( string $sql ): string => str_contains( $sql, 'ADD `previous_generation`' ) ? 'INVALID MIGRATION FIXTURE' : $sql;
 	add_filter( 'query', $filter );
 	$refused( static fn() => $links->migrateGenerations() );
 	remove_filter( 'query', $filter );
 	$filter = null;
+	$assert( 'partial-generations' === $preflight->inspect()['identity'] );
 	$refused( static fn() => $links->findForUser( 1 ) );
 	$links->migrateGenerations();
 	$links->migrateGenerations();
+	$assert( 'current' === $preflight->inspect()['identity'] );
 	$assert( null === $links->findForUser( 1 ) );
 	$legacy = $links->findForUser( 987654321 );
 	$assert( null !== $legacy && $legacy->active && $legacy->authorized && 'synthetic-legacy' === $legacy->subject && 1 === $legacy->generation );
@@ -79,6 +86,32 @@ try {
 		) === $claim_history
 	);
 	$auth->installSchema();
+	$assert( 'current' === $preflight->inspect()['authorization'] );
+	$before_preflight = $db->get_results( "SELECT * FROM {$prefix}arn_identity_audit ORDER BY id", ARRAY_A );
+	$assert( $preflight->inspect() === $preflight->inspect() );
+	$assert( $before_preflight === $db->get_results( "SELECT * FROM {$prefix}arn_identity_audit ORDER BY id", ARRAY_A ) );
+	$db->query( "ALTER TABLE {$prefix}arn_identity_links ADD unexpected int NULL" );
+	$refused( static fn() => $preflight->inspect() );
+	$db->query( "ALTER TABLE {$prefix}arn_identity_links DROP COLUMN unexpected" );
+	$db->query( "UPDATE {$prefix}arn_authz_schema SET version=999 WHERE id=1" );
+	$refused( static fn() => $preflight->inspect() );
+	$db->query( "UPDATE {$prefix}arn_authz_schema SET version=1 WHERE id=1" );
+	$read_queries = array();
+	$filter       = static function ( string $sql ) use ( &$read_queries ): string {
+		$read_queries[] = $sql;
+		return $sql;
+	};
+	add_filter( 'query', $filter );
+	$preflight->inspect();
+	remove_filter( 'query', $filter );
+	$filter = null;
+	$assert( count( $read_queries ) > 0 && array() === array_filter( $read_queries, static fn( string $sql ): bool => 1 !== preg_match( '/^\s*(SELECT|SHOW)\b/i', $sql ) ) );
+	$db->query( "RENAME TABLE {$prefix}arn_authz_schema TO {$prefix}schema_saved" );
+	try {
+		$refused( static fn() => $preflight->inspect() );
+	} finally {
+		$db->query( "RENAME TABLE {$prefix}schema_saved TO {$prefix}arn_authz_schema" );
+	}
 	$user = wp_insert_user(
 		array(
 			'user_login' => $prefix . 'fictional',
