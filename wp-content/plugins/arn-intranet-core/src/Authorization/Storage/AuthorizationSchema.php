@@ -106,6 +106,16 @@ final class AuthorizationSchema {
 	 */
 	public function install(): void {
 		$this->execute( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED' );
+		$missing = $this->missingTables();
+		$this->createMissing( $missing );
+		$this->validate();
+	}
+
+	/** Valida estruturas existentes sem instalar. Suporta retoma explícita.
+	 *
+	 * @return array Sufixos em falta.
+	 */
+	public function missingTables(): array {
 		$missing = array();
 		foreach ( $this->definitions() as $suffix => $fields ) {
 			$exists = $this->rows( $this->database->prepare( 'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s', $this->table( $suffix ) ) );
@@ -118,6 +128,14 @@ final class AuthorizationSchema {
 				}
 			}
 		}
+		return $missing;
+	}
+
+	/** Cria exclusivamente tabelas previamente validadas como ausentes.
+	 *
+	 * @param array $missing Sufixos internos.
+	 */
+	private function createMissing( array $missing ): void {
 		foreach ( $missing as $suffix ) {
 			$parts = array();
 			foreach ( $this->definitions()[ $suffix ] as $name => $definition ) {
@@ -146,7 +164,6 @@ final class AuthorizationSchema {
 			$initial = 'schema' === $suffix ? ' SELECT 1 AS id, 1 AS version' : '';
 			$this->execute( $this->database->prepare( 'CREATE TABLE %i (', $this->table( $suffix ) ) . implode( ', ', $parts ) . ') ENGINE=InnoDB DEFAULT CHARACTER SET ascii COLLATE ascii_bin' . $initial );
 		}
-		$this->validate();
 	}
 
 	/**

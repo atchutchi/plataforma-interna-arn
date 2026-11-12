@@ -59,10 +59,13 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 	/**
 	 * Cria apenas tabelas ausentes, nunca migra silenciosamente schema existente.
 	 * DDL não é transaccional. Não chamar dentro de outra transacção.
+	 *
+	 * @param bool $require_generation Exige geração completa, excepto durante migração explícita.
 	 */
-	public function installSchema(): void {
+	public function installSchema( bool $require_generation = true ): void {
 		$this->silently(
-			function (): void {
+			function () use ( $require_generation ): void {
+				$this->validateInstallation();
 				$this->execute( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED' );
 				$this->execute(
 					$this->database->prepare(
@@ -99,7 +102,7 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 						$this->audit_table,
 					)
 				);
-				$this->assertSchema();
+				$this->assertSchema( $require_generation );
 			}
 		);
 	}
@@ -127,10 +130,11 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 
 	/** Valida também schemas parcialmente migrados sem os aceitar para acesso.
 	 *
-	 * @param bool $required Exige todas as colunas.
+	 * @param bool       $required Exige todas as colunas.
+	 * @param array|null $present Tabelas existentes durante instalação explícita.
 	 * @throws RuntimeException Em schema incompatível.
 	 */
-	private function assertGenerationSchema( bool $required ): void {
+	private function assertGenerationSchema( bool $required, ?array $present = null ): void {
 		foreach ( array(
 			$this->links_table => array( 'generation' => 'NO' ),
 			$this->audit_table => array(
@@ -138,6 +142,8 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 				'new_generation'      => 'YES',
 			),
 		) as $table => $columns ) {
+			if ( null !== $present && ! in_array( $table, $present, true ) ) {
+				continue; }
 			$fields = $this->fields( $table );
 			foreach ( $columns as $name => $nullable ) {
 				if ( ! isset( $fields[ $name ] ) && ! $required ) {
@@ -148,6 +154,36 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 				}
 			}
 		}
+	}
+
+	/** Valida todas as tabelas presentes antes de retomar uma instalação interrompida.
+	 *
+	 * @return void
+	 */
+	public function validateInstallation(): void {
+		$this->silently(
+			function (): void {
+				$tables  = $this->rows( $this->database->prepare( 'SELECT TABLE_NAME, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (%s, %s)', $this->links_table, $this->audit_table ) );
+				$present = array();
+				foreach ( $tables as $table ) {
+					if ( 'InnoDB' !== $table->ENGINE ) {
+						throw new RuntimeException( 'Schema de identidade inválido.' ); }
+					$present[] = $table->TABLE_NAME;
+					if ( $table->TABLE_NAME === $this->links_table ) {
+						$this->assertLinksSchema();
+						$fields = $this->fields( $this->links_table );
+						if ( count( $fields ) !== 5 + ( isset( $fields['generation'] ) ? 1 : 0 ) ) {
+							throw new RuntimeException( 'Colunas desconhecidas.' ); }
+					} else {
+						$this->assertAuditSchema();
+						$fields = $this->fields( $this->audit_table );
+						if ( count( $fields ) !== 9 + ( isset( $fields['previous_generation'] ) ? 1 : 0 ) + ( isset( $fields['new_generation'] ) ? 1 : 0 ) ) {
+							throw new RuntimeException( 'Colunas desconhecidas.' ); }
+					}
+				}
+				$this->assertGenerationSchema( false, $present );
+			}
+		);
 	}
 
 	/** Diagnóstico explícito sem DDL. Não constitui autorização de acesso.
@@ -402,6 +438,16 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 		if ( 'InnoDB' !== ( $engines[ $this->links_table ] ?? null ) || 'InnoDB' !== ( $engines[ $this->audit_table ] ?? null ) ) {
 			throw new RuntimeException( 'Schema transaccional de identidade indisponível.' );
 		}
+		$this->assertLinksSchema();
+		$this->assertAuditSchema();
+		$this->assertGenerationSchema( $require_generation );
+	}
+
+	/** Valida a tabela de vínculos independentemente da auditoria durante retoma.
+	 *
+	 * @throws RuntimeException Quando as constraints são incompatíveis.
+	 */
+	private function assertLinksSchema(): void {
 		$indexes     = $this->uniqueKeys( $this->links_table );
 		$unique_user = false;
 		$unique_pair = false;
@@ -427,8 +473,6 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 		) {
 			throw new RuntimeException( 'Constraints de identidade inválidas.' );
 		}
-		$this->assertAuditSchema();
-		$this->assertGenerationSchema( $require_generation );
 	}
 
 	/**

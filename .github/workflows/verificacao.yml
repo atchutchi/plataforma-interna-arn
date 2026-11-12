@@ -69,6 +69,7 @@ jobs:
       - run: npm run composer:install
       - run: npm run test:identity:integration
       - run: npm run test:institutional-identity:integration
+      - run: npm run test:institutional-migrations:integration
       - run: npm run test:oidc:integration
       - run: npm run test:authorization:integration
       - run: npm run test:identity-connection:integration
