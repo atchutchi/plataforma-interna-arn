@@ -1,6 +1,6 @@
 # Versão, instalação e recuperação
 
-Preparação F1-17, 28 de outubro de 2026. Este é um guião para preparar e aceitar a entrega. Não é um instalador institucional. A aplicação continua com opções e instaladores limitados ao laboratório. Faltam as decisões e provas da secção de deploy do README.
+Preparação F1-17, 28 de outubro de 2026. Este é um guião para preparar e aceitar a entrega. Não é um instalador institucional. As migrações explícitas de identidade/autorização foram integradas pela PR #85. Os instaladores locais dos restantes módulos não são migrações institucionais. Faltam as decisões e provas da secção de deploy do README.
 
 Actualização de 9 de novembro: seguir o [plano de entrada em serviço](plano-entrada-servico.md) e o [levantamento da adaptação institucional](adaptacao-institucional.md). O destino é 192.168.17.205, com Windows Server 2019 e IIS em execução. O DNS interno 192.168.17.151 serve arn.local. O nome reservado é plataforma-arn.duckdns.org. A resolução interna, certificado e login institucional ainda exigem prova. Não instalar DNS no servidor da aplicação nem alterar o domínio arn.local.
 
@@ -71,7 +71,7 @@ Preparar um destino isolado com versões aprovadas e volumes privados fora do do
 
 Obter o commit aprovado numa origem limpa. Instalar as dependências fixadas em composer.lock num ambiente de preparação compatível, sem dependências de desenvolvimento, e validar os requisitos reais da plataforma. Não usar `composer update` para montar uma release. O plugin aceita o caminho privado ARN_OIDC_VENDOR_AUTOLOAD ou procura vendor/autoload.php na raiz WordPress. Confirmar o autoload efectivo sem expor caminhos e credenciais na interface pública.
 
-Inventariar cada schema e a versão instalada antes de qualquer mudança. Rever os instaladores LocalInstaller e os relatórios dos módulos. Os comandos `arn ... install` actuais são circuitos de laboratório, alguns com criação de fixtures. Não executá-los sobre dados reais nem tratá-los como upgrade. Uma instalação institucional precisa de migrações próprias revistas e de ensaio de versão anterior para seguinte. Essa entrega ainda falta.
+Inventariar cada schema e a versão instalada antes de qualquer mudança. Rever os instaladores LocalInstaller e os relatórios dos módulos. Os comandos `arn ... install` actuais são circuitos de laboratório, alguns com criação de fixtures. Não executá-los sobre dados reais nem tratá-los como upgrade. Uma instalação institucional precisa de migrações próprias revistas e de ensaio de versão anterior para seguinte. Para identidade/autorização, usar o contrato de migrações explícitas e o [guião de homologação no .205](homologacao-guarda-restauro-205.md). A homologação destas migrações e a adaptação dos restantes módulos continuam pendentes.
 
 Só activar módulos após instalação íntegra e verificação das suas dependências. Não activar flags fictícias para contornar os controlos de ambiente. Confirmar que contas técnicas não ganham competências de negócio e que o utilizador sem função não vê objectos de outros perfis.
 
