@@ -150,6 +150,30 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 		}
 	}
 
+	/** Diagnóstico explícito sem DDL. Não constitui autorização de acesso.
+	 *
+	 * @return string Estado estrutural, nunca identidades ou dados pessoais.
+	 */
+	public function migrationState(): string {
+		return $this->silently(
+			function (): string {
+				$tables = $this->rows( $this->database->prepare( 'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (%s, %s)', $this->links_table, $this->audit_table ) );
+				if ( array() === $tables ) {
+					return 'absent';
+				}
+				$this->assertSchema( false );
+				$link_fields      = $this->fields( $this->links_table );
+				$audit_fields     = $this->fields( $this->audit_table );
+				$generation       = isset( $link_fields['generation'] ) ? 1 : 0;
+				$audit_generation = ( isset( $audit_fields['previous_generation'] ) ? 1 : 0 ) + ( isset( $audit_fields['new_generation'] ) ? 1 : 0 );
+				if ( count( $link_fields ) !== 5 + $generation || count( $audit_fields ) !== 9 + $audit_generation ) {
+					throw new RuntimeException( 'Schema de identidade desconhecido.' );
+				}
+				return 3 === $generation + $audit_generation ? 'current' : ( 0 === $generation + $audit_generation ? 'legacy' : 'partial-generations' );
+			}
+		);
+	}
+
 	/**
 	 * A criação começa sem acesso e falha em qualquer conflito unique.
 	 *
