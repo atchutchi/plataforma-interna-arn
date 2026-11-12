@@ -72,6 +72,7 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 					subject varbinary(255) NOT NULL,
 					authorized tinyint(1) unsigned NOT NULL DEFAULT 0,
 					active tinyint(1) unsigned NOT NULL DEFAULT 0,
+					generation bigint unsigned NOT NULL DEFAULT 1,
 					PRIMARY KEY (user_id),
 					UNIQUE KEY issuer_subject (issuer, subject)
                 ) ENGINE=InnoDB DEFAULT CHARACTER SET ascii COLLATE ascii_bin',
@@ -90,6 +91,8 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 					new_authorized tinyint(1) unsigned NOT NULL,
 					new_active tinyint(1) unsigned NOT NULL,
 					occurred_at datetime NOT NULL,
+					previous_generation bigint unsigned NULL,
+					new_generation bigint unsigned NULL,
 					PRIMARY KEY (id),
 					KEY user_history (user_id, id)
                 ) ENGINE=InnoDB DEFAULT CHARACTER SET ascii COLLATE ascii_bin',
@@ -99,6 +102,52 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 				$this->assertSchema();
 			}
 		);
+	}
+
+	/** Migração explícita v1 para v2, com retoma após cada DDL.
+	 * Não chamar em pedidos HTTP ou sem manutenção exclusiva.
+	 */
+	public function migrateGenerations(): void {
+		$this->silently(
+			function (): void {
+				$this->execute( 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED' );
+				$this->assertSchema( false );
+				if ( ! isset( $this->fields( $this->links_table )['generation'] ) ) {
+						$this->execute( $this->database->prepare( 'ALTER TABLE %i ADD generation bigint unsigned NOT NULL DEFAULT 1', $this->links_table ) );
+				}
+				foreach ( array( 'previous_generation', 'new_generation' ) as $column ) {
+					if ( ! isset( $this->fields( $this->audit_table )[ $column ] ) ) {
+						$this->execute( $this->database->prepare( 'ALTER TABLE %i ADD %i bigint unsigned NULL', $this->audit_table, $column ) );
+					}
+				}
+				$this->assertSchema();
+			}
+		);
+	}
+
+	/** Valida também schemas parcialmente migrados sem os aceitar para acesso.
+	 *
+	 * @param bool $required Exige todas as colunas.
+	 * @throws RuntimeException Em schema incompatível.
+	 */
+	private function assertGenerationSchema( bool $required ): void {
+		foreach ( array(
+			$this->links_table => array( 'generation' => 'NO' ),
+			$this->audit_table => array(
+				'previous_generation' => 'YES',
+				'new_generation'      => 'YES',
+			),
+		) as $table => $columns ) {
+			$fields = $this->fields( $table );
+			foreach ( $columns as $name => $nullable ) {
+				if ( ! isset( $fields[ $name ] ) && ! $required ) {
+					continue; }
+				$field = $fields[ $name ] ?? null;
+				if ( null === $field || 1 !== preg_match( '/^bigint(?:\([0-9]+\))? unsigned$/D', $field->Type ?? '' ) || ( $field->Null ?? null ) !== $nullable ) {
+					throw new RuntimeException( 'Schema de geração indisponível.' );
+				}
+			}
+		}
 	}
 
 	/**
@@ -119,11 +168,13 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 					function () use ( $link, $actor_id ): void {
 						$this->execute(
 							$this->database->prepare(
-								'INSERT INTO %i (user_id, issuer, subject, authorized, active) VALUES (%d, %s, %s, 0, 0)',
+								'INSERT INTO %i (user_id, issuer, subject, authorized, active, generation) SELECT %d, %s, %s, 0, 0, 1 WHERE NOT EXISTS (SELECT 1 FROM %i WHERE user_id = %d)',
 								$this->links_table,
 								$link->user_id,
 								$link->issuer,
 								$link->subject,
+								$this->audit_table,
+								$link->user_id,
 							),
 							1
 						);
@@ -153,11 +204,11 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 							throw new RuntimeException( 'Decisão inválida.' );
 						}
 						$link = $decision->link;
-						$this->execute( $this->database->prepare( 'INSERT INTO %i (user_id,issuer,subject,authorized,active) VALUES (%d,%s,%s,1,1)', $this->links_table, $link->user_id, $link->issuer, $link->subject ), 1 );
+						$this->execute( $this->database->prepare( 'INSERT INTO %i (user_id,issuer,subject,authorized,active,generation) SELECT %d,%s,%s,1,1,1 WHERE NOT EXISTS (SELECT 1 FROM %i WHERE user_id = %d)', $this->links_table, $link->user_id, $link->issuer, $link->subject, $this->audit_table, $link->user_id ), 1 );
 						$this->audit( $link->user_id, $decision->authorizing_actor_id, 'create', null, false, false );
-						$initial = new LocalIdentityLink( $link->user_id, $link->issuer, $link->subject, false, false );
-						$this->audit( $link->user_id, $decision->authorizing_actor_id, 'activate', $initial, true, true );
-						$confirmed = $link;
+						$initial = new LocalIdentityLink( $link->user_id, $link->issuer, $link->subject, false, false, 1 );
+						$this->audit( $link->user_id, $decision->authorizing_actor_id, 'activate', $initial, true, true, 1 );
+						$confirmed = new LocalIdentityLink( $link->user_id, $link->issuer, $link->subject, true, true, 1 );
 					}
 				);
 				if ( ! $confirmed instanceof LocalIdentityLink ) {
@@ -189,7 +240,7 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 					function () use ( $user_id, $authorized, $active, $actor_id ): void {
 						$rows     = $this->rows(
 							$this->database->prepare(
-								'SELECT user_id, issuer, subject, authorized, active FROM %i WHERE user_id = %d FOR UPDATE',
+								'SELECT user_id, issuer, subject, authorized, active, generation FROM %i WHERE user_id = %d FOR UPDATE',
 								$this->links_table,
 								$user_id,
 							)
@@ -201,9 +252,11 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 						if ( $previous->authorized === $authorized && $previous->active === $active ) {
 								return;
 						}
+						if ( PHP_INT_MAX === $previous->generation ) {
+							throw new RuntimeException( 'Geração esgotada.' ); }
 						$this->execute(
 							$this->database->prepare(
-								'UPDATE %i SET authorized = %d, active = %d WHERE user_id = %d',
+								'UPDATE %i SET authorized = %d, active = %d, generation = generation + 1 WHERE user_id = %d',
 								$this->links_table,
 								(int) $authorized,
 								(int) $active,
@@ -235,7 +288,7 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 				$this->assertSchema();
 				$rows = $this->rows(
 					$this->database->prepare(
-						'SELECT user_id, issuer, subject, authorized, active FROM %i WHERE issuer = %s AND subject = %s LIMIT 2',
+						'SELECT user_id, issuer, subject, authorized, active, generation FROM %i WHERE issuer = %s AND subject = %s LIMIT 2',
 						$this->links_table,
 						$canonical,
 						$subject,
@@ -262,7 +315,7 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 				$this->assertSchema();
 				$rows = $this->rows(
 					$this->database->prepare(
-						'SELECT user_id, issuer, subject, authorized, active FROM %i WHERE user_id = %d LIMIT 2',
+						'SELECT user_id, issuer, subject, authorized, active, generation FROM %i WHERE user_id = %d LIMIT 2',
 						$this->links_table,
 						$user_id,
 					)
@@ -306,9 +359,11 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 	/**
 	 * Verifica motor, índices completos e comparação binária sem criar tabelas.
 	 *
+	 * @param bool $require_generation Exige schema v2 completo.
+	 *
 	 * @throws RuntimeException Quando o schema não garante integridade.
 	 */
-	private function assertSchema(): void {
+	private function assertSchema( bool $require_generation = true ): void {
 		$tables  = $this->rows(
 			$this->database->prepare(
 				'SELECT TABLE_NAME, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (%s, %s)',
@@ -349,6 +404,7 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 			throw new RuntimeException( 'Constraints de identidade inválidas.' );
 		}
 		$this->assertAuditSchema();
+		$this->assertGenerationSchema( $require_generation );
 	}
 
 	/**
@@ -432,20 +488,25 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 	 * @param LocalIdentityLink|null $previous   Estado anterior, ou criação.
 	 * @param bool                   $authorized Estado novo autorizado.
 	 * @param bool                   $active     Estado novo activo.
+	 * @param int|null               $generation Geração inicial explícita no claim.
 	 */
-	private function audit( int $user_id, int $actor_id, string $action, ?LocalIdentityLink $previous, bool $authorized, bool $active ): void {
+	private function audit( int $user_id, int $actor_id, string $action, ?LocalIdentityLink $previous, bool $authorized, bool $active, ?int $generation = null ): void {
 		$old_flags = null === $previous ? 'NULL, NULL' : '%d, %d';
 		$args      = array( $this->audit_table, $user_id, $actor_id, $action );
 		if ( null !== $previous ) {
 			$args[] = (int) $previous->authorized;
 			$args[] = (int) $previous->active;
 		}
-		$args[] = (int) $authorized;
-		$args[] = (int) $active;
-		$args[] = gmdate( 'Y-m-d H:i:s' );
+		$args[]         = (int) $authorized;
+		$args[]         = (int) $active;
+		$args[]         = gmdate( 'Y-m-d H:i:s' );
+		$old_generation = null === $previous ? 'NULL' : '%d';
+		if ( null !== $previous ) {
+			$args[] = $previous->generation; }
+		$args[] = $generation ?? ( null === $previous ? 1 : $previous->generation + 1 );
 		$this->execute(
 			$this->database->prepare(
-				"INSERT INTO %i (user_id, actor_id, action, previous_authorized, previous_active, new_authorized, new_active, occurred_at) VALUES (%d, %d, %s, {$old_flags}, %d, %d, %s)",
+				"INSERT INTO %i (user_id, actor_id, action, previous_authorized, previous_active, new_authorized, new_active, occurred_at, previous_generation, new_generation) VALUES (%d, %d, %s, {$old_flags}, %d, %d, %s, {$old_generation}, %d)",
 				...$args,
 			),
 			1
@@ -524,8 +585,10 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 	 * @param object $row Registo devolvido por wpdb.
 	 */
 	private function hydrate( object $row ): ?LocalIdentityLink {
-		$user_id = $row->user_id ?? null;
+		$user_id    = $row->user_id ?? null;
+		$generation = $row->generation ?? null;
 		if (
+			( ! is_int( $generation ) && ! is_string( $generation ) ) || (int) $generation < 1 || (string) (int) $generation !== (string) $generation ||
 			( ! is_int( $user_id ) && ! is_string( $user_id ) ) ||
 			(int) $user_id < 1 || (string) (int) $user_id !== (string) $user_id ||
 			! is_string( $row->issuer ?? null ) || ! is_string( $row->subject ?? null ) ||
@@ -536,6 +599,6 @@ final class WpdbIdentityLinkRepository implements IdentityLinkRepository {
 		) {
 			return null;
 		}
-		return new LocalIdentityLink( (int) $user_id, $row->issuer, $row->subject, (bool) $row->authorized, (bool) $row->active );
+		return new LocalIdentityLink( (int) $user_id, $row->issuer, $row->subject, (bool) $row->authorized, (bool) $row->active, (int) $generation );
 	}
 }

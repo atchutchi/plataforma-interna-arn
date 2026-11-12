@@ -47,7 +47,7 @@ final class InstitutionalPrincipalTest extends TestCase {
 	 * @param bool         $enabled Activação explícita.
 	 */
 	private function resolve( array $session, int $generation = 7, int $revision = 9, AccountState $state = AccountState::Active, bool $enabled = true ): ?Principal {
-		return SessionPrincipalPolicy::resolve( new Account( 12, $state, true ), new LocalIdentityLink( 12, 'accounts.google.com', 'invented-sub', true, true ), $generation, $revision, $session, 10000, $enabled );
+		return SessionPrincipalPolicy::resolve( new Account( 12, $state, true ), new LocalIdentityLink( 12, 'accounts.google.com', 'invented-sub', true, true, 7 ), $generation, $revision, $session, 10000, $enabled );
 	}
 
 	/** Uma sessão válida não transporta concessões ou dados pessoais. */
@@ -114,9 +114,9 @@ final class InstitutionalPrincipalTest extends TestCase {
 	/** Titular, sessão nativa e vínculo são requisitos independentes. */
 	public function testMissingAndMismatchedSourcesFailClosed(): void {
 		foreach ( array( null, new Account( 13, AccountState::Active, true ), new Account( 12, AccountState::Active, false ) ) as $account ) {
-			self::assertNull( SessionPrincipalPolicy::resolve( $account, new LocalIdentityLink( 12, 'accounts.google.com', 'invented-sub', true, true ), 7, 9, $this->session(), 10000, true ) );
+			self::assertNull( SessionPrincipalPolicy::resolve( $account, new LocalIdentityLink( 12, 'accounts.google.com', 'invented-sub', true, true, 7 ), 7, 9, $this->session(), 10000, true ) );
 		}
-		foreach ( array( null, new LocalIdentityLink( 13, 'accounts.google.com', 'invented-sub', true, true ), new LocalIdentityLink( 12, 'accounts.google.com', 'invented-sub', false, false ) ) as $link ) {
+		foreach ( array( null, new LocalIdentityLink( 13, 'accounts.google.com', 'invented-sub', true, true, 7 ), new LocalIdentityLink( 12, 'accounts.google.com', 'invented-sub', false, false ) ) as $link ) {
 			self::assertNull( SessionPrincipalPolicy::resolve( new Account( 12, AccountState::Active, true ), $link, 7, 9, $this->session(), 10000, true ) );
 		}
 	}

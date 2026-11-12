@@ -236,6 +236,16 @@ class wpdb {
 			if ( str_contains( $query, 'arn_identity_audit' ) ) {
 				return array(
 					(object) array(
+						'Field' => 'previous_generation',
+						'Type'  => 'bigint unsigned',
+						'Null'  => 'YES',
+					),
+					(object) array(
+						'Field' => 'new_generation',
+						'Type'  => 'bigint unsigned',
+						'Null'  => 'YES',
+					),
+					(object) array(
 						'Field' => 'id',
 						'Type'  => 'bigint unsigned',
 						'Null'  => 'NO',
@@ -285,6 +295,11 @@ class wpdb {
 				);
 			}
 			return array(
+				(object) array(
+					'Field' => 'generation',
+					'Type'  => 'bigint unsigned',
+					'Null'  => 'NO',
+				),
 				(object) array(
 					'Field' => 'user_id',
 					'Type'  => $this->link_user_type,

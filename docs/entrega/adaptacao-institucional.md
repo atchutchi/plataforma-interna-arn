@@ -25,6 +25,10 @@ Separar DDL e validação de dados da criação de páginas/configuração. DDL 
 
 Ensaiar instalação vazia, reexecução idempotente, upgrade da versão suportada, interrupção antes/depois de cada etapa, schema incompatível e rollback/restauro. A base, os ficheiros privados, os recibos e o histórico têm de permanecer coerentes. Nenhum ensaio usa dados reais.
 
+## Parcela implementada em 12 de novembro
+
+A [persistência de vínculos e sessões](qa-vinculos-sessoes-institucionais.md) acrescenta gerações auditadas, migração explícita retomável, fonte corrente, emissão nativa e ponte com o núcleo de autorização. A guarda federada admite composição institucional explícita e recusa regressar ao circuito local. Isto não abre os módulos nem conclui o callback institucional.
+
 ## Próxima entrega de desenvolvimento
 
 Começar pela composição de identidade/sessão e fonte institucional de actores. Os módulos de negócio dependem dessa fronteira. Não substituir todos os testes de ambiente por uma opção global de produção. Só abrir cada módulo quando o respectivo schema, fonte, autorização e configuração estiverem prontos e ensaiados. O candidato F1-17 permanece bloqueado enquanto esta adaptação não estiver concluída.

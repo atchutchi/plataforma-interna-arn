@@ -14,6 +14,8 @@ A prioridade para preparar o servidor é concluir a [adaptação institucional](
 
 Correcção da dependência HTTP concluída localmente em 9 de novembro: o Composer resolveu symfony/http-client para v7.4.23 dentro do contentor, preservando as outras versões. Auditoria sem avisos, regressão de credenciais e integração de identidade/sessão verificadas. A CI passa a exigir auditoria e descoberta completa dos ficheiros de testes. Ver [evidência e limites](docs/entrega/qa-dependencia-http-2026-11-09.md). O candidato antigo com v8.0.16 não deve ser instalado.
 
+Identidade institucional: persistência versionada dos vínculos, auditoria de gerações, emissão e revalidação de sessões nativas e ponte comum de autorização implementadas no laboratório. Ver [aceitação e limites](docs/entrega/qa-vinculos-sessoes-institucionais.md). Ainda faltam a composição no callback Google, a migração operacional e a adaptação das factories de cada módulo. Não activar em produção.
+
 ## Concluído no laboratório
 
 “Concluído local” significa que a parcela indicada está implementada e ensaiada com o âmbito descrito no relatório. O estado da integração é rastreável na PR correspondente. Não significa aprovação institucional ou homologação no servidor. Não voltar a implementar estas entregas.

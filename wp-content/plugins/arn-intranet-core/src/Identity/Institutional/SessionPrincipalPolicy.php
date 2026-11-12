@@ -41,7 +41,7 @@ final class SessionPrincipalPolicy {
 	): ?Principal {
 		if ( ! $enabled || null === $account || null === $link ||
 			AccountState::Active !== $account->state || ! $account->session_valid ||
-			$account->user_id !== $link->user_id || $link_generation < 1 || $authorization_revision < 1 ||
+			$account->user_id !== $link->user_id || $link_generation < 1 || $link_generation !== $link->generation || $authorization_revision < 1 ||
 			! FederatedSessionPolicy::valid( $link, $session, $now, true ) ) {
 			return null;
 		}
