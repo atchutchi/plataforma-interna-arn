@@ -26,7 +26,7 @@ final class MigrationReceipts {
 			if ( basename( $file ) !== sprintf( 'receipt-%08d.json', $sequence ) || is_link( $file ) || filesize( $file ) > 4096 ) {
 				throw new RuntimeException( 'Sequência de recibos inválida.' ); }
 			$record = json_decode( file_get_contents( $file ), true, 16, JSON_THROW_ON_ERROR );
-			if ( ! is_array( $record ) || 7 !== count( $record ) || ( $record['binding'] ?? null ) !== $this->binding || ( $record['sequence'] ?? null ) !== $sequence || ( $record['version'] ?? null ) !== 1 || ! is_int( $record['actor'] ?? null ) || $record['actor'] < 1 || ! is_string( $record['backup_ref'] ?? null ) || 1 !== preg_match( '/^[A-Za-z0-9._-]{1,120}$/D', $record['backup_ref'] ) || ! is_string( $record['time'] ?? null ) || 1 !== preg_match( '/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\+00:00$/D', $record['time'] ) || ! in_array( $record['phase'] ?? null, array( 'started', 'identity', 'authorization', 'complete', 'released' ), true ) ) {
+			if ( ! is_array( $record ) || 7 !== count( $record ) || ( $record['binding'] ?? null ) !== $this->binding || ( $record['sequence'] ?? null ) !== $sequence || ( $record['version'] ?? null ) !== 1 || ! is_int( $record['actor'] ?? null ) || $record['actor'] < 1 || ! is_string( $record['backup_ref'] ?? null ) || 1 !== preg_match( '/^[A-Za-z0-9._-]{1,120}$/D', $record['backup_ref'] ) || ! is_string( $record['time'] ?? null ) || 1 !== preg_match( '/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\+00:00$/D', $record['time'] ) || ! in_array( $record['phase'] ?? null, array( 'started', 'identity', 'authorization', 'communications', 'complete', 'released' ), true ) ) {
 				throw new RuntimeException( 'Recibo incompatível.' ); }
 			$records[] = $record;
 		}
@@ -34,7 +34,7 @@ final class MigrationReceipts {
 	}
 	public function append( string $phase, int $actor, string $backup_ref ): void {
 		$records = $this->all();
-		if ( $actor < 1 || ! in_array( $phase, array( 'started', 'identity', 'authorization', 'complete', 'released' ), true ) || 1 !== preg_match( '/^[A-Za-z0-9._-]{1,120}$/D', $backup_ref ) ) {
+		if ( $actor < 1 || ! in_array( $phase, array( 'started', 'identity', 'authorization', 'communications', 'complete', 'released' ), true ) || 1 !== preg_match( '/^[A-Za-z0-9._-]{1,120}$/D', $backup_ref ) ) {
 			throw new RuntimeException( 'Recibo inválido.' ); }
 		$sequence = count( $records ) + 1;
 		$json     = json_encode(

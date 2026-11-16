@@ -1,0 +1,10 @@
+import { build } from 'esbuild';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync } from 'node:fs';
+import { resolve } from 'node:path';
+const source = resolve('wp-content/themes/arn-intranet/ui');
+const output = resolve('wp-content/themes/arn-intranet/assets/panel');
+mkdirSync(output, { recursive: true });
+await build({ entryPoints: [source + '/panel.tsx'], outfile: output + '/panel.js', bundle: true, minify: true, sourcemap: false, target: ['es2020'], jsx: 'automatic', alias: { '@': source }, define: { 'process.env.NODE_ENV': '"production"' }, legalComments: 'linked' });
+const css = spawnSync(process.execPath, ['node_modules/@tailwindcss/cli/dist/index.mjs', '-i', source + '/panel.css', '-o', output + '/panel.css', '--minify'], { stdio: 'inherit' });
+if (css.status !== 0) process.exit(css.status || 1);

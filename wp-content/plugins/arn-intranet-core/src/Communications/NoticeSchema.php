@@ -97,6 +97,18 @@ final class NoticeSchema {
 		if ( ! Configuration::current( 'communications' ) || ! defined( 'WP_CLI' ) || true !== WP_CLI || ! current_user_can( 'manage_options' ) ) {
 			throw new RuntimeException( 'Instalação de comunicados recusada.' );
 		}
+		$this->installTables();
+	}
+
+	public function installInstitutional( \Arn\Intranet\Identity\Institutional\MaintenanceGate $gate ): void {
+		$gate->assertExclusive();
+		if ( ! InstitutionalPanel::enabled() ) {
+			throw new RuntimeException( 'Painel institucional desactivado.' );
+		}
+		$this->installTables( true );
+	}
+
+	public function missingTables( bool $resume = false ): array {
 		$missing = array();
 		foreach ( $this->definitions() as $part => $fields ) {
 			$exists = $this->rows( $this->database->prepare( 'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', $this->table( $part ) ) );
@@ -106,9 +118,14 @@ final class NoticeSchema {
 				$this->assertTable( $part, $fields );
 			}
 		}
-		if ( $missing && count( $missing ) !== count( $this->definitions() ) ) {
+		if ( ! $resume && $missing && count( $missing ) !== count( $this->definitions() ) ) {
 			throw new RuntimeException( 'Instalação de comunicados parcial recusada.' );
 		}
+		return $missing;
+	}
+
+	private function installTables( bool $resume = false ): void {
+		$missing = $this->missingTables( $resume );
 		foreach ( $missing as $part ) {
 			$columns = array();
 			foreach ( $this->definitions()[ $part ] as $name => [$type, $nullable, $collation, $auto] ) {

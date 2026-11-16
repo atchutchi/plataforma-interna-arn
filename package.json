@@ -20,7 +20,7 @@
     "test:php": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo php scripts/check-php-test-discovery.php && node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo vendor/bin/phpunit -c phpunit.xml.dist",
     "lint:php": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo php scripts/check-php-test-discovery.php && node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo vendor/bin/phpcs",
     "test:institutional-identity:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/institutional-identity.php --user=admin",
-	"test:institutional-migrations:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/institutional-migrations.php --user=admin",
+    "test:institutional-migrations:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/institutional-migrations.php --user=admin",
     "test:identity:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/identity-persistence.php --user=admin",
     "test:workspace-provisioning:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/workspace-provisioning.php --user=admin",
     "test:workspace-access:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/workspace-access.php --user=admin",
@@ -64,9 +64,24 @@
     "composer:audit": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo composer audit --locked --no-dev",
     "test:media-processing:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/media-processing.php --user=admin",
     "test:tickets:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp --require=tests/integration/tickets-cli-bootstrap.php eval-file tests/integration/tickets.php --user=admin",
-    "test:leave:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp --require=tests/integration/requests-cli-bootstrap.php eval-file tests/integration/leave.php --user=admin"
+    "test:leave:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp --require=tests/integration/requests-cli-bootstrap.php eval-file tests/integration/leave.php --user=admin",
+    "test:institutional-panel:integration": "node scripts/wp-env.mjs --tests run cli --env-cwd=arn-repo wp eval-file tests/integration/institutional-panel.php --user=admin"
   },
   "devDependencies": {
-    "@wordpress/env": "11.17.0"
+    "@tailwindcss/cli": "4.3.5",
+    "@wordpress/env": "11.17.0",
+    "esbuild": "0.28.2",
+    "tailwindcss": "4.3.5"
+  },
+  "dependencies": {
+    "@radix-ui/react-accordion": "1.3.1",
+    "@radix-ui/react-slot": "1.5.0",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "embla-carousel-react": "8.6.0",
+    "lucide-react": "1.73.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "tailwind-merge": "3.7.0"
   }
 }

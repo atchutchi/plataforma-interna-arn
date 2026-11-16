@@ -14,4 +14,5 @@ if (errors.length > 0) {
 }
 
 console.log('Construção verificada: tema, plugin e configuração local estão completos.');
-console.log('Não há pacote de blocos para compilar nesta fundação.');
+await import('./build-panel.mjs');
+console.log('Painel institucional compilado localmente, sem CDN.');

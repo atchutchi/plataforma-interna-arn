@@ -223,7 +223,8 @@ final class GoogleLoginController {
 				if ( null === $source ) {
 					throw new RuntimeException(); }
 				( new CallbackLogin( $this->client, self::repository(), $source ) )->complete( $config, $params, $context );
-				wp_safe_redirect( home_url( '/' ), 302 );
+				$destination = \Arn\Intranet\Communications\InstitutionalPanel::enabled() ? add_query_arg( 'arn_panel', '1', home_url( '/' ) ) : home_url( '/' );
+				wp_safe_redirect( $destination, 302 );
 				exit;
 			}
 			$claims  = $this->client->complete( $config, $params, $context );
