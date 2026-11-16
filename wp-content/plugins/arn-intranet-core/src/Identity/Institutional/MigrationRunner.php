@@ -23,12 +23,21 @@ final class MigrationRunner {
 		// Validar ambos os componentes antes de qualquer DDL. Nenhuma reparação de schema desconhecido.
 		$links->validateInstallation();
 		$auth->missingTables();
+		$communications = \Arn\Intranet\Communications\InstitutionalPanel::enabled() ? new \Arn\Intranet\Communications\NoticeSchema( $this->database ) : null;
+		$records        = $this->receipts->all();
+		$last           = end( $records );
+		$resume         = is_array( $last ) && $last['backup_ref'] === $backup_ref && in_array( $last['phase'], array( 'started', 'identity', 'authorization', 'communications' ), true );
+		$communications?->missingTables( $resume );
 		$this->receipts->append( 'started', $actor, $backup_ref );
 		$links->installSchema( false );
 		$links->migrateGenerations();
 		$this->receipts->append( 'identity', $actor, $backup_ref );
 		$auth->install();
 		$this->receipts->append( 'authorization', $actor, $backup_ref );
+		if ( null !== $communications ) {
+			$communications->installInstitutional( $this->gate );
+			$this->receipts->append( 'communications', $actor, $backup_ref );
+		}
 		$result = ( new MigrationPreflight( $this->database ) )->inspect();
 		if ( 'current' !== $result['identity'] || 'current' !== $result['authorization'] ) {
 			throw new RuntimeException( 'Migração não confirmada.' ); }
@@ -46,6 +55,15 @@ final class MigrationRunner {
 		$result = ( new MigrationPreflight( $this->database ) )->inspect();
 		if ( 'current' !== $result['identity'] || 'current' !== $result['authorization'] ) {
 			throw new RuntimeException( 'Schema incompatível. Manutenção mantida.' ); }
+		if ( \Arn\Intranet\Communications\InstitutionalPanel::enabled() ) {
+			( new \Arn\Intranet\Communications\NoticeSchema( $this->database ) )->assertReady();
+			$phases  = array_column( $records, 'phase' );
+			$started = array_keys( $phases, 'started', true );
+			$latest  = $started ? end( $started ) : count( $phases );
+			if ( ! in_array( 'communications', array_slice( $phases, $latest ), true ) ) {
+				throw new RuntimeException( 'Aplicação do painel ainda não confirmada.' );
+			}
+		}
 		$this->receipts->append( 'released', $actor, $last['backup_ref'] );
 		$this->gate->releaseMaintenance();
 	}

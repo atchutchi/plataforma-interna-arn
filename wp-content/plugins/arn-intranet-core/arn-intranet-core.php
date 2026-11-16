@@ -226,6 +226,7 @@ add_action( 'wp_loaded', array( new LocalGrantManagementPage(), 'register' ) );
 add_action( 'wp_loaded', array( new LocalRecordsPage(), 'register' ) );
 
 ( new AdminDashboard( __FILE__ ) )->register();
+\Arn\Intranet\Communications\InstitutionalPage::register();
 \Arn\Intranet\Cms\SettingsPage::register();
 
 add_action( 'wp_loaded', array( new LocalNotificationsPage(), 'register' ) );

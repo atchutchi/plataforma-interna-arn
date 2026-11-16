@@ -37,8 +37,17 @@ final class MigrationPreflight {
 			if ( array() !== $tables ) {
 				$schema->validate();
 			}
+			$communications = 'disabled';
+			if ( \Arn\Intranet\Communications\InstitutionalPanel::enabled() ) {
+				$notice_schema  = new \Arn\Intranet\Communications\NoticeSchema( $this->database );
+				$communications = $notice_schema->missingTables() ? 'absent' : 'current';
+				if ( 'current' === $communications ) {
+					$notice_schema->assertReady();
+				}
+			}
 			return array(
 				'plan_version'         => 1,
+				'communications'       => $communications,
 				'identity'             => $identity,
 				'authorization'        => array() === $tables ? 'absent' : 'current',
 				'write_performed'      => false,
